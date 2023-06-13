@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+        "driver",               # cli binary
+        "compiler",             # compiler library
+]               
