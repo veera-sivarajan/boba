@@ -6,5 +6,6 @@ pub enum Expr {
         left: Box<Expr>,
         oper: Token,
         right: Box<Expr>,
-    }
+    },
+    Number(f64),
 }

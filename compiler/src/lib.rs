@@ -10,6 +10,7 @@ fn compile_helper(source: &str) -> Result<(), BobaError> {
     let tokens = lexer.scan()?;
     let mut parser = parser::Parser::new(tokens.into_iter());
     let ast = parser.parse()?;
+    println!("{ast:?}");
     Ok(())
 }
 
