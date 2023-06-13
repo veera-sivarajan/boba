@@ -177,8 +177,6 @@ impl<'src> Lexer<'src> {
     }
 
     fn column(&mut self, start_pos: usize) -> u16 {
-        println!("Start: {start_pos}");
-        println!("Line: {}", self.start_of_line);
         self.column = start_pos as u16 - self.start_of_line;
         self.column
     }
@@ -199,6 +197,10 @@ impl<'src> Lexer<'src> {
                     let (index, _) = self.cursor.next().unwrap();
                     self.next_line(index);
                 }
+                '\'' => {
+                    let token = self.scan_character()?;
+                    self.tokens.push(token);
+                }
                 '"' => {
                     let token = self.scan_string()?;
                     self.tokens.push(token);
@@ -218,6 +220,7 @@ impl<'src> Lexer<'src> {
         }
         Ok(self.tokens.clone())
     }
+
 
     fn scan_single_token(&mut self) {
         let (start_pos, c) = self.cursor.next().unwrap();
@@ -354,6 +357,19 @@ impl<'src> Lexer<'src> {
         self.tokens.push(token);
     }
 
+    fn scan_character(&mut self) -> Result<Token, BobaError> {
+        let (start_pos, _) = self.cursor.next().unwrap(); // consume the starting single quote
+        if let Some((end_pos, character)) = self.cursor.next() {
+            if self.cursor.next_if(|x| x.1 == '\'').is_some() {
+                Ok(Token::new(TokenType::Character(character), self.make_span(start_pos, character.len_utf8())))
+            } else {
+                Err(BobaError::UnterminatedCharacter(self.make_span(start_pos, character.len_utf8())))
+            }
+        } else {
+            Err(BobaError::EmptyCharacter(self.make_span(start_pos, 1)))
+        }
+    }
+
     fn scan_string(&mut self) -> Result<Token, BobaError> {
         let mut lexeme = String::from("");
         let (start_pos, _) = self.cursor.next().unwrap(); // skip opening quotes
@@ -444,17 +460,17 @@ mod test_lexer {
     }
 
     #[test]
-    fn test_single_char() {
+    fn single_char() {
         assert!(test_runner(".", &[TokenType::Dot]))
     }
 
     #[test]
-    fn test_double_char() {
+    fn double_char() {
         assert!(test_runner("==", &[TokenType::EqualEqual]))
     }
 
     #[test]
-    fn test_keyword() {
+    fn keyword() {
         assert!(test_runner(
             "while () {}",
             &[
@@ -468,7 +484,7 @@ mod test_lexer {
     }
 
     #[test]
-    fn test_string() {
+    fn string() {
         assert!(test_runner(
             "\"hello\"",
             &[TokenType::StringLiteral("hello".into())]
@@ -476,14 +492,14 @@ mod test_lexer {
     }
 
     #[test]
-    fn test_numbers() {
+    fn numbers() {
         assert!(test_runner("1", &[TokenType::Number(1.0)]));
         assert!(test_runner("123", &[TokenType::Number(123.0)]));
         assert!(test_runner("1.00", &[TokenType::Number(1.00)]));
     }
 
     #[test]
-    fn test_bools() {
+    fn bools() {
         assert!(test_runner(
             "false and true",
             &[
@@ -495,7 +511,7 @@ mod test_lexer {
     }
 
     #[test]
-    fn test_identifier() {
+    fn identifier() {
         assert!(test_runner(
             "human",
             &[TokenType::Identifier("human".into())]
@@ -503,7 +519,7 @@ mod test_lexer {
     }
 
     #[test]
-    fn test_function_declarations() {
+    fn function_declarations() {
         assert!(test_runner(
             "
 fn factorial(num: Number) -> Number {
@@ -531,6 +547,12 @@ fn factorial(num: Number) -> Number {
                 TokenType::RightBrace,
             ]))
     }
-                
-               
+
+    #[test]
+    fn character_literals() {
+        assert!(test_runner(
+            "'a'",
+            &[TokenType::Character('a')]
+        ))
+    }
 }

@@ -26,6 +26,8 @@ impl fmt::Display for Span {
 #[derive(Debug)]
 pub enum BobaError {
     UnterminatedString(Span),
+    UnterminatedCharacter(Span),
+    EmptyCharacter(Span),
     Unexpected { msg: Box<str>, span: Option<Span> },
 }
 
@@ -37,6 +39,18 @@ impl fmt::Display for BobaError {
                 write!(
                     f,
                     "Syntax Error: Unterminated string literal at {span}."
+                )
+            }
+            EmptyCharacter(span) => {
+                write!(
+                    f,
+                    "Syntax Error: Reached end of file but expected character literal at {span}."
+                )
+            }
+            UnterminatedCharacter(span) => {
+                write!(
+                    f,
+                    "Syntax Error: Unterminated character literal at {span}."
                 )
             }
             Unexpected { msg, span } => {
