@@ -1,8 +1,7 @@
-use crate::lexer::{Token, TokenType};
 use crate::error::BobaError;
 use crate::expr::Expr;
+use crate::lexer::{Token, TokenType};
 use std::iter::Peekable;
-
 
 macro_rules! next_eq {
     ( $parser: ident, $( $x: expr ), *) => {
@@ -35,11 +34,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn term(&mut self) -> Result<Expr, BobaError> {
         let mut expr = self.factor()?;
-        while let Some(oper) = next_eq!(
-            self,
-            TokenType::Plus,
-            TokenType::Minus
-        ) {
+        while let Some(oper) = next_eq!(self, TokenType::Plus, TokenType::Minus)
+        {
             let right = self.factor()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
@@ -52,11 +48,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn factor(&mut self) -> Result<Expr, BobaError> {
         let mut expr = self.primary_expression()?;
-        while let Some(oper) = next_eq!(
-            self,
-            TokenType::Slash,
-            TokenType::Star
-        ) {
+        while let Some(oper) = next_eq!(self, TokenType::Slash, TokenType::Star)
+        {
             let right = self.primary_expression()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
@@ -74,7 +67,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 _ => {
                     println!("{}", expr.kind);
                     todo!()
-                },
+                }
             }
         } else {
             Err(self.error("Expected a primary expression"))
