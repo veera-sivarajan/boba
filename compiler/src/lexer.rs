@@ -501,4 +501,36 @@ mod test_lexer {
             &[TokenType::Identifier("human".into())]
         ));
     }
+
+    #[test]
+    fn test_function_declarations() {
+        assert!(test_runner(
+            "
+fn factorial(num: Number) -> Number {
+    let a = 1 + 2;
+}
+",
+            &[
+                TokenType::Fn,
+                TokenType::Identifier("factorial".into()),
+                TokenType::LeftParen,
+                TokenType::Identifier("num".into()),
+                TokenType::Colon,
+                TokenType::Identifier("Number".into()),
+                TokenType::RightParen,
+                TokenType::Arrow,
+                TokenType::Identifier("Number".into()),
+                TokenType::LeftBrace,
+                TokenType::Let,
+                TokenType::Identifier("a".into()),
+                TokenType::Equal,
+                TokenType::Number(1.0),
+                TokenType::Plus,
+                TokenType::Number(2.0),
+                TokenType::Semicolon,
+                TokenType::RightBrace,
+            ]))
+    }
+                
+               
 }
