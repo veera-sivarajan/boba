@@ -1,15 +1,21 @@
 mod lexer;
+mod expr;
+mod parser;
 mod error;
+
+use crate::error::BobaError;
+
+fn compile_helper(source: &str) -> Result<(), BobaError> {
+    let mut lexer = lexer::Lexer::new(source);
+    let tokens = lexer.scan()?;
+    let mut parser = parser::Parser::new(tokens.into_iter());
+    let ast = parser.parse()?;
+    Ok(())
+}
 
 pub fn compile(source: &str) {
     println!("{source}");
-    let mut lexer = lexer::Lexer::new(source);
-    let tokens = lexer.scan();
-    if let Ok(token_list) = tokens {
-        for t in token_list {
-            println!("{}", t.kind);
-        }
-    } else {
-        println!("Error: {tokens:?}");
+    if let Err(error) = compile_helper(source) {
+        eprintln!("{error}");
     }
 }
