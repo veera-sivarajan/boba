@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::lexer::Token;
+use crate::lexer::{Token, TokenType};
 use std::rc::Rc;
 
 struct Register {
@@ -21,6 +21,13 @@ struct ScratchRegisters {
 }
 
 struct RegisterIndex(u8);
+
+use std::fmt;
+impl fmt::Display for RegisterIndex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl ScratchRegisters {
     pub fn new() -> Self {
@@ -66,9 +73,7 @@ struct Labels {
 
 impl Labels {
     fn new() -> Self {
-        Self {
-            count: 0,
-        }
+        Self { count: 0 }
     }
 
     fn create(&mut self) -> LabelIndex {
@@ -97,22 +102,41 @@ impl CodeGen {
 
     pub fn generate_assembly(&mut self, ast: &[Expr]) {
         for ele in ast {
-            match ele {
-                Expr::Binary { left, oper, right} => {
-                    self.binary(left, oper, right);
-                }
-                Expr::Number(num) => self.number(*num),
-            }
+            self.codegen(ele);
         }
     }
 
-    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) {
-
-
+    fn codegen(&mut self, expr: &Expr) -> RegisterIndex {
+        match expr {
+            Expr::Binary { left, oper, right } => {
+                self.binary(left, oper, right)
+            }
+            Expr::Number(num) => self.number(*num),
+        }
     }
 
-    fn number(&mut self, value: f64) {
+    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr ) -> RegisterIndex {
+        let left_register = self.codegen(left);
+        let right_register = self.codegen(right);
+        match oper.kind {
+            TokenType::Plus => {
+                println!("ADDQ {}, {}", self.registers.name(&left_register), self.registers.name(&right_register));
+                self.registers.deallocate(left_register);
+                right_register
+            }
+            TokenType::Minus => {
+                println!("SUBQ {}, {}", self.registers.name(&left_register), self.registers.name(&right_register));
+                self.registers.deallocate(left_register);
+                right_register
+            }
+            _ => todo!(),
 
+        }
+    }
 
+    fn number(&mut self, value: f64) -> RegisterIndex {
+        let register = self.registers.allocate();
+        println!("MOV  ${}, {}", value as u64,  self.registers.name(&register));
+        register
     }
 }
