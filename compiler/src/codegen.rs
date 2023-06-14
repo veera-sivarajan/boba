@@ -1,42 +1,79 @@
+use crate::expr::Expr;
 use std::collections::HashMap;
+use std::rc::Rc;
 
-struct ScratchRegisters {
-    values: [(Box<str>, bool); 7],
+struct Register {
+    name: Rc<str>,
+    inuse: bool,
 }
 
-struct Register(u8);
+impl Register {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.into(),
+            inuse: false,
+        }
+    }
+}
+
+struct ScratchRegisters {
+    table: [Register; 7],
+}
+
+struct RegisterIndex(u8);
 
 impl ScratchRegisters {
     pub fn new() -> Self {
         Self {
-            values: [
-                ("%rbx".into(), false),
-                ("%r10".into(), false),
-                ("%r11".into(), false),
-                ("%r12".into(), false),
-                ("%r13".into(), false),
-                ("%r14".into(), false),
-                ("%r15".into(), false),
-            ]
+            table: [
+                Register::new("%rbx"),
+                Register::new("%r10"),
+                Register::new("%r11"),
+                Register::new("%r12"),
+                Register::new("%r13"),
+                Register::new("%r14"),
+                Register::new("%r15"),
+            ],
         }
     }
 
-    pub fn allocate(&self) -> Register {
-
-
+    pub fn allocate(&mut self) -> RegisterIndex {
+        for (index, register) in self.table.iter_mut().enumerate() {
+            if !register.inuse {
+                register.inuse = true;
+                return RegisterIndex(index as u8);
+            }
+        }
+        unreachable!()
     }
 
-    pub fn deallocate(&self, register: Register) {
-
-
+    pub fn deallocate(&mut self, index: RegisterIndex) {
+        let mut register = self.table.get_mut(index.0 as usize).unwrap();
+        register.inuse = false;
     }
 
-    pub fn name(&self, register: Register) -> Box<str> {
-
-
+    pub fn name(&self, index: &RegisterIndex) -> Rc<str> {
+        let register = self.table.get(index.0 as usize).unwrap();
+        register.name.clone()
     }
 }
 
-struct CodeGen {
+pub struct CodeGen {
     registers: ScratchRegisters,
+}
+
+impl CodeGen {
+    pub fn new() -> Self {
+        Self {
+            registers: ScratchRegisters::new(),
+        }
+    }
+
+    pub fn generate_assembly(&mut self, _ast: &[Expr]) {
+        for _ in 0..7 {
+            let register = self.registers.allocate();
+            println!("{}", self.registers.name(&register));
+            self.registers.deallocate(register);
+        }
+    }
 }
