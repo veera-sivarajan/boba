@@ -9,15 +9,14 @@ fn main() -> std::io::Result<()> {
             let mut assembly_file = OpenOptions::new()
                 .create(true)
                 .write(true)
-                .append(true)
-                .open("math.s")?;
+                .open("/home/veera/projects/boba/output/math.s")?;
             assembly_file.write_all(assembly.header.as_bytes())?;
             assembly_file.write_all(assembly.code.as_bytes())?;
             assembly_file.write_all(assembly.runtime.as_bytes())?;
             Command::new("gcc")
-                .arg("math.s")
+                .arg("/home/veera/projects/boba/output/math.s")
                 .arg("-o")
-                .arg("math")
+                .arg("/home/veera/projects/boba/output/math")
                 .output()
                 .expect("Failed to invoke gcc.");
             Ok(())
