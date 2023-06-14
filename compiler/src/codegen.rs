@@ -138,8 +138,17 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 result_register
             }
+            TokenType::Slash => {
+                let result_register = self.registers.allocate();
+                println!("MOV  {}, %rax", self.registers.name(&left_register));
+                println!("CQO");
+                println!("IDIV {}", self.registers.name(&right_register));
+                println!("MOV  %rax, {}", self.registers.name(&result_register));
+                self.registers.deallocate(left_register);
+                self.registers.deallocate(right_register);
+                result_register
+            }
             _ => todo!(),
-
         }
     }
 
