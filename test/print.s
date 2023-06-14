@@ -14,13 +14,13 @@ main:
         IDIV %rbx
         MOVQ  %rax, %r10
 
-        pushq %rbp
-        movq %rsp, %rbp
-        movq  %r10, %rsi
-        leaq .LC0(%rip), %rax
-        movq %rax, %rdi
-        movl $0, %eax
-        call printf@PLT
-        movl $0, %eax
-        popq %rbp
+        PUSHq %rbp
+        MOVQ %rsp, %rbp
+        MOVQ  %r10, %rsi
+        LEAQ .LC0(%rip), %rax
+        MOVQ %rax, %rdi
+        MOVL $0, %eax
+        CALL printf@PLT
+        MOVL $0, %eax
+        POPQ %rbp
         ret

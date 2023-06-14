@@ -18,7 +18,7 @@ fn compile_helper(source: &str) -> Result<(), BobaError> {
 }
 
 pub fn compile(source: &str) {
-    println!("{source}");
+    eprintln!("{source}");
     if let Err(error) = compile_helper(source) {
         eprintln!("{error}");
     }

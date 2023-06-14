@@ -102,8 +102,26 @@ impl CodeGen {
 
     pub fn generate_assembly(&mut self, ast: &[Expr]) {
         for ele in ast {
-            self.codegen(ele);
+            self.assembly_helper(ele);
         }
+    }
+
+    fn assembly_helper(&mut self, expr: &Expr) {
+        println!(".globl main");
+        println!(".LC0:");
+        println!(r#".string "%d\n""#);
+        println!("main: ");
+        let result = self.codegen(expr);
+        println!("PUSHQ %rbp");
+        println!("MOVQ %rsp, %rbp");
+        println!("MOVQ  {}, %rsi", self.registers.name(&result));
+        println!("LEAQ .LC0(%rip), %rax");
+        println!("MOVQ %rax, %rdi");
+        println!("MOVL $0, %eax");
+        println!("CALL printf@PLT");
+        println!("MOVL $0, %eax");
+        println!("POPQ %rbp");
+        println!("RET");
     }
 
     fn codegen(&mut self, expr: &Expr) -> RegisterIndex {
@@ -115,35 +133,54 @@ impl CodeGen {
         }
     }
 
-    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr ) -> RegisterIndex {
+    fn binary(
+        &mut self,
+        left: &Expr,
+        oper: &Token,
+        right: &Expr,
+    ) -> RegisterIndex {
         let left_register = self.codegen(left);
         let right_register = self.codegen(right);
         match oper.kind {
             TokenType::Plus => {
-                println!("ADDQ {}, {}", self.registers.name(&left_register), self.registers.name(&right_register));
+                println!(
+                    "ADDQ {}, {}",
+                    self.registers.name(&left_register),
+                    self.registers.name(&right_register)
+                );
                 self.registers.deallocate(left_register);
                 right_register
             }
             TokenType::Minus => {
-                println!("SUBQ {}, {}", self.registers.name(&left_register), self.registers.name(&right_register));
+                println!(
+                    "SUBQ {}, {}",
+                    self.registers.name(&left_register),
+                    self.registers.name(&right_register)
+                );
                 self.registers.deallocate(left_register);
                 right_register
             }
             TokenType::Star => {
                 let result_register = self.registers.allocate();
-                println!("MOV  {}, %rax", self.registers.name(&right_register));
+                println!("MOVQ {}, %rax", self.registers.name(&right_register));
                 println!("IMUL {}", self.registers.name(&left_register));
-                println!("MOV  %rax, {}", self.registers.name(&result_register));
+                println!(
+                    "MOVQ %rax, {}",
+                    self.registers.name(&result_register)
+                );
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 result_register
             }
             TokenType::Slash => {
                 let result_register = self.registers.allocate();
-                println!("MOV  {}, %rax", self.registers.name(&left_register));
+                println!("MOVQ {}, %rax", self.registers.name(&left_register));
                 println!("CQO");
                 println!("IDIV {}", self.registers.name(&right_register));
-                println!("MOV  %rax, {}", self.registers.name(&result_register));
+                println!(
+                    "MOVQ %rax, {}",
+                    self.registers.name(&result_register)
+                );
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 result_register
@@ -154,7 +191,7 @@ impl CodeGen {
 
     fn number(&mut self, value: f64) -> RegisterIndex {
         let register = self.registers.allocate();
-        println!("MOV  ${}, {}", value as u64,  self.registers.name(&register));
+        println!("MOVQ ${}, {}", value as u64, self.registers.name(&register));
         register
     }
 }
