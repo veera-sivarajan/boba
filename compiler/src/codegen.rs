@@ -1,5 +1,4 @@
 use crate::expr::Expr;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 struct Register {
@@ -58,22 +57,50 @@ impl ScratchRegisters {
     }
 }
 
+struct LabelIndex(u32);
+
+struct Labels {
+    count: u32,
+}
+
+impl Labels {
+    fn new() -> Self {
+        Self {
+            count: 0,
+        }
+    }
+
+    fn create(&mut self) -> LabelIndex {
+        let index = LabelIndex(self.count);
+        self.count += 1;
+        index
+    }
+
+    fn name(&self, index: LabelIndex) -> Box<str> {
+        format!(".L{}", index.0).into()
+    }
+}
+
 pub struct CodeGen {
     registers: ScratchRegisters,
+    labels: Labels,
 }
 
 impl CodeGen {
     pub fn new() -> Self {
         Self {
             registers: ScratchRegisters::new(),
+            labels: Labels::new(),
         }
     }
 
     pub fn generate_assembly(&mut self, _ast: &[Expr]) {
         for _ in 0..7 {
-            let register = self.registers.allocate();
-            println!("{}", self.registers.name(&register));
-            self.registers.deallocate(register);
+            // let register = self.registers.allocate();
+            // println!("{}", self.registers.name(&register));
+            // self.registers.deallocate(register);
+            let label = self.labels.create();
+            println!("{}", self.labels.name(label));
         }
     }
 }
