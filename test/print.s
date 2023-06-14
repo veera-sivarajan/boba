@@ -13,7 +13,6 @@ main:
         CQO
         IDIV %rbx
         MOVQ  %rax, %r10
-
         PUSHq %rbp
         MOVQ %rsp, %rbp
         MOVQ  %r10, %rsi

@@ -5,21 +5,19 @@ mod error;
 mod codegen;
 
 use crate::error::BobaError;
+use crate::codegen::Assembly;
 
-fn compile_helper(source: &str) -> Result<(), BobaError> {
+fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;
     let mut parser = parser::Parser::new(tokens.into_iter());
     let ast = parser.parse()?;
     let mut codegen = codegen::CodeGen::new();
-    codegen.generate_assembly(&ast);
-    // println!("{ast:?}");
-    Ok(())
+    let assembly = codegen.generate_assembly(&ast);
+    Ok(assembly)
 }
 
-pub fn compile(source: &str) {
+pub fn compile(source: &str) -> Result<Assembly, BobaError> {
     eprintln!("{source}");
-    if let Err(error) = compile_helper(source) {
-        eprintln!("{error}");
-    }
+    compile_helper(source) 
 }
