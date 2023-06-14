@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::lexer::Token;
 use std::rc::Rc;
 
 struct Register {
@@ -94,13 +95,24 @@ impl CodeGen {
         }
     }
 
-    pub fn generate_assembly(&mut self, _ast: &[Expr]) {
-        for _ in 0..7 {
-            // let register = self.registers.allocate();
-            // println!("{}", self.registers.name(&register));
-            // self.registers.deallocate(register);
-            let label = self.labels.create();
-            println!("{}", self.labels.name(label));
+    pub fn generate_assembly(&mut self, ast: &[Expr]) {
+        for ele in ast {
+            match ele {
+                Expr::Binary { left, oper, right} => {
+                    self.binary(left, oper, right);
+                }
+                Expr::Number(num) => self.number(*num),
+            }
         }
+    }
+
+    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) {
+
+
+    }
+
+    fn number(&mut self, value: f64) {
+
+
     }
 }
