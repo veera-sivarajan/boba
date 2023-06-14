@@ -1,0 +1,4 @@
+* boba
+~boba~ compiles rust-like source code to x86 assembly. 
+
+Uses ~gcc~ to link the generated assembly with C standard library (to access ~printf()~) and to create an executable.
