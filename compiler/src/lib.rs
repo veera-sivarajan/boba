@@ -2,6 +2,7 @@ mod lexer;
 mod expr;
 mod parser;
 mod error;
+mod codegen;
 
 use crate::error::BobaError;
 
