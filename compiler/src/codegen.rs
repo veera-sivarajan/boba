@@ -77,6 +77,7 @@ pub struct Assembly {
 }
 
 pub struct CodeGen {
+    globals: Vec<Token>,
     registers: ScratchRegisters,
     assembly: Assembly,
 }
@@ -84,6 +85,7 @@ pub struct CodeGen {
 impl CodeGen {
     pub fn new() -> Self {
         Self {
+            globals: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
                 code: "# generated assembly\n".to_string(),
@@ -94,8 +96,9 @@ impl CodeGen {
     }
 
     pub fn compile(&mut self, ast: &[Stmt]) -> Assembly {
+        self.generate_header().expect("Unable to write header.");
         for ele in ast {
-            self.generate_assembly(ele);
+            self.codegen(ele).expect("Unable to write code.");
         }
         self.assembly.clone()
     }
@@ -112,15 +115,6 @@ impl CodeGen {
 main: 
 "#
         )
-    }
-
-    fn generate_assembly(&mut self, stmt: &Stmt) {
-        self.generate_header().expect("Unable to write header.");
-        self.generate_code(stmt).expect("Unable to write code.");
-    }
-
-    fn generate_code(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
-        self.codegen(stmt)
     }
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
@@ -186,7 +180,31 @@ main:
                 self.binary(left, oper, right)
             }
             Expr::Number(num) => self.number(*num),
+            Expr::Variable(token) => self.variable(token),
         }
+    }
+
+    fn symbol(&self, token: &Token) -> String {
+        if self.globals.contains(token) {
+            if let TokenType::Identifier(name) = &token.kind {
+                format!("{name}(%rip)")
+            } else {
+                unreachable!()
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn add_global(&mut self, token: &Token) {
+        self.globals.push(token.clone());
+    }
+
+    fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
+        self.add_global(token);
+        let register = self.registers.allocate();
+        self.emit_code(format!("MOVQ {}, {}", self.symbol(token), self.registers.name(&register)).as_str())?;
+        Ok(register)
     }
 
     fn binary(
