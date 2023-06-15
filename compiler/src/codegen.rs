@@ -72,7 +72,6 @@ impl ScratchRegisters {
 pub struct Assembly {
     pub header: String,
     pub code: String,
-    pub runtime: String,
     pub data: String,
 }
 
@@ -88,16 +87,13 @@ impl CodeGen {
             globals: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
-                header: r#"# header
-        .globl main 
-
-        .LC0:
+                header: r#".globl main
+.LC0:
         .string "%d\n"
-main: 
 "#
                 .to_string(),
+                code: "main:\n".to_string(),
                 data: ".data\n".to_string(),
-                ..Assembly::default()
             },
         }
     }
@@ -291,7 +287,6 @@ main:
                     &self.registers.name(&right_register),
                     "",
                 )?;
-
                 self.emit_code(
                     "movq",
                     "%rax",
