@@ -8,4 +8,5 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Number(f64),
+    Variable(Token),
 }

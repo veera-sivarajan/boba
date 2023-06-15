@@ -134,6 +134,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if let Some(expr) = self.cursor.next() {
             match expr.kind {
                 TokenType::Number(num) => Ok(Expr::Number(num)),
+                TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
                 _ => {
                     println!("{}", expr.kind);
                     todo!()
