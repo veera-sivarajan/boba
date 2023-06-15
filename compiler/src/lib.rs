@@ -18,6 +18,10 @@ fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
 }
 
 pub fn compile(source: &str) -> Result<Assembly, BobaError> {
-    eprintln!("{source}");
-    compile_helper(source) 
+    if !source.is_empty() {
+        eprintln!("Compiling: {source}");
+        compile_helper(source) 
+    } else {
+        Err(BobaError::General("Empty source file.".into()))
+    }
 }

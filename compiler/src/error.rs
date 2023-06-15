@@ -29,6 +29,7 @@ pub enum BobaError {
     UnterminatedCharacter(Span),
     EmptyCharacter(Span),
     Unexpected { msg: Box<str>, span: Option<Span> },
+    General(Box<str>),
 }
 
 impl fmt::Display for BobaError {
@@ -59,6 +60,9 @@ impl fmt::Display for BobaError {
                 } else {
                     write!(f, "Parse error: {msg} at end of file.")
                 }
+            }
+            General(msg) => {
+                write!(f, "Error: {msg}")
             }
         }
     }

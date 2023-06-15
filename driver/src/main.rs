@@ -5,6 +5,7 @@ use std::process::Command;
 fn assemble(header: String, code: String, runtime: String) -> std::io::Result<()> {
     let mut assembly_file = OpenOptions::new()
         .create(true)
+        .truncate(true)
         .write(true)
         .open("/home/veera/projects/boba/output/math.s")?;
     assembly_file.write_all(header.as_bytes())?;
@@ -21,7 +22,7 @@ fn assemble(header: String, code: String, runtime: String) -> std::io::Result<()
 
 fn main() -> std::io::Result<()> {
     let source = include_str!("/home/veera/projects/boba/test/math.rs");
-    match compiler::compile(source) {
+    match compiler::compile(source.trim_end()) {
         Ok(assembly) => {
             assemble(assembly.header, assembly.code, assembly.runtime)
         }
