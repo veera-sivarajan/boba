@@ -426,7 +426,7 @@ impl<'src> Lexer<'src> {
             "if" => TokenType::If,
             "nil" => TokenType::Nil,
             "or" => TokenType::Or,
-            "print" => TokenType::Print,
+            "println" => TokenType::Print,
             "return" => TokenType::Return,
             "true" => TokenType::Boolean(true),
             "let" => TokenType::Let,

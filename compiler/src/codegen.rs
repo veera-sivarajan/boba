@@ -1,6 +1,7 @@
+use crate::error::BobaError;
 use crate::expr::Expr;
-use crate::stmt::Stmt;
 use crate::lexer::{Token, TokenType};
+use crate::stmt::Stmt;
 use std::fmt::Write;
 use std::rc::Rc;
 
@@ -72,6 +73,7 @@ pub struct Assembly {
     pub header: String,
     pub code: String,
     pub runtime: String,
+    pub data: String,
 }
 
 pub struct CodeGen {
@@ -83,7 +85,10 @@ impl CodeGen {
     pub fn new() -> Self {
         Self {
             registers: ScratchRegisters::new(),
-            assembly: Assembly::default(),
+            assembly: Assembly {
+                data: ".data\n".to_string(),
+                ..Assembly::default()
+            },
         }
     }
 
@@ -95,11 +100,17 @@ impl CodeGen {
     }
 
     fn generate_header(&mut self) -> fmt::Result {
-        writeln!(&mut self.assembly.header, "# header")?;
-        writeln!(&mut self.assembly.header, ".globl main")?;
-        writeln!(&mut self.assembly.header, ".LC0:")?;
-        writeln!(&mut self.assembly.header, r#".string "%d\n""#)?;
-        writeln!(&mut self.assembly.header, "main: ")
+        writeln!(
+            &mut self.assembly.header,
+            r#"
+# header
+        .globl main 
+
+        .LC0:
+        .string "%d\n"
+main: 
+"#
+        )
     }
 
     fn generate_runtime(&mut self, result: &RegisterIndex) -> fmt::Result {
@@ -122,28 +133,56 @@ impl CodeGen {
 
     fn generate_assembly(&mut self, stmt: &Stmt) {
         self.generate_header().expect("Unable to write header.");
-        let result = self.generate_code(stmt).expect("Unable to write code.");
-        self.generate_runtime(&result)
-            .expect("Unable to write runtime.");
+        self.generate_code(stmt).expect("Unable to write code.");
     }
 
-    fn generate_code(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
+    fn generate_code(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         writeln!(&mut self.assembly.code, "# generated assembly")?;
         self.codegen(stmt)
     }
 
-    fn codegen(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
+    fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::Let {..} => self.let_stmt(stmt),
-            Stmt::Expression(expr) => self.expression(expr),
+            Stmt::Let {
+                name,
+                is_mutable: _,
+                init,
+            } => self.let_stmt(name, init),
+            Stmt::Expression(expr) => todo!(),
         }
     }
 
-    fn let_stmt(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
-        todo!()
+    fn emit_data(&mut self, value: &str) -> Result<(), BobaError> {
+        writeln!(&mut self.assembly.data, "{value}").map_err(|e| e.into())
     }
-    
-    fn expression(&mut self, expr: &Expr) -> Result<RegisterIndex, fmt::Error> {
+
+    fn emit_code(&mut self, value: &str) -> Result<(), BobaError> {
+        writeln!(&mut self.assembly.code, "{value}").map_err(|e| e.into())
+    }
+
+    fn let_stmt(
+        &mut self,
+        name: &Token,
+        init: &Option<Expr>,
+    ) -> Result<(), BobaError> {
+        if let TokenType::Identifier(variable_name) = &name.kind {
+            if let Some(Expr::Number(value)) = init {
+                self.emit_data(
+                    format!("{variable_name}:  .quad {value}").as_str(),
+                )
+            } else {
+                Err(BobaError::Compiler {
+                    msg: "Global variables should be initated with constants"
+                        .into(),
+                    span: name.span,
+                })
+            }
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn expression(&mut self, expr: &Expr) -> Result<RegisterIndex, BobaError> {
         match expr {
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
@@ -157,46 +196,53 @@ impl CodeGen {
         left: &Expr,
         oper: &Token,
         right: &Expr,
-    ) -> Result<RegisterIndex, fmt::Error> {
+    ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;
         match oper.kind {
             TokenType::Plus => {
-                writeln!(
-                    &mut self.assembly.code,
-                    "ADDQ {}, {}",
-                    self.registers.name(&left_register),
-                    self.registers.name(&right_register)
+                self.emit_code(
+                    format!(
+                        "ADDQ {}, {}",
+                        self.registers.name(&left_register),
+                        self.registers.name(&right_register)
+                    )
+                    .as_str(),
                 )?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
             TokenType::Minus => {
-                writeln!(
-                    &mut self.assembly.code,
-                    "SUBQ {}, {}",
-                    self.registers.name(&left_register),
-                    self.registers.name(&right_register)
+                self.emit_code(
+                    format!(
+                        "SUBQ {}, {}",
+                        self.registers.name(&left_register),
+                        self.registers.name(&right_register)
+                    )
+                    .as_str(),
                 )?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
             TokenType::Star => {
                 let result_register = self.registers.allocate();
-                writeln!(
-                    &mut self.assembly.code,
-                    "MOVQ {}, %rax",
-                    self.registers.name(&right_register)
+                self.emit_code(
+                    format!(
+                        "MOVQ {}, %rax",
+                        self.registers.name(&right_register)
+                    )
+                    .as_str(),
                 )?;
-                writeln!(
-                    &mut self.assembly.code,
-                    "IMUL {}",
-                    self.registers.name(&left_register)
+                self.emit_code(
+                    format!("IMUL {}", self.registers.name(&left_register))
+                        .as_str(),
                 )?;
-                writeln!(
-                    &mut self.assembly.code,
-                    "MOVQ %rax, {}",
-                    self.registers.name(&result_register)
+                self.emit_code(
+                    format!(
+                        "MOVQ %rax, {}",
+                        self.registers.name(&result_register)
+                    )
+                    .as_str(),
                 )?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
@@ -204,21 +250,24 @@ impl CodeGen {
             }
             TokenType::Slash => {
                 let result_register = self.registers.allocate();
-                writeln!(
-                    &mut self.assembly.code,
-                    "MOVQ {}, %rax",
-                    self.registers.name(&left_register)
+                self.emit_code(
+                    format!(
+                        "MOVQ {}, %rax",
+                        self.registers.name(&left_register)
+                    )
+                    .as_str(),
                 )?;
-                writeln!(&mut self.assembly.code, "CQO")?;
-                writeln!(
-                    &mut self.assembly.code,
-                    "IDIV {}",
-                    self.registers.name(&right_register)
+                self.emit_code(format!("CQO").as_str())?;
+                self.emit_code(
+                    format!("IDIV {}", self.registers.name(&right_register))
+                        .as_str(),
                 )?;
-                writeln!(
-                    &mut self.assembly.code,
-                    "MOVQ %rax, {}",
-                    self.registers.name(&result_register)
+                self.emit_code(
+                    format!(
+                        "MOVQ %rax, {}",
+                        self.registers.name(&result_register)
+                    )
+                    .as_str(),
                 )?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
@@ -228,13 +277,15 @@ impl CodeGen {
         }
     }
 
-    fn number(&mut self, value: f64) -> Result<RegisterIndex, fmt::Error> {
+    fn number(&mut self, value: f64) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
-        writeln!(
-            &mut self.assembly.code,
-            "MOVQ ${}, {}",
-            value as u64,
-            self.registers.name(&register)
+        self.emit_code(
+            format!(
+                "MOVQ ${}, {}",
+                value as u64,
+                self.registers.name(&register)
+            )
+            .as_str(),
         )?;
         Ok(register)
     }

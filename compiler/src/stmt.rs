@@ -9,4 +9,5 @@ pub enum Stmt {
         init: Option<Expr>,
     },
     Expression(Expr),
+    Print(Expr),
 }

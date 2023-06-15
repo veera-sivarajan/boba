@@ -30,6 +30,8 @@ pub enum BobaError {
     EmptyCharacter(Span),
     Unexpected { msg: Box<str>, span: Option<Span> },
     General(Box<str>),
+    Compiler { msg: Box<str>, span: Span },
+    Formatting,
 }
 
 impl fmt::Display for BobaError {
@@ -64,8 +66,17 @@ impl fmt::Display for BobaError {
             General(msg) => {
                 write!(f, "Error: {msg}")
             }
+            Compiler { msg, span } => write!(f, "Compiler Error: {msg} at {span}"),
+            Formatting => write!(f, "Compiler Internal Error: Cannot write to assembly file."),
         }
     }
 }
+
+impl From<std::fmt::Error> for BobaError {
+    fn from(_value: std::fmt::Error) -> Self {
+        BobaError::Formatting
+    }
+}
+        
 
 impl std::error::Error for BobaError {}

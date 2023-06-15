@@ -42,7 +42,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if self.next_eq(TokenType::Let) {
             self.variable_declaration()
         } else {
-            self.expression_stmt()
+            self.statement()
         }
     }
 
@@ -79,6 +79,21 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.cursor
             .next_if(|t| t.kind == expected)
             .ok_or(self.error(error_msg))
+    }
+
+    fn statement(&mut self) -> Result<Stmt, BobaError> {
+        if self.next_eq(TokenType::Print) {
+            self.print_stmt()
+        } else {
+            self.expression_stmt()
+        }
+    }
+
+    fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
+        self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
+        let value = self.primary_expression()?;
+        self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
+        Ok(Stmt::Print(value))
     }
 
     fn expression_stmt(&mut self) -> Result<Stmt, BobaError> {
