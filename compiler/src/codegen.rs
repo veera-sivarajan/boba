@@ -77,7 +77,7 @@ pub struct Assembly {
 }
 
 pub struct CodeGen {
-    globals: Vec<Token>,
+    globals: Vec<String>,
     registers: ScratchRegisters,
     assembly: Assembly,
 }
@@ -157,21 +157,18 @@ main:
         name: &Token,
         init: &Option<Expr>,
     ) -> Result<(), BobaError> {
-        if let TokenType::Identifier(variable_name) = &name.kind {
-            if let Some(Expr::Number(value)) = init {
-                self.add_global(name);
-                self.emit_data(
-                    format!("{variable_name}:  .quad {value}").as_str(),
-                )
-            } else {
-                Err(BobaError::Compiler {
-                    msg: "Global variables should be initated with constants"
-                        .into(),
-                    span: name.span,
-                })
-            }
+        let symbol_name = name.identifier_name();
+        if let Some(Expr::Number(value)) = init {
+            self.add_global(&symbol_name);
+            self.emit_data(
+                format!("{symbol_name}:  .quad {value}").as_str(),
+            )
         } else {
-            unreachable!()
+            Err(BobaError::Compiler {
+                msg: "Global variables should be initated with constants"
+                    .into(),
+                span: name.span,
+            })
         }
     }
 
@@ -187,7 +184,7 @@ main:
 
     fn symbol(&self, token: &Token) -> Result<String, BobaError> {
         let symbol_name = token.identifier_name();
-        if self.globals.contains(token) {
+        if self.globals.contains(&symbol_name) {
             Ok(format!("{symbol_name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
@@ -197,8 +194,8 @@ main:
         }
     }
 
-    fn add_global(&mut self, token: &Token) {
-        self.globals.push(token.clone());
+    fn add_global(&mut self, name: &str) {
+        self.globals.push(name.to_string());
     }
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
