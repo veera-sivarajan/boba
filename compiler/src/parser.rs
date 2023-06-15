@@ -93,6 +93,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         let value = self.term()?;
         self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
+        self.consume(TokenType::Semicolon, "Expected semicolon after print statement")?;
         Ok(Stmt::Print(value))
     }
 

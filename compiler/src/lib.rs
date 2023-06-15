@@ -15,8 +15,7 @@ fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
     let ast = parser.parse()?;
     // println!("{ast:?}");
     let mut codegen = codegen::CodeGen::new();
-    let assembly = codegen.compile(&ast);
-    Ok(assembly)
+    codegen.compile(&ast)
 }
 
 pub fn compile(source: &str) -> Result<Assembly, BobaError> {

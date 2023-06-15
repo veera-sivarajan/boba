@@ -132,6 +132,14 @@ impl Token {
     pub const fn is_identifier(&self) -> bool {
         matches!(self.kind, TokenType::Identifier(_))
     }
+
+    pub fn identifier_name(&self) -> String {
+        if let TokenType::Identifier(name) = &self.kind {
+            name.clone()
+        } else {
+            panic!("Token is not an identifier")
+        }
+    }
 }
 
 pub struct Lexer<'src> {

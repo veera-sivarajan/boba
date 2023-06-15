@@ -95,12 +95,12 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(&mut self, ast: &[Stmt]) -> Assembly {
-        self.generate_header().expect("Unable to write header.");
+    pub fn compile(&mut self, ast: &[Stmt]) -> Result<Assembly, BobaError> {
+        self.generate_header()?;
         for ele in ast {
-            self.codegen(ele).expect("Unable to write code.");
+            self.codegen(ele)?;
         }
-        self.assembly.clone()
+        Ok(self.assembly.clone())
     }
 
     fn generate_header(&mut self) -> fmt::Result {
@@ -159,6 +159,7 @@ main:
     ) -> Result<(), BobaError> {
         if let TokenType::Identifier(variable_name) = &name.kind {
             if let Some(Expr::Number(value)) = init {
+                self.add_global(name);
                 self.emit_data(
                     format!("{variable_name}:  .quad {value}").as_str(),
                 )
@@ -184,15 +185,15 @@ main:
         }
     }
 
-    fn symbol(&self, token: &Token) -> String {
+    fn symbol(&self, token: &Token) -> Result<String, BobaError> {
+        let symbol_name = token.identifier_name();
         if self.globals.contains(token) {
-            if let TokenType::Identifier(name) = &token.kind {
-                format!("{name}(%rip)")
-            } else {
-                unreachable!()
-            }
+            Ok(format!("{symbol_name}(%rip)"))
         } else {
-            unreachable!()
+            Err(BobaError::Compiler {
+                msg: format!("Undeclared variable {symbol_name}").into(),
+                span: token.span,
+            })
         }
     }
 
@@ -201,9 +202,8 @@ main:
     }
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
-        self.add_global(token);
         let register = self.registers.allocate();
-        self.emit_code(format!("MOVQ {}, {}", self.symbol(token), self.registers.name(&register)).as_str())?;
+        self.emit_code(format!("MOVQ {}, {}", self.symbol(token)?, self.registers.name(&register)).as_str())?;
         Ok(register)
     }
 
