@@ -57,13 +57,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn variable_declaration(&mut self) -> Result<Stmt, BobaError> {
         let is_mutable = self.next_eq(TokenType::Mutable);
-        let name = self.consume_identifier("Expect variable name.")?;
+        let name = self.consume_identifier("Expect variable name")?;
         let init = if self.next_eq(TokenType::Equal) {
             Some(self.term()?)
         } else {
             None
         };
-        self.consume(TokenType::Semicolon, "Expect semicolon.")?;
+        self.consume(TokenType::Semicolon, "Expect semicolon")?;
         Ok(Stmt::Let {
             name,
             is_mutable,

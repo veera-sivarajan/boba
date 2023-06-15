@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::lexer::{Token, TokenType};
 use std::fmt::Write;
 use std::rc::Rc;
@@ -86,9 +87,9 @@ impl CodeGen {
         }
     }
 
-    pub fn generate_assembly(&mut self, ast: &[Expr]) -> Assembly {
+    pub fn compile(&mut self, ast: &[Stmt]) -> Assembly {
         for ele in ast {
-            self.assembly_helper(ele);
+            self.generate_assembly(ele);
         }
         self.assembly.clone()
     }
@@ -119,19 +120,30 @@ impl CodeGen {
         writeln!(&mut self.assembly.runtime, "RET")
     }
 
-    fn assembly_helper(&mut self, expr: &Expr) {
+    fn generate_assembly(&mut self, stmt: &Stmt) {
         self.generate_header().expect("Unable to write header.");
-        let result = self.generate_code(expr).expect("Unable to write code.");
+        let result = self.generate_code(stmt).expect("Unable to write code.");
         self.generate_runtime(&result)
             .expect("Unable to write runtime.");
     }
 
-    fn generate_code(&mut self, expr: &Expr) -> Result<RegisterIndex, fmt::Error> {
+    fn generate_code(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
         writeln!(&mut self.assembly.code, "# generated assembly")?;
-        self.codegen(expr)
+        self.codegen(stmt)
+    }
+
+    fn codegen(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
+        match stmt {
+            Stmt::Let {..} => self.let_stmt(stmt),
+            Stmt::Expression(expr) => self.expression(expr),
+        }
+    }
+
+    fn let_stmt(&mut self, stmt: &Stmt) -> Result<RegisterIndex, fmt::Error> {
+        todo!()
     }
     
-    fn codegen(&mut self, expr: &Expr) -> Result<RegisterIndex, fmt::Error> {
+    fn expression(&mut self, expr: &Expr) -> Result<RegisterIndex, fmt::Error> {
         match expr {
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
@@ -146,8 +158,8 @@ impl CodeGen {
         oper: &Token,
         right: &Expr,
     ) -> Result<RegisterIndex, fmt::Error> {
-        let left_register = self.codegen(left)?;
-        let right_register = self.codegen(right)?;
+        let left_register = self.expression(left)?;
+        let right_register = self.expression(right)?;
         match oper.kind {
             TokenType::Plus => {
                 writeln!(
