@@ -86,6 +86,7 @@ impl CodeGen {
         Self {
             registers: ScratchRegisters::new(),
             assembly: Assembly {
+                code: "# generated assembly\n".to_string(),
                 data: ".data\n".to_string(),
                 ..Assembly::default()
             },
@@ -113,31 +114,12 @@ main:
         )
     }
 
-    fn generate_runtime(&mut self, result: &RegisterIndex) -> fmt::Result {
-        writeln!(&mut self.assembly.runtime, "# code for printf()")?;
-        writeln!(&mut self.assembly.runtime, "PUSHQ %rbp")?;
-        writeln!(&mut self.assembly.runtime, "MOVQ %rsp, %rbp")?;
-        writeln!(
-            &mut self.assembly.runtime,
-            "MOVQ  {}, %rsi",
-            self.registers.name(result)
-        )?;
-        writeln!(&mut self.assembly.runtime, "LEAQ .LC0(%rip), %rax")?;
-        writeln!(&mut self.assembly.runtime, "MOVQ %rax, %rdi")?;
-        writeln!(&mut self.assembly.runtime, "MOVL $0, %eax")?;
-        writeln!(&mut self.assembly.runtime, "CALL printf@PLT")?;
-        writeln!(&mut self.assembly.runtime, "MOVL $0, %eax")?;
-        writeln!(&mut self.assembly.runtime, "POPQ %rbp")?;
-        writeln!(&mut self.assembly.runtime, "RET")
-    }
-
     fn generate_assembly(&mut self, stmt: &Stmt) {
         self.generate_header().expect("Unable to write header.");
         self.generate_code(stmt).expect("Unable to write code.");
     }
 
     fn generate_code(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
-        writeln!(&mut self.assembly.code, "# generated assembly")?;
         self.codegen(stmt)
     }
 
@@ -149,7 +131,23 @@ main:
                 init,
             } => self.let_stmt(name, init),
             Stmt::Expression(expr) => todo!(),
+            Stmt::Print(expr) => self.print_stmt(expr),
         }
+    }
+
+    fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
+        let register = self.expression(expr)?;
+        self.emit_code("# code for printf()")?;
+        self.emit_code("PUSHQ %rbp")?;
+        self.emit_code("MOVQ %rsp, %rbp")?;
+        self.emit_code(format!("MOVQ  {}, %rsi", self.registers.name(&register)).as_str())?;
+        self.emit_code("LEAQ .LC0(%rip), %rax")?;
+        self.emit_code("MOVQ %rax, %rdi")?;
+        self.emit_code("MOVL $0, %eax")?;
+        self.emit_code("CALL printf@PLT")?;
+        self.emit_code("MOVL $0, %eax")?;
+        self.emit_code("POPQ %rbp")?;
+        self.emit_code("RET")
     }
 
     fn emit_data(&mut self, value: &str) -> Result<(), BobaError> {
