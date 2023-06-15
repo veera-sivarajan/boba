@@ -1,3 +1,3 @@
 let c = 1;
-let d = 200;
-println(c + d);
+let d = 500;
+println(d + 1 - 250);

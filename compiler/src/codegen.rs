@@ -88,6 +88,14 @@ impl CodeGen {
             globals: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
+                header: r#"# header
+        .globl main 
+
+        .LC0:
+        .string "%d\n"
+main: 
+"#
+                .to_string(),
                 data: ".data\n".to_string(),
                 ..Assembly::default()
             },
@@ -95,25 +103,10 @@ impl CodeGen {
     }
 
     pub fn compile(&mut self, ast: &[Stmt]) -> Result<Assembly, BobaError> {
-        self.generate_header()?;
         for ele in ast {
             self.codegen(ele)?;
         }
         Ok(self.assembly.clone())
-    }
-
-    fn generate_header(&mut self) -> fmt::Result {
-        writeln!(
-            &mut self.assembly.header,
-            r#"
-# header
-        .globl main 
-
-        .LC0:
-        .string "%d\n"
-main: 
-"#
-        )
     }
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
@@ -130,26 +123,57 @@ main:
 
     fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
         let register = self.expression(expr)?;
-        self.emit_code("pushq %rbp")?;
-        self.emit_code("movq %rsp, %rbp")?;
-        self.emit_code(
-            format!("movq  {}, %rsi", self.registers.name(&register)).as_str(),
-        )?;
-        self.emit_code("leaq .LC0(%rip), %rax")?;
-        self.emit_code("movq %rax, %rdi")?;
-        self.emit_code("movl $0, %eax")?;
-        self.emit_code("call printf@PLT")?;
-        self.emit_code("movl $0, %eax")?;
-        self.emit_code("popq %rbp")?;
-        self.emit_code("ret")
+        self.emit_code("pushq", "%rbp", "")?;
+        self.emit_code("movq", "%rsp", "%rbp")?;
+        self.emit_code("movq", &self.registers.name(&register), "%rsi")?;
+        self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
+        self.emit_code("movq", "%rax", "%rdi")?;
+        self.emit_code("movl", "$0", "%eax")?;
+        self.emit_code("call", "printf@PLT", "")?;
+        self.emit_code("movl", "$0", "%eax")?;
+        self.emit_code("popq", "%rbp", "")?;
+        self.emit_code("ret", "", "")
     }
 
-    fn emit_data(&mut self, value: &str) -> Result<(), BobaError> {
-        writeln!(&mut self.assembly.data, "{value}").map_err(|e| e.into())
+    fn emit_data(
+        &mut self,
+        symbol_name: &str,
+        value: &f64,
+    ) -> Result<(), BobaError> {
+        self.data_writer(symbol_name, value).map_err(|e| e.into())
     }
 
-    fn emit_code(&mut self, value: &str) -> Result<(), BobaError> {
-        writeln!(&mut self.assembly.code, "{value}").map_err(|e| e.into())
+    fn data_writer(&mut self, symbol_name: &str, value: &f64) -> fmt::Result {
+        writeln!(&mut self.assembly.data, "{symbol_name}:")?;
+        writeln!(&mut self.assembly.data, "{:8}.quad {value}", " ")
+    }
+
+    fn code_writer(
+        &mut self,
+        instruction: &str,
+        first_operand: &str,
+        second_operand: &str,
+    ) -> Result<(), std::fmt::Error> {
+        write!(&mut self.assembly.code, "{:8}{instruction:6}", " ")?;
+        if !first_operand.is_empty() && !second_operand.is_empty() {
+            write!(
+                &mut self.assembly.code,
+                "{first_operand}, {second_operand}"
+            )?;
+        } else if !first_operand.is_empty() {
+            write!(&mut self.assembly.code, "{first_operand}")?;
+        }
+        writeln!(&mut self.assembly.code)
+    }
+
+    fn emit_code(
+        &mut self,
+        instruction: &str,
+        first_operand: &str,
+        second_operand: &str,
+    ) -> Result<(), BobaError> {
+        self.code_writer(instruction, first_operand, second_operand)
+            .map_err(|e| e.into())
     }
 
     fn let_stmt(
@@ -160,7 +184,7 @@ main:
         let symbol_name = name.identifier_name();
         if let Some(Expr::Number(value)) = init {
             self.add_global(&symbol_name);
-            self.emit_data(format!("{symbol_name}:  .quad {value}").as_str())
+            self.emit_data(&symbol_name, value)
         } else {
             Err(BobaError::Compiler {
                 msg: "Global variables should be initated with constants"
@@ -199,12 +223,9 @@ main:
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
         self.emit_code(
-            format!(
-                "movq {}, {}",
-                self.symbol(token)?,
-                self.registers.name(&register)
-            )
-            .as_str(),
+            "movq",
+            &self.symbol(token)?,
+            &self.registers.name(&register),
         )?;
         Ok(register)
     }
@@ -220,24 +241,18 @@ main:
         match oper.kind {
             TokenType::Plus => {
                 self.emit_code(
-                    format!(
-                        "addq {}, {}",
-                        self.registers.name(&left_register),
-                        self.registers.name(&right_register)
-                    )
-                    .as_str(),
+                    "addq",
+                    &self.registers.name(&left_register),
+                    &self.registers.name(&right_register),
                 )?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
             TokenType::Minus => {
                 self.emit_code(
-                    format!(
-                        "subq {}, {}",
-                        self.registers.name(&right_register),
-                        self.registers.name(&left_register)
-                    )
-                    .as_str(),
+                    "subq",
+                    &self.registers.name(&right_register),
+                    &self.registers.name(&left_register),
                 )?;
                 self.registers.deallocate(right_register);
                 Ok(left_register)
@@ -245,22 +260,19 @@ main:
             TokenType::Star => {
                 let result_register = self.registers.allocate();
                 self.emit_code(
-                    format!(
-                        "movq {}, %rax",
-                        self.registers.name(&right_register)
-                    )
-                    .as_str(),
+                    "movq",
+                    &self.registers.name(&right_register),
+                    "%rax",
                 )?;
                 self.emit_code(
-                    format!("imul {}", self.registers.name(&left_register))
-                        .as_str(),
+                    "imul",
+                    &self.registers.name(&left_register),
+                    "",
                 )?;
                 self.emit_code(
-                    format!(
-                        "movq %rax, {}",
-                        self.registers.name(&result_register)
-                    )
-                    .as_str(),
+                    "movq",
+                    "%rax",
+                    &self.registers.name(&result_register),
                 )?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
@@ -269,23 +281,21 @@ main:
             TokenType::Slash => {
                 let result_register = self.registers.allocate();
                 self.emit_code(
-                    format!(
-                        "movq {}, %rax",
-                        self.registers.name(&left_register)
-                    )
-                    .as_str(),
+                    "movq",
+                    &self.registers.name(&left_register),
+                    "%rax",
                 )?;
-                self.emit_code("cqo")?;
+                self.emit_code("cqo", "", "")?;
                 self.emit_code(
-                    format!("idiv {}", self.registers.name(&right_register))
-                        .as_str(),
+                    "idiv",
+                    &self.registers.name(&right_register),
+                    "",
                 )?;
+
                 self.emit_code(
-                    format!(
-                        "movq %rax, {}",
-                        self.registers.name(&result_register)
-                    )
-                    .as_str(),
+                    "movq",
+                    "%rax",
+                    &self.registers.name(&result_register),
                 )?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
@@ -298,12 +308,9 @@ main:
     fn number(&mut self, value: f64) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
         self.emit_code(
-            format!(
-                "movq ${}, {}",
-                value as u64,
-                self.registers.name(&register)
-            )
-            .as_str(),
+            "movq",
+            format!("${}", value as u64).as_str(),
+            &self.registers.name(&register),
         )?;
         Ok(register)
     }
