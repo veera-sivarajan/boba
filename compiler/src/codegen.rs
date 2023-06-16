@@ -76,7 +76,7 @@ pub struct Assembly {
 }
 
 pub struct CodeGen {
-    globals: Vec<String>,
+    globals: Vec<Token>,
     registers: ScratchRegisters,
     assembly: Assembly,
 }
@@ -179,7 +179,7 @@ impl CodeGen {
     ) -> Result<(), BobaError> {
         let symbol_name = name.identifier_name();
         if let Some(Expr::Number(value)) = init {
-            self.add_global(&symbol_name);
+            self.add_global(name);
             self.emit_data(&symbol_name, value)
         } else {
             Err(BobaError::Compiler {
@@ -202,7 +202,7 @@ impl CodeGen {
 
     fn symbol(&self, token: &Token) -> Result<String, BobaError> {
         let symbol_name = token.identifier_name();
-        if self.globals.contains(&symbol_name) {
+        if self.globals.contains(token) {
             Ok(format!("{symbol_name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
@@ -212,8 +212,8 @@ impl CodeGen {
         }
     }
 
-    fn add_global(&mut self, name: &str) {
-        self.globals.push(name.to_string());
+    fn add_global(&mut self, token: &Token) {
+        self.globals.push(token.clone());
     }
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {

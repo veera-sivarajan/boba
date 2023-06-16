@@ -106,10 +106,22 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenType,
     pub span: Span,
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        use TokenType::{Character, Identifier, StringLiteral};
+        match (&self.kind, &other.kind) {
+            (Identifier(left), Identifier(right)) => left == right,
+            (StringLiteral(left), StringLiteral(right)) => left == right,
+            (Character(left), Character(right)) => left == right,
+            (left, right) => left == right,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -228,7 +240,6 @@ impl<'src> Lexer<'src> {
         }
         Ok(self.tokens.clone())
     }
-
 
     fn scan_single_token(&mut self) {
         let (start_pos, c) = self.cursor.next().unwrap();
@@ -369,9 +380,14 @@ impl<'src> Lexer<'src> {
         let (start_pos, _) = self.cursor.next().unwrap(); // consume the starting single quote
         if let Some((_end_pos, character)) = self.cursor.next() {
             if self.cursor.next_if(|x| x.1 == '\'').is_some() {
-                Ok(Token::new(TokenType::Character(character), self.make_span(start_pos, character.len_utf8())))
+                Ok(Token::new(
+                    TokenType::Character(character),
+                    self.make_span(start_pos, character.len_utf8()),
+                ))
             } else {
-                Err(BobaError::UnterminatedCharacter(self.make_span(start_pos, character.len_utf8())))
+                Err(BobaError::UnterminatedCharacter(
+                    self.make_span(start_pos, character.len_utf8()),
+                ))
             }
         } else {
             Err(BobaError::EmptyCharacter(self.make_span(start_pos, 1)))
@@ -553,14 +569,12 @@ fn factorial(num: Number) -> Number {
                 TokenType::Number(2.0),
                 TokenType::Semicolon,
                 TokenType::RightBrace,
-            ]))
+            ]
+        ))
     }
 
     #[test]
     fn character_literals() {
-        assert!(test_runner(
-            "'a'",
-            &[TokenType::Character('a')]
-        ))
+        assert!(test_runner("'a'", &[TokenType::Character('a')]))
     }
 }

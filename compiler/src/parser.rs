@@ -89,6 +89,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
+    // FIXME: panics when there is no expression
+    // inside print function
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         let value = self.term()?;
