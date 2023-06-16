@@ -114,13 +114,7 @@ pub struct Token {
 
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
-        use TokenType::{Character, Identifier, StringLiteral};
-        match (&self.kind, &other.kind) {
-            (Identifier(left), Identifier(right)) => left == right,
-            (StringLiteral(left), StringLiteral(right)) => left == right,
-            (Character(left), Character(right)) => left == right,
-            (left, right) => left == right,
-        }
+        self.kind == other.kind
     }
 }
 
