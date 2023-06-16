@@ -1,12 +1,12 @@
-mod lexer;
-mod expr;
-mod parser;
-mod error;
 mod codegen;
+mod error;
+mod expr;
+mod lexer;
+mod parser;
 mod stmt;
 
-use crate::error::BobaError;
 use crate::codegen::Assembly;
+use crate::error::BobaError;
 
 fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
@@ -21,7 +21,7 @@ fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
 pub fn compile(source: &str) -> Result<Assembly, BobaError> {
     if !source.is_empty() {
         eprintln!("Compiling: {source}");
-        compile_helper(source) 
+        compile_helper(source)
     } else {
         Err(BobaError::General("Empty source file.".into()))
     }

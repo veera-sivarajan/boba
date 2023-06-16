@@ -66,8 +66,13 @@ impl fmt::Display for BobaError {
             General(msg) => {
                 write!(f, "Error: {msg}")
             }
-            Compiler { msg, span } => write!(f, "Compiler Error: {msg} at {span}"),
-            Formatting => write!(f, "Compiler Internal Error: Cannot write to assembly file."),
+            Compiler { msg, span } => {
+                write!(f, "Compiler Error: {msg} at {span}")
+            }
+            Formatting => write!(
+                f,
+                "Compiler Internal Error: Cannot write to assembly file."
+            ),
         }
     }
 }
@@ -77,6 +82,5 @@ impl From<std::fmt::Error> for BobaError {
         BobaError::Formatting
     }
 }
-        
 
 impl std::error::Error for BobaError {}

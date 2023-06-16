@@ -23,12 +23,10 @@ fn assemble(header: String, code: String, data: String) -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     let source = include_str!("/home/veera/projects/boba/test/math.rs");
     match compiler::compile(source.trim_end()) {
-        Ok(assembly) => {
-            assemble(assembly.header, assembly.code, assembly.data)
-        }
+        Ok(assembly) => assemble(assembly.header, assembly.code, assembly.data),
         Err(err) => {
             eprintln!("{err}");
             Ok(())
-        } 
+        }
     }
 }

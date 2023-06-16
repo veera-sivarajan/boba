@@ -1,5 +1,5 @@
-use crate::lexer::Token;
 use crate::expr::Expr;
+use crate::lexer::Token;
 
 #[derive(Clone, Debug)]
 pub enum Stmt {

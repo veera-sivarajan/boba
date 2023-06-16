@@ -33,7 +33,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(self.statements.clone())
     }
 
-    
     fn next_eq(&mut self, expected: TokenType) -> bool {
         next_eq!(self, expected).is_some()
     }
@@ -95,7 +94,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         let value = self.term()?;
         self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
-        self.consume(TokenType::Semicolon, "Expected semicolon after print statement")?;
+        self.consume(
+            TokenType::Semicolon,
+            "Expected semicolon after print statement",
+        )?;
         Ok(Stmt::Print(value))
     }
 
