@@ -367,7 +367,7 @@ impl<'src> Lexer<'src> {
 
     fn scan_character(&mut self) -> Result<Token, BobaError> {
         let (start_pos, _) = self.cursor.next().unwrap(); // consume the starting single quote
-        if let Some((end_pos, character)) = self.cursor.next() {
+        if let Some((_end_pos, character)) = self.cursor.next() {
             if self.cursor.next_if(|x| x.1 == '\'').is_some() {
                 Ok(Token::new(TokenType::Character(character), self.make_span(start_pos, character.len_utf8())))
             } else {

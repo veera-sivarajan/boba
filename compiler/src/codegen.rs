@@ -112,7 +112,7 @@ impl CodeGen {
                 is_mutable: _,
                 init,
             } => self.let_stmt(name, init),
-            Stmt::Expression(expr) => todo!(),
+            Stmt::Expression(_expr) => todo!(),
             Stmt::Print(expr) => self.print_stmt(expr),
         }
     }
