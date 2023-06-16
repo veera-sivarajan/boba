@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn assemble(header: String, code: String, data: String) -> std::io::Result<()> {
     let mut assembly_file = OpenOptions::new()
@@ -15,6 +15,7 @@ fn assemble(header: String, code: String, data: String) -> std::io::Result<()> {
         .arg("/home/veera/projects/boba/output/math.s")
         .arg("-o")
         .arg("/home/veera/projects/boba/output/math")
+        .stderr(Stdio::inherit())
         .output()
         .expect("Failed to invoke gcc.");
     Ok(())
