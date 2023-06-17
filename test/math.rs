@@ -1,3 +1,4 @@
-let a = 1;
-let b = 2;
-println(a + b);
+let a = true;
+let b = false;
+println(a);
+println(b);

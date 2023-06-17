@@ -140,6 +140,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             match expr.kind {
                 TokenType::Number(num) => Ok(Expr::Number(num)),
                 TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
+                TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
+                TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
                 _ => {
                     println!("{}", expr.kind);
                     todo!()

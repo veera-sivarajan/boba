@@ -77,11 +77,11 @@ impl std::fmt::Display for TokenType {
             GreaterEqual => write!(f, ">="),
             Less => write!(f, "<"),
             LessEqual => write!(f, "<="),
-            Number(num) => write!(f, "number: {num}"),
-            Boolean(value) => write!(f, "boolean: {value}"),
+            Number(num) => write!(f, "{num}"),
+            Boolean(value) => write!(f, "{value}"),
             Unknown => write!(f, "unknown token"),
-            Identifier(name) => write!(f, "identifier: {name}"),
-            StringLiteral(lexeme) => write!(f, "string: {lexeme}"),
+            Identifier(name) => write!(f, "{name}"),
+            StringLiteral(lexeme) => write!(f, "{lexeme}"),
             Print => write!(f, "keyword print"),
             Let => write!(f, "keyword Let"),
             Nil => write!(f, "keyword nil"),
@@ -110,6 +110,12 @@ impl std::fmt::Display for TokenType {
 pub struct Token {
     pub kind: TokenType,
     pub span: Span,
+}
+
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.kind.fmt(f)
+    }
 }
 
 impl PartialEq for Token {

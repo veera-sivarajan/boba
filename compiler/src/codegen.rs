@@ -102,6 +102,7 @@ impl CodeGen {
         for ele in ast {
             self.codegen(ele)?;
         }
+        self.emit_code("ret", "", "")?;
         Ok(self.assembly.clone())
     }
 
@@ -127,21 +128,21 @@ impl CodeGen {
         self.emit_code("movl", "$0", "%eax")?;
         self.emit_code("call", "printf@PLT", "")?;
         self.emit_code("movl", "$0", "%eax")?;
-        self.emit_code("popq", "%rbp", "")?;
-        self.emit_code("ret", "", "")
+        self.emit_code("popq", "%rbp", "")
     }
 
-    fn emit_data(
+    fn emit_data<S: Into<String>>(
         &mut self,
         symbol_name: &str,
-        value: &f64,
+        size: &str,
+        value: S,
     ) -> Result<(), BobaError> {
-        self.data_writer(symbol_name, value).map_err(|e| e.into())
+        self.data_writer(symbol_name, size, value).map_err(|e| e.into())
     }
 
-    fn data_writer(&mut self, symbol_name: &str, value: &f64) -> fmt::Result {
+    fn data_writer<S: Into<String>>(&mut self, symbol_name: &str, size: &str, value: S) -> fmt::Result {
         writeln!(&mut self.assembly.data, "{symbol_name}:")?;
-        writeln!(&mut self.assembly.data, "{:8}.quad {value}", " ")
+        writeln!(&mut self.assembly.data, "{:8}.{size} {}", " ", value.into())
     }
 
     fn code_writer(
@@ -177,10 +178,18 @@ impl CodeGen {
         name: &Token,
         init: &Option<Expr>,
     ) -> Result<(), BobaError> {
-        let symbol_name = name.identifier_name();
-        if let Some(Expr::Number(value)) = init {
-            self.add_global(name);
-            self.emit_data(&symbol_name, value)
+        let symbol_name = name.to_string();
+        if let Some(expr) = init {
+            if let Some(size) = expr.get_size() {
+                self.add_global(name);
+                self.emit_data(&symbol_name, size.as_ref(), expr)
+            } else {
+                Err(BobaError::Compiler {
+                    msg: "Global variables can be initialized with constants only"
+                        .into(),
+                    span: name.span,
+                })
+            }
         } else {
             Err(BobaError::Compiler {
                 msg: "Global variables should be initated with constants"
@@ -197,17 +206,30 @@ impl CodeGen {
             }
             Expr::Number(num) => self.number(*num),
             Expr::Variable(token) => self.variable(token),
+            Expr::Boolean(value) => self.boolean(value),
+            _ => todo!(),
         }
     }
 
-    fn symbol(&self, token: &Token) -> Result<String, BobaError> {
-        let symbol_name = token.identifier_name();
-        if self.globals.contains(token) {
+    fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
+        let number = u8::from(*value);
+        let register = self.registers.allocate();
+        self.emit_code(
+            "movq",
+            format!("${number}").as_str(),
+            &self.registers.name(&register),
+        )?;
+        Ok(register)
+    }
+    
+    fn symbol(&self, name: &Token) -> Result<String, BobaError> {
+        let symbol_name = name.to_string();
+        if self.globals.contains(name) {
             Ok(format!("{symbol_name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
                 msg: format!("Undeclared variable {symbol_name}").into(),
-                span: token.span,
+                span: name.span,
             })
         }
     }
