@@ -15,9 +15,16 @@ fn assemble(header: String, code: String, data: String) -> std::io::Result<()> {
         .arg("/home/veera/projects/boba/output/math.s")
         .arg("-o")
         .arg("/home/veera/projects/boba/output/math")
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to invoke gcc.");
+    println!("========Program Output===========");
+    Command::new("/home/veera/projects/boba/output/math")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .expect("Failed to run the executable.");
     Ok(())
 }
 
