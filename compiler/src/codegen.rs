@@ -233,10 +233,12 @@ impl CodeGen {
             .map_err(|e| e.into())
     }
 
-    fn emit_label<S: Into<String>>(&mut self, label: S) -> Result<(), BobaError> {
-
-        writeln!(&mut self.assembly.code, "{}:", label.into()).map_err(|e| e.into())
-
+    fn emit_label<S: Into<String>>(
+        &mut self,
+        label: S,
+    ) -> Result<(), BobaError> {
+        writeln!(&mut self.assembly.code, "{}:", label.into())
+            .map_err(|e| e.into())
     }
 
     fn let_stmt(
@@ -322,7 +324,7 @@ impl CodeGen {
     ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;
-        match oper.kind {
+        match &oper.kind {
             TokenType::Plus => {
                 self.emit_code(
                     "addq",
@@ -384,7 +386,35 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
-            _ => todo!(),
+            comparison_token => {
+                let result = self.registers.allocate();
+                let true_label = self.labels.create();
+                let done_label = self.labels.create();
+                self.emit_code(
+                    "cmp",
+                    &self.registers.name(&right_register),
+                    &self.registers.name(&left_register),
+                )?;
+                match comparison_token {
+                    TokenType::Less => self.emit_code("jl", &true_label, "")?,
+                    TokenType::LessEqual => {
+                        self.emit_code("jle", &true_label, "")?
+                    }
+                    TokenType::Greater => {
+                        self.emit_code("jg", &true_label, "")?
+                    }
+                    TokenType::GreaterEqual => {
+                        self.emit_code("jge", &true_label, "")?
+                    }
+                    _ => unreachable!(),
+                };
+                self.emit_code("mov", "$0", &self.registers.name(&result))?;
+                self.emit_code("jmp", &done_label, "")?;
+                self.emit_label(true_label)?;
+                self.emit_code("mov", "$1", &self.registers.name(&result))?;
+                self.emit_label(done_label)?;
+                Ok(result)
+            }
         }
     }
 
