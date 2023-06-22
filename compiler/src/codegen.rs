@@ -292,12 +292,11 @@ impl CodeGen {
     }
 
     fn symbol(&self, name: &Token) -> Result<String, BobaError> {
-        let symbol_name = name.to_string();
         if self.globals.contains(name) {
-            Ok(format!("{symbol_name}(%rip)"))
+            Ok(format!("{name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
-                msg: format!("Undeclared variable {symbol_name}").into(),
+                msg: format!("Undeclared variable {name}").into(),
                 span: name.span,
             })
         }
