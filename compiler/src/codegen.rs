@@ -19,6 +19,23 @@ impl Register {
     }
 }
 
+#[derive(Default)]
+struct Labels {
+    count: u16,
+}
+
+impl Labels {
+    fn new() -> Self {
+        Labels::default()
+    }
+
+    fn create(&mut self) -> Box<str> {
+        let label = format!(".L{}", self.count);
+        self.count += 1;
+        label.into()
+    }
+}
+
 struct ScratchRegisters {
     table: [Register; 7],
 }
@@ -79,6 +96,7 @@ pub struct CodeGen {
     globals: Vec<Token>,
     registers: ScratchRegisters,
     assembly: Assembly,
+    labels: Labels,
 }
 
 impl CodeGen {
@@ -95,6 +113,7 @@ impl CodeGen {
                 code: "main:\n".to_string(),
                 data: ".data\n".to_string(),
             },
+            labels: Labels::new(),
         }
     }
 
