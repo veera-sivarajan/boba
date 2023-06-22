@@ -3,21 +3,6 @@ use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
 use crate::stmt::Stmt;
 use std::fmt::Write;
-use std::rc::Rc;
-
-struct Register {
-    name: Rc<str>,
-    inuse: bool,
-}
-
-impl Register {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.into(),
-            inuse: false,
-        }
-    }
-}
 
 #[derive(Default)]
 struct Labels {
@@ -36,38 +21,41 @@ impl Labels {
     }
 }
 
-struct ScratchRegisters {
-    table: [Register; 7],
-}
-
 struct RegisterIndex(u8);
 
 use std::fmt;
 impl fmt::Display for RegisterIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(
+            f,
+            "{}",
+            match self.0 {
+                0 => "%rbx",
+                1 => "%r10",
+                2 => "%r11",
+                3 => "%r12",
+                4 => "%r13",
+                5 => "%r14",
+                6 => "%r15",
+                _ => unreachable!(),
+            }
+        )
     }
+}
+
+struct ScratchRegisters {
+    table: [bool; 7],
 }
 
 impl ScratchRegisters {
     pub fn new() -> Self {
-        Self {
-            table: [
-                Register::new("%rbx"),
-                Register::new("%r10"),
-                Register::new("%r11"),
-                Register::new("%r12"),
-                Register::new("%r13"),
-                Register::new("%r14"),
-                Register::new("%r15"),
-            ],
-        }
+        Self { table: [false; 7] }
     }
 
     pub fn allocate(&mut self) -> RegisterIndex {
-        for (index, register) in self.table.iter_mut().enumerate() {
-            if !register.inuse {
-                register.inuse = true;
+        for (index, in_use) in self.table.iter_mut().enumerate() {
+            if !*in_use {
+                *in_use = true;
                 return RegisterIndex(index as u8);
             }
         }
@@ -75,13 +63,8 @@ impl ScratchRegisters {
     }
 
     pub fn deallocate(&mut self, index: RegisterIndex) {
-        let mut register = self.table.get_mut(index.0 as usize).unwrap();
-        register.inuse = false;
-    }
-
-    pub fn name(&self, index: &RegisterIndex) -> Rc<str> {
-        let register = self.table.get(index.0 as usize).unwrap();
-        register.name.clone()
+        let register = self.table.get_mut(index.0 as usize).unwrap();
+        *register = false;
     }
 }
 
@@ -172,11 +155,7 @@ impl CodeGen {
         };
         let left = self.expression(left)?;
         let right = self.expression(right)?;
-        self.emit_code(
-            "cmp",
-            &self.registers.name(&right),
-            &self.registers.name(&left),
-        )?;
+        self.emit_code("cmp", right, left)?;
         match oper.kind {
             TokenType::Less => self.emit_code("jnl", false_label, "")?,
             TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
@@ -200,7 +179,7 @@ impl CodeGen {
         let register = self.expression(expr)?;
         self.emit_code("pushq", "%rbp", "")?;
         self.emit_code("movq", "%rsp", "%rbp")?;
-        self.emit_code("movq", &self.registers.name(&register), "%rsi")?;
+        self.emit_code("movq", &register, "%rsi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
         self.emit_code("movl", "$0", "%eax")?;
@@ -232,10 +211,12 @@ impl CodeGen {
     fn code_writer(
         &mut self,
         instruction: &str,
-        first_operand: &str,
-        second_operand: &str,
+        first_operand: impl fmt::Display,
+        second_operand: impl fmt::Display,
     ) -> Result<(), std::fmt::Error> {
         write!(&mut self.assembly.code, "{:8}{instruction:6}", " ")?;
+        let first_operand = first_operand.to_string();
+        let second_operand = second_operand.to_string();
         if !first_operand.is_empty() && !second_operand.is_empty() {
             write!(
                 &mut self.assembly.code,
@@ -250,8 +231,8 @@ impl CodeGen {
     fn emit_code(
         &mut self,
         instruction: &str,
-        first_operand: &str,
-        second_operand: &str,
+        first_operand: impl fmt::Display,
+        second_operand: impl fmt::Display,
     ) -> Result<(), BobaError> {
         self.code_writer(instruction, first_operand, second_operand)
             .map_err(|e| e.into())
@@ -306,11 +287,7 @@ impl CodeGen {
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
         let number = u8::from(*value);
         let register = self.registers.allocate();
-        self.emit_code(
-            "movq",
-            format!("${number}").as_str(),
-            &self.registers.name(&register),
-        )?;
+        self.emit_code("movq", format!("${number}").as_str(), &register)?;
         Ok(register)
     }
 
@@ -332,11 +309,7 @@ impl CodeGen {
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
-        self.emit_code(
-            "movq",
-            &self.symbol(token)?,
-            &self.registers.name(&register),
-        )?;
+        self.emit_code("movq", &self.symbol(token)?, &register)?;
         Ok(register)
     }
 
@@ -350,62 +323,30 @@ impl CodeGen {
         let right_register = self.expression(right)?;
         match &oper.kind {
             TokenType::Plus => {
-                self.emit_code(
-                    "addq",
-                    &self.registers.name(&left_register),
-                    &self.registers.name(&right_register),
-                )?;
+                self.emit_code("addq", &left_register, &right_register)?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
             TokenType::Minus => {
-                self.emit_code(
-                    "subq",
-                    &self.registers.name(&right_register),
-                    &self.registers.name(&left_register),
-                )?;
+                self.emit_code("subq", &right_register, &left_register)?;
                 self.registers.deallocate(right_register);
                 Ok(left_register)
             }
             TokenType::Star => {
                 let result_register = self.registers.allocate();
-                self.emit_code(
-                    "movq",
-                    &self.registers.name(&right_register),
-                    "%rax",
-                )?;
-                self.emit_code(
-                    "imul",
-                    &self.registers.name(&left_register),
-                    "",
-                )?;
-                self.emit_code(
-                    "movq",
-                    "%rax",
-                    &self.registers.name(&result_register),
-                )?;
+                self.emit_code("movq", &right_register, "%rax")?;
+                self.emit_code("imul", &left_register, "")?;
+                self.emit_code("movq", "%rax", &result_register)?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
             TokenType::Slash => {
                 let result_register = self.registers.allocate();
-                self.emit_code(
-                    "movq",
-                    &self.registers.name(&left_register),
-                    "%rax",
-                )?;
+                self.emit_code("movq", &left_register, "%rax")?;
                 self.emit_code("cqo", "", "")?;
-                self.emit_code(
-                    "idiv",
-                    &self.registers.name(&right_register),
-                    "",
-                )?;
-                self.emit_code(
-                    "movq",
-                    "%rax",
-                    &self.registers.name(&result_register),
-                )?;
+                self.emit_code("idiv", &right_register, "")?;
+                self.emit_code("movq", "%rax", &result_register)?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 Ok(result_register)
@@ -414,11 +355,7 @@ impl CodeGen {
                 let result = self.registers.allocate();
                 let true_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code(
-                    "cmp",
-                    &self.registers.name(&right_register),
-                    &self.registers.name(&left_register),
-                )?;
+                self.emit_code("cmp", &right_register, &left_register)?;
                 match comparison_token {
                     TokenType::Less => self.emit_code("jl", &true_label, "")?,
                     TokenType::LessEqual => {
@@ -432,10 +369,10 @@ impl CodeGen {
                     }
                     _ => unreachable!(),
                 };
-                self.emit_code("mov", "$0", &self.registers.name(&result))?;
+                self.emit_code("mov", "$0", &result)?;
                 self.emit_code("jmp", &done_label, "")?;
                 self.emit_label(true_label)?;
-                self.emit_code("mov", "$1", &self.registers.name(&result))?;
+                self.emit_code("mov", "$1", &result)?;
                 self.emit_label(done_label)?;
                 Ok(result)
             }
@@ -447,7 +384,7 @@ impl CodeGen {
         self.emit_code(
             "movq",
             format!("${}", value as u64).as_str(),
-            &self.registers.name(&register),
+            &register,
         )?;
         Ok(register)
     }
