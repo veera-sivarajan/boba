@@ -100,9 +100,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
-        self.consume(TokenType::LeftParen, "Expect '(' after `if`.")?;
         let condition = self.term()?;
-        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
         let then_branch = self.statement()?;
         let elze = if self.next_eq(TokenType::Else) {
             Some(Box::new(self.statement()?))
@@ -118,7 +116,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn block_stmt(&mut self) -> Result<Vec<Stmt>, BobaError> {
         let mut stmts = Vec::new();
-        while !self.peek_check(TokenType::RightParen) {
+        while !self.peek_check(TokenType::RightBrace) {
             stmts.push(self.declaration()?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;

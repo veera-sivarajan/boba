@@ -115,6 +115,7 @@ impl CodeGen {
             } => self.let_stmt(name, init),
             Stmt::Expression(_expr) => todo!(),
             Stmt::Print(expr) => self.print_stmt(expr),
+            _ => todo!(),
         }
     }
 
