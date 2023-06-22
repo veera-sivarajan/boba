@@ -10,4 +10,10 @@ pub enum Stmt {
     },
     Expression(Expr),
     Print(Expr),
+    If {
+        condition: Expr,
+        then: Box<Stmt>,
+        elze: Option<Box<Stmt>>,
+    },
+    Block(Vec<Stmt>),
 }
