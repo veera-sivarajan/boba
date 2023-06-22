@@ -134,8 +134,42 @@ impl CodeGen {
             } => self.let_stmt(name, init),
             Stmt::Expression(_expr) => todo!(),
             Stmt::Print(expr) => self.print_stmt(expr),
-            _ => todo!(),
+            Stmt::If {
+                condition,
+                then,
+                elze,
+            } => self.if_stmt(condition, then, elze),
+            Stmt::Block(stmts) => self.block_stmt(stmts),
         }
+    }
+
+    fn if_stmt(
+        &mut self,
+        condition: &Expr,
+        then: &Stmt,
+        elze: &Option<Box<Stmt>>,
+    ) -> Result<(), BobaError> {
+        let else_label = self.labels.create();
+        let done_label = self.labels.create();
+        let register = self.expression(condition)?;
+        self.emit_code("cmp", "$0", &self.registers.name(&register))?;
+        self.registers.deallocate(register);
+        self.emit_code("je", &else_label, "")?;
+        self.codegen(then)?;
+        self.emit_code("jmp", &done_label, "")?;
+        self.emit_label(else_label)?;
+        if let Some(else_body) = elze {
+            self.codegen(else_body)?;
+        }
+        self.emit_label(done_label)?;
+        Ok(())
+    }
+
+    fn block_stmt(&mut self, stmts: &[Stmt]) -> Result<(), BobaError> {
+        for stmt in stmts {
+            self.codegen(stmt)?;
+        }
+        Ok(())
     }
 
     fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
@@ -157,10 +191,16 @@ impl CodeGen {
         size: &str,
         value: S,
     ) -> Result<(), BobaError> {
-        self.data_writer(symbol_name, size, value).map_err(|e| e.into())
+        self.data_writer(symbol_name, size, value)
+            .map_err(|e| e.into())
     }
 
-    fn data_writer<S: Into<String>>(&mut self, symbol_name: &str, size: &str, value: S) -> fmt::Result {
+    fn data_writer<S: Into<String>>(
+        &mut self,
+        symbol_name: &str,
+        size: &str,
+        value: S,
+    ) -> fmt::Result {
         writeln!(&mut self.assembly.data, "{symbol_name}:")?;
         writeln!(&mut self.assembly.data, "{:8}.{size} {}", " ", value.into())
     }
@@ -191,6 +231,12 @@ impl CodeGen {
     ) -> Result<(), BobaError> {
         self.code_writer(instruction, first_operand, second_operand)
             .map_err(|e| e.into())
+    }
+
+    fn emit_label<S: Into<String>>(&mut self, label: S) -> Result<(), BobaError> {
+
+        writeln!(&mut self.assembly.code, "{}:", label.into()).map_err(|e| e.into())
+
     }
 
     fn let_stmt(
@@ -241,7 +287,7 @@ impl CodeGen {
         )?;
         Ok(register)
     }
-    
+
     fn symbol(&self, name: &Token) -> Result<String, BobaError> {
         let symbol_name = name.to_string();
         if self.globals.contains(name) {
