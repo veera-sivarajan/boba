@@ -65,7 +65,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let is_mutable = self.next_eq(TokenType::Mutable);
         let name = self.consume_identifier("Expect variable name")?;
         let init = if self.next_eq(TokenType::Equal) {
-            Some(self.term()?)
+            Some(self.expression()?)
         } else {
             None
         };
@@ -100,7 +100,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
-        let condition = self.term()?;
+        let condition = self.expression()?;
         let then_branch = self.statement()?;
         let elze = if self.next_eq(TokenType::Else) {
             Some(Box::new(self.statement()?))
@@ -127,7 +127,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     // inside print function
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
-        let value = self.term()?;
+        let value = self.expression()?;
         self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
         self.consume(
             TokenType::Semicolon,
@@ -137,9 +137,47 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn expression_stmt(&mut self) -> Result<Stmt, BobaError> {
-        let expr = self.term()?;
+        let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon.")?;
         Ok(Stmt::Expression(expr))
+    }
+
+    fn expression(&mut self) -> Result<Expr, BobaError> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.comparison()?;
+        while let Some(oper) =
+            next_eq!(self, TokenType::BangEqual, TokenType::EqualEqual)
+        {
+            let right = self.comparison()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                oper,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn comparison(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.term()?;
+        while let Some(oper) = next_eq!(
+            self,
+            TokenType::Greater,
+            TokenType::GreaterEqual,
+            TokenType::Less,
+            TokenType::LessEqual
+        ) {
+            let right = self.term()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                oper,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
     }
 
     fn term(&mut self) -> Result<Expr, BobaError> {
