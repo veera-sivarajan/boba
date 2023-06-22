@@ -37,6 +37,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         next_eq!(self, expected).is_some()
     }
 
+    
+    fn peek_check(&mut self, expected: TokenType) -> bool {
+        self.cursor
+            .peek()
+            .map_or(false, |token| token.kind == expected)
+    }
+
     fn declaration(&mut self) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Let) {
             self.variable_declaration()
@@ -83,9 +90,39 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn statement(&mut self) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Print) {
             self.print_stmt()
+        } else if self.next_eq(TokenType::If) {
+            self.if_stmt()
+        } else if self.next_eq(TokenType::LeftBrace) {
+            Ok(Stmt::Block(self.block_stmt()?))
         } else {
             self.expression_stmt()
         }
+    }
+
+    fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after `if`.")?;
+        let condition = self.term()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+        let then_branch = self.statement()?;
+        let elze = if self.next_eq(TokenType::Else) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+        Ok(Stmt::If {
+            condition,
+            then: Box::new(then_branch),
+            elze,
+        })
+    }
+
+    fn block_stmt(&mut self) -> Result<Vec<Stmt>, BobaError> {
+        let mut stmts = Vec::new();
+        while !self.peek_check(TokenType::RightParen) {
+            stmts.push(self.declaration()?);
+        }
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
+        Ok(stmts)
     }
 
     // FIXME: panics when there is no expression
