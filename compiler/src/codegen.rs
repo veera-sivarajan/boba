@@ -149,19 +149,43 @@ impl CodeGen {
         then: &Stmt,
         elze: &Option<Box<Stmt>>,
     ) -> Result<(), BobaError> {
-        let else_label = self.labels.create();
+        let false_label = self.labels.create();
         let done_label = self.labels.create();
-        let register = self.expression(condition)?;
-        self.emit_code("cmp", "$0", &self.registers.name(&register))?;
-        self.registers.deallocate(register);
-        self.emit_code("je", &else_label, "")?;
+        self.boolean_expression(condition, &false_label)?;
         self.codegen(then)?;
         self.emit_code("jmp", &done_label, "")?;
-        self.emit_label(else_label)?;
+        self.emit_label(false_label)?;
         if let Some(else_body) = elze {
             self.codegen(else_body)?;
         }
         self.emit_label(done_label)?;
+        Ok(())
+    }
+
+    fn boolean_expression(
+        &mut self,
+        condition: &Expr,
+        false_label: &str,
+    ) -> Result<(), BobaError> {
+        let Expr::Binary { left, oper, right } = condition else {
+            panic!("Expect a boolean expression.");
+        };
+        let left = self.expression(left)?;
+        let right = self.expression(right)?;
+        self.emit_code(
+            "cmp",
+            &self.registers.name(&right),
+            &self.registers.name(&left),
+        )?;
+        match oper.kind {
+            TokenType::Less => self.emit_code("jnl", false_label, "")?,
+            TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
+            TokenType::Greater => self.emit_code("jng", false_label, "")?,
+            TokenType::GreaterEqual => {
+                self.emit_code("jnge", false_label, "")?
+            }
+            _ => unreachable!(),
+        }
         Ok(())
     }
 
