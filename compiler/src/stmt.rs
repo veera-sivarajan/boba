@@ -12,8 +12,9 @@ pub enum Stmt {
     Print(Expr),
     If {
         condition: Expr,
-        then: Box<Stmt>,
-        elze: Option<Box<Stmt>>,
+        then: Vec<Stmt>,
+        elze: Option<Vec<Stmt>>,
     },
     Block(Vec<Stmt>),
 }
+

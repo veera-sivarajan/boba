@@ -129,17 +129,17 @@ impl CodeGen {
     fn if_stmt(
         &mut self,
         condition: &Expr,
-        then: &Stmt,
-        elze: &Option<Box<Stmt>>,
+        then: &[Stmt],
+        elze: &Option<Vec<Stmt>>,
     ) -> Result<(), BobaError> {
         let false_label = self.labels.create();
         let done_label = self.labels.create();
         self.boolean_expression(condition, &false_label)?;
-        self.codegen(then)?;
+        self.block_stmt(then)?;
         self.emit_code("jmp", &done_label, "")?;
         self.emit_label(false_label)?;
         if let Some(else_body) = elze {
-            self.codegen(else_body)?;
+            self.block_stmt(else_body)?;
         }
         self.emit_label(done_label)?;
         Ok(())

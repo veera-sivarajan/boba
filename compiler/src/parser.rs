@@ -101,15 +101,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
         let condition = self.expression()?;
-        let then_branch = self.statement()?;
+        self.consume(TokenType::LeftBrace, "Condition should be followed by a block.",)?;
+        let then= self.block_stmt()?;
         let elze = if self.next_eq(TokenType::Else) {
-            Some(Box::new(self.statement()?))
+            self.consume(TokenType::LeftBrace, "Block should follow an 'else' keyword.",)?;
+            Some(self.block_stmt()?)
         } else {
             None
         };
         Ok(Stmt::If {
             condition,
-            then: Box::new(then_branch),
+            then,
             elze,
         })
     }
