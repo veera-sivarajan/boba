@@ -112,8 +112,8 @@ impl CodeGen {
         match stmt {
             Stmt::Let {
                 name,
-                is_mutable: _,
                 init,
+                ..
             } => self.let_stmt(name, init),
             Stmt::Expression(_expr) => todo!(),
             Stmt::Print(expr) => self.print_stmt(expr),
@@ -378,7 +378,7 @@ impl CodeGen {
         }
     }
 
-    fn number(&mut self, value: f64) -> Result<RegisterIndex, BobaError> {
+    fn number(&mut self, value: i64) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
         self.emit_code(
             "movq",
