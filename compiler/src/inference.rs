@@ -2,12 +2,13 @@ use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
 use crate::stmt::Stmt;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Term {
-    Expr(Expr), // variable
-    Var(String),  // variable
-    Num,        // constant
+    Expr(Expr),  // variable
+    Var(String), // variable
+    Num,         // constant
     Bool,
     Arrow(ArrowType), // function application
 }
@@ -55,101 +56,176 @@ impl Constraint {
     }
 }
 
-pub fn infer_types(ast: &[Stmt]) -> Vec<Substitution> {
-    let mut cons = vec![];
-    for stmt in ast {
-        generate_constraints(stmt, &mut cons);
-    }
-    unify(&mut cons, &mut vec![])
-}
+// pub fn infer_types(ast: &[Stmt]) -> Vec<Substitution> {
+//     let mut cons = vec![];
+//     for stmt in ast {
+//         generate_constraints(stmt, &mut cons);
+//     }
+//     unify(&mut cons, &mut vec![])
+// }
 
-struct Symbol {
-    name: Token,
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Symbol {
+    name: String,
     is_mutable: bool,
-    is_global: bool,
-    kind: Term,
 }
 
-fn generate_constraints(stmt: &Stmt, constraints: &mut Vec<Constraint>) {
-    match stmt {
-        Stmt::If { condition, .. } => {
-            generate_constraints_expr(condition, constraints);
-            let result = vec![Constraint::new(
-                Term::Expr(condition.clone()),
-                Term::Bool,
-            )];
-            constraints.extend(result);
+pub enum Type {
+    Number,
+    Bool,
+    String,
+    Char,
+    Array(Box<Type>),
+    Unknown,
+}
+
+pub struct StaticAnalysis {
+    context: Vec<HashMap<Symbol, Type>>,
+    constraints: Vec<Constraint>,
+}
+
+impl StaticAnalysis {
+    pub fn new() -> Self {
+        Self {
+            context: vec![HashMap::new()],
+            constraints: vec![],
         }
-        Stmt::Let { name, init, .. } => {
-            let name = name.to_string();
-            if let Some(expr) = init {
-                generate_constraints_expr(expr, constraints);
-                constraints.push(Constraint::new(
-                    Term::Var(name),
-                    Term::Expr(expr.clone())
-                ));
-            }
-        }
-        _ => todo!(),
     }
-}
 
-fn generate_constraints_expr(expr: &Expr, constraints: &mut Vec<Constraint>) {
-    match expr {
-        Expr::Number(_) => {
-            constraints.push(Constraint {
-                lhs: Term::Expr(expr.clone()),
-                rhs: Term::Num,
-            });
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+        for stmt in ast {
+            self.check_stmt(stmt)?;
         }
-        Expr::Boolean(_) => {
-            constraints.push(Constraint {
-                lhs: Term::Expr(expr.clone()),
-                rhs: Term::Bool,
-            });
+        Ok(())
+    }
+
+    fn check_stmt(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
+        match stmt {
+            Stmt::If { condition, .. } => {
+                self.generate_constraints(condition);
+                self.constraints.push(Constraint::new(
+                    Term::Expr(condition.clone()),
+                    Term::Bool,
+                ));
+                Ok(())
+            }
+            Stmt::Let {
+                name,
+                init,
+                is_mutable,
+            } => {
+                let var_name = name.to_string();
+                if self
+                    .variable_is_declared(&var_name)
+                    .is_some_and(|scope| scope == 0)
+                {
+                    // ERROR
+                    Err(BobaError::TypeError {
+                        msg: format!("Cannot redeclare variable '{var_name}'")
+                            .into(),
+                        span: name.span,
+                    })
+                } else if !is_mutable && init.is_none() {
+                    // ERROR
+                    Err(BobaError::TypeError {
+                        msg: format!("Immutable variable '{var_name}' cannot be declared without initializing.").into(),
+                        span: name.span,
+                    })
+                } else {
+                    self.add_variable(&var_name, *is_mutable);
+                    if let Some(expr) = init {
+                        self.generate_constraints(expr);
+                        self.constraints.push(Constraint::new(
+                            Term::Var(var_name),
+                            Term::Expr(expr.clone()),
+                        ));
+                    }
+                    Ok(())
+                }
+            }
+            Stmt::Block(stmts) => {
+                // self.context.push(HashMap::new());
+                // self.check(stmts)?;
+                // Ok(())
+                todo!()
+            }
+            _ => todo!(),
         }
-        Expr::Binary { left, oper, right } => {
-            generate_constraints_expr(left, constraints);
-            generate_constraints_expr(right, constraints);
-            let mut consequent = vec![
-                Constraint::new(Term::Expr(*left.clone()), Term::Num),
-                Constraint::new(Term::Expr(*right.clone()), Term::Num),
-            ];
-            match oper.kind {
-                TokenType::Plus
-                | TokenType::Minus
-                | TokenType::Slash
-                | TokenType::Star => {
-                    consequent.push(Constraint::new(
-                        Term::Expr(expr.clone()),
-                        Term::Num,
-                    ));
-                    constraints.extend(consequent);
+    }
+
+    fn variable_is_declared(&self, name: &str) -> Option<u8> {
+        for (index, scope) in self.context.iter().rev().enumerate() {
+            for (key, _value) in scope {
+                if key.name == name {
+                    return Some(index as u8);
                 }
-                TokenType::Less
-                | TokenType::LessEqual
-                | TokenType::GreaterEqual
-                | TokenType::Greater => {
-                    consequent.push(Constraint::new(
-                        Term::Expr(expr.clone()),
-                        Term::Bool,
-                    ));
-                    constraints.extend(consequent);
-                }
-                _ => unreachable!(),
             }
         }
-        Expr::Variable(token) => {
-            let name = token.to_string();
-            constraints.push(Constraint {
-                lhs: Term::Expr(expr.clone()),
-                rhs: Term::Var(name),
-            });
+        None
+    }
+
+    fn add_variable(&mut self, name: &str, is_mutable: bool) {
+        if let Some(map) = self.context.last_mut() {
+            let name = name.to_string();
+            map.insert(Symbol { name, is_mutable }, Type::Unknown);
         }
-        _ => {
-            eprintln!("{expr:?}");
-            todo!()
-        },
+    }
+
+    fn generate_constraints(&mut self, expr: &Expr) {
+        match expr {
+            Expr::Number(_) => {
+                self.constraints.push(Constraint {
+                    lhs: Term::Expr(expr.clone()),
+                    rhs: Term::Num,
+                });
+            }
+            Expr::Boolean(_) => {
+                self.constraints.push(Constraint {
+                    lhs: Term::Expr(expr.clone()),
+                    rhs: Term::Bool,
+                });
+            }
+            Expr::Binary { left, oper, right } => {
+                self.generate_constraints(left);
+                self.generate_constraints(right);
+                self.constraints.extend(vec![
+                    Constraint::new(Term::Expr(*left.clone()), Term::Num),
+                    Constraint::new(Term::Expr(*right.clone()), Term::Num),
+                ]);
+                match oper.kind {
+                    TokenType::Plus
+                    | TokenType::Minus
+                    | TokenType::Slash
+                    | TokenType::Star => {
+                        self.constraints.push(Constraint::new(
+                            Term::Expr(expr.clone()),
+                            Term::Num,
+                        ));
+                    }
+                    TokenType::Less
+                    | TokenType::LessEqual
+                    | TokenType::GreaterEqual
+                    | TokenType::Greater => {
+                        self.constraints.push(Constraint::new(
+                            Term::Expr(expr.clone()),
+                            Term::Bool,
+                        ));
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            Expr::Variable(token) => {
+                let name = token.to_string();
+                self.constraints.push(Constraint {
+                    lhs: Term::Expr(expr.clone()),
+                    rhs: Term::Var(name),
+                });
+            }
+            _ => {
+                eprintln!("{expr:?}");
+                todo!()
+            }
+        }
     }
 }
 

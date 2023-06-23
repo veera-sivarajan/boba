@@ -15,7 +15,8 @@ fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
     let mut parser = parser::Parser::new(tokens.into_iter());
     let ast = parser.parse()?;
     // println!("{ast:?}");
-    inference::infer_types(&ast);
+    // inference::infer_types(&ast);
+    inference::StaticAnalysis::new().check(&ast)?;
     let mut codegen = codegen::CodeGen::new();
     codegen.compile(&ast)
 }

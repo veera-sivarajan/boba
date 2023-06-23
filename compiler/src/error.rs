@@ -32,6 +32,7 @@ pub enum BobaError {
     General(Box<str>),
     Compiler { msg: Box<str>, span: Span },
     Formatting,
+    TypeError { msg: Box<str>, span: Span },
 }
 
 impl fmt::Display for BobaError {
@@ -73,6 +74,7 @@ impl fmt::Display for BobaError {
                 f,
                 "Compiler Internal Error: Cannot write to assembly file."
             ),
+            TypeError { msg, span } => write!(f, "TypeError: {msg} at {span}."),
         }
     }
 }
