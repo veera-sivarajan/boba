@@ -1,13 +1,13 @@
 use crate::lexer::Token;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
         oper: Token,
         right: Box<Expr>,
     },
-    Number(f64),
+    Number(i64),
     Variable(Token),
     Boolean(bool),
     String(String),

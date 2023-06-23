@@ -4,6 +4,7 @@ mod expr;
 mod lexer;
 mod parser;
 mod stmt;
+mod inference;
 
 use crate::codegen::Assembly;
 use crate::error::BobaError;

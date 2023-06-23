@@ -2,7 +2,7 @@ use crate::error::BobaError;
 use std::iter::Peekable;
 use std::str::CharIndices;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -33,7 +33,7 @@ pub enum TokenType {
     MultiplyAssign,
     DivideAssign,
 
-    Number(f64),
+    Number(i64),
     Boolean(bool),
     Unknown,
     Identifier(String),
@@ -106,7 +106,7 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Eq, Hash)]
 pub struct Token {
     pub kind: TokenType,
     pub span: Span,
@@ -124,13 +124,13 @@ impl PartialEq for Token {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Span {
     pub start: Position,
     pub end: Position,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Position {
     pub line_number: u16,
     pub column_number: u16,
@@ -428,7 +428,7 @@ impl<'src> Lexer<'src> {
                 lexeme.push(num);
             }
         }
-        let num = lexeme.parse::<f64>().expect("Unable to parse number.");
+        let num = lexeme.parse::<i64>().expect("Unable to parse number.");
         let span = self.make_span(start_pos, lexeme.len());
         self.tokens.push(Token::new(TokenType::Number(num), span));
     }
@@ -517,9 +517,9 @@ mod test_lexer {
 
     #[test]
     fn numbers() {
-        assert!(test_runner("1", &[TokenType::Number(1.0)]));
-        assert!(test_runner("123", &[TokenType::Number(123.0)]));
-        assert!(test_runner("1.00", &[TokenType::Number(1.00)]));
+        assert!(test_runner("1", &[TokenType::Number(1)]));
+        assert!(test_runner("123", &[TokenType::Number(123)]));
+        assert!(test_runner("1.00", &[TokenType::Number(1)]));
     }
 
     #[test]
@@ -564,9 +564,9 @@ fn factorial(num: Number) -> Number {
                 TokenType::Let,
                 TokenType::Identifier("a".into()),
                 TokenType::Equal,
-                TokenType::Number(1.0),
+                TokenType::Number(1),
                 TokenType::Plus,
-                TokenType::Number(2.0),
+                TokenType::Number(2),
                 TokenType::Semicolon,
                 TokenType::RightBrace,
             ]
