@@ -115,18 +115,22 @@ impl StaticAnalysis {
                 is_mutable,
             } => {
                 let var_name = name.to_string();
-                if self
+                if self.is_global_scope() && *is_mutable {
+                    Err(BobaError::TypeError {
+                        msg: format!("Global variable '{var_name}' cannot be mutable")
+                            .into(),
+                        span: name.span,
+                    })
+                } else if self
                     .variable_is_declared(&var_name)
                     .is_some_and(|scope| scope == 0)
                 {
-                    // ERROR
                     Err(BobaError::TypeError {
                         msg: format!("Cannot redeclare variable '{var_name}'")
                             .into(),
                         span: name.span,
                     })
                 } else if !is_mutable && init.is_none() {
-                    // ERROR
                     Err(BobaError::TypeError {
                         msg: format!("Immutable variable '{var_name}' cannot be declared without initializing.").into(),
                         span: name.span,
@@ -151,6 +155,10 @@ impl StaticAnalysis {
             }
             _ => todo!(),
         }
+    }
+
+    fn is_global_scope(&self) -> bool {
+        self.context.len() == 1
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {
