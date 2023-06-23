@@ -123,7 +123,7 @@ impl StaticAnalysis {
                     })
                 } else if self
                     .variable_is_declared(&var_name)
-                    .is_some_and(|scope| scope == 0)
+                    .is_some_and(|scope| scope == self.scope())
                 {
                     Err(BobaError::TypeError {
                         msg: format!("Cannot redeclare variable '{var_name}'")
@@ -157,8 +157,12 @@ impl StaticAnalysis {
         }
     }
 
+    fn scope(&self) -> u8 {
+        self.context.len() as u8 - 1
+    }
+
     fn is_global_scope(&self) -> bool {
-        self.context.len() == 1
+        self.scope() == 0
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {
