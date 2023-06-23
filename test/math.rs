@@ -1,4 +1,7 @@
-let a = true;
-let b = false;
-println(a);
-println(b);
+let a = 3;
+let b = 2;
+if a < b {
+    println(a + b);
+} else {
+    println(a - b);
+}

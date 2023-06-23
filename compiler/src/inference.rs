@@ -55,10 +55,25 @@ impl Constraint {
 }
 
 pub fn infer_types(ast: &[Stmt]) -> Result<Vec<Substitution>, BobaError> {
+    let mut cons = vec![];
+    for stmt in ast {
+        generate_constraints(stmt, &mut cons);
+    }
     todo!()
 }
 
+struct Symbol {
+    name: Token,
+    is_mutable: bool,
+    is_global: bool,
+    kind: Term,
+}
+
 fn generate_constraints(stmt: &Stmt, constraints: &mut Vec<Constraint>) {
+    match stmt {
+        Stmt::Let { name, is_mutable, init } => {
+            todo!()
+    }
     todo!()
 }
     
