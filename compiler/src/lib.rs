@@ -6,10 +6,9 @@ mod parser;
 mod stmt;
 mod inference;
 
-use crate::codegen::Assembly;
 use crate::error::BobaError;
 
-fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
+fn compile_helper(source: &str) -> Result<String, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;
     let mut parser = parser::Parser::new(tokens.into_iter());
@@ -21,7 +20,7 @@ fn compile_helper(source: &str) -> Result<Assembly, BobaError> {
     codegen.compile(&ast)
 }
 
-pub fn compile(source: &str) -> Result<Assembly, BobaError> {
+pub fn compile(source: &str) -> Result<String, BobaError> {
     if !source.is_empty() {
         eprintln!("Compiling: {source}");
         compile_helper(source)

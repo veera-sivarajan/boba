@@ -73,10 +73,17 @@ pub struct Assembly {
     pub header: String,
     pub code: String,
     pub data: String,
+    pub global: String,
+}
+
+impl Assembly {
+    fn build(&self) -> String {
+        format!("{}{}{}{}", self.global, self.header, self.code, self.data)
+    }
 }
 
 pub struct CodeGen {
-    globals: Vec<Token>,
+    data: Vec<Token>,
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
@@ -85,11 +92,11 @@ pub struct CodeGen {
 impl CodeGen {
     pub fn new() -> Self {
         Self {
-            globals: Vec::new(),
+            data: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
-                header: r#".globl main
-.LC0:
+                global: ".globl main\n".to_string(),
+                header: r#".LC0:
         .string "%d\n"
 "#
                 .to_string(),
@@ -100,21 +107,17 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(&mut self, ast: &[Stmt]) -> Result<Assembly, BobaError> {
+    pub fn compile(&mut self, ast: &[Stmt]) -> Result<String, BobaError> {
         for ele in ast {
             self.codegen(ele)?;
         }
         self.emit_code("ret", "", "")?;
-        Ok(self.assembly.clone())
+        Ok(self.assembly.build())
     }
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::Let {
-                name,
-                init,
-                ..
-            } => self.let_stmt(name, init),
+            Stmt::Let { name, init, .. } => self.let_stmt(name, init),
             Stmt::Expression(_expr) => todo!(),
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::If {
@@ -123,8 +126,27 @@ impl CodeGen {
                 elze,
             } => self.if_stmt(condition, then, elze),
             Stmt::Block(stmts) => self.block_stmt(stmts),
-            Stmt::Function { name, num_locals, .. } => todo!("{name} :: {num_locals}"),
+            Stmt::Function {
+                name,
+                params,
+                return_type,
+                num_locals,
+                body,
+            } => {
+                self.function_decl(name, params, return_type, *num_locals, body)
+            }
         }
+    }
+
+    fn function_decl(
+        &mut self,
+        name: &Token,
+        params: &[(Token, Token)],
+        return_type: &Token,
+        num_locals: u8,
+        body: &[Stmt],
+    ) -> Result<(), BobaError> {
+        todo!()
     }
 
     fn if_stmt(
@@ -293,7 +315,7 @@ impl CodeGen {
     }
 
     fn symbol(&self, name: &Token) -> Result<String, BobaError> {
-        if self.globals.contains(name) {
+        if self.data.contains(name) {
             Ok(format!("{name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
@@ -304,7 +326,7 @@ impl CodeGen {
     }
 
     fn add_global(&mut self, token: &Token) {
-        self.globals.push(token.clone());
+        self.data.push(token.clone());
     }
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
