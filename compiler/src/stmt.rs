@@ -16,5 +16,11 @@ pub enum Stmt {
         elze: Option<Vec<Stmt>>,
     },
     Block(Vec<Stmt>),
+    Function {
+        name: Token,
+        params: Vec<(Token, Token)>,
+        return_type: Token,
+        body: Vec<Stmt>,
+    }
 }
 

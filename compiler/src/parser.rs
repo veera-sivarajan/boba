@@ -61,6 +61,16 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
+    
+    fn consume_type(
+        &mut self,
+        error_msg: &str,
+    ) -> Result<Token, BobaError> {
+        self.cursor
+            .next_if(|token| token.is_type())
+            .ok_or(self.error(error_msg))
+    }
+
     fn variable_declaration(&mut self) -> Result<Stmt, BobaError> {
         let is_mutable = self.next_eq(TokenType::Mutable);
         let name = self.consume_identifier("Expect variable name")?;
@@ -94,9 +104,45 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             self.if_stmt()
         } else if self.next_eq(TokenType::LeftBrace) {
             Ok(Stmt::Block(self.block_stmt()?))
+        } else if self.next_eq(TokenType::Fn) {
+            self.function_decl()
         } else {
             self.expression_stmt()
         }
+    }
+
+    // fn factorial(num: Number, value: Number) -> Number {
+    //     ...
+    // }
+
+    fn parse_name_and_type(&mut self) -> Result<(Token, Token), BobaError> {
+        let identifier = self.consume_identifier("Expect parameter name.")?;
+        self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
+        let id_type = self.consume_type("Expect parameter type.")?;
+        Ok((identifier, id_type))
+    }
+
+    fn function_decl(&mut self) -> Result<Stmt, BobaError> {
+        let name = self.consume_identifier("Expect function name.")?;
+        self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
+        let mut params: Vec<(Token, Token)> = Vec::with_capacity(255);
+        if !self.peek_check(TokenType::RightParen) {
+            params.push(self.parse_name_and_type()?);
+            while self.next_eq(TokenType::Comma) {
+                params.push(self.parse_name_and_type()?);
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
+        let return_type = self.consume_type("Expect correct return type.")?;
+        self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
+        let body = self.block_stmt()?;
+        Ok(Stmt::Function {
+            name,
+            params,
+            return_type,
+            body
+        })
     }
 
     fn if_stmt(&mut self) -> Result<Stmt, BobaError> {

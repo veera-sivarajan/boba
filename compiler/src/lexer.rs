@@ -51,6 +51,7 @@ pub enum TokenType {
     Return,
     And,
     Or,
+    Type(String),
 }
 
 impl std::fmt::Display for TokenType {
@@ -102,6 +103,7 @@ impl std::fmt::Display for TokenType {
             MultiplyAssign => write!(f, "MultiplyAssign"),
             DivideAssign => write!(f, "DivideAssign"),
             Comment => write!(f, "Comment"),
+            Type(name) => write!(f, "{name}"),
         }
     }
 }
@@ -143,6 +145,10 @@ impl Token {
 
     pub const fn is_identifier(&self) -> bool {
         matches!(self.kind, TokenType::Identifier(_))
+    }
+
+    pub const fn is_type(&self) -> bool {
+        matches!(self.kind, TokenType::Type(_))
     }
 
     pub fn identifier_name(&self) -> String {
@@ -456,6 +462,7 @@ impl<'src> Lexer<'src> {
             "let" => TokenType::Let,
             "mut" => TokenType::Mutable,
             "while" => TokenType::While,
+            "String" | "Number" | "Bool" | "Char" => TokenType::Type(lexeme),
             _ => TokenType::Identifier(lexeme),
         };
         let span = self.make_span(start_pos, len);
