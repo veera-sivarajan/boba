@@ -181,17 +181,19 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(stmts)
     }
 
-    // FIXME: panics when there is no expression
-    // inside print function
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
-        let value = self.expression()?;
-        self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
-        self.consume(
-            TokenType::Semicolon,
-            "Expected semicolon after print statement",
-        )?;
-        Ok(Stmt::Print(value))
+        if self.peek_check(TokenType::RightParen) {
+            Err(self.error("Expect an expression inside print statement."))
+        } else {
+            let value = self.expression()?;
+            self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
+            self.consume(
+                TokenType::Semicolon,
+                "Expected semicolon after print statement",
+            )?;
+            Ok(Stmt::Print(value))
+        }
     }
 
     fn expression_stmt(&mut self) -> Result<Stmt, BobaError> {
