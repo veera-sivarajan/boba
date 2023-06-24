@@ -37,7 +37,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         next_eq!(self, expected).is_some()
     }
 
-    
     fn peek_check(&mut self, expected: TokenType) -> bool {
         self.cursor
             .peek()
@@ -61,11 +60,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    
-    fn consume_type(
-        &mut self,
-        error_msg: &str,
-    ) -> Result<Token, BobaError> {
+    fn consume_type(&mut self, error_msg: &str) -> Result<Token, BobaError> {
         self.cursor
             .next_if(|token| token.is_type())
             .ok_or(self.error(error_msg))
@@ -122,6 +117,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok((identifier, id_type))
     }
 
+    fn count_local_variables(&self, stmts: &[Stmt]) -> u8 {
+        stmts
+            .iter()
+            .filter(|stmt| matches!(stmt, Stmt::Let { .. }))
+            .count() as u8
+    }
+
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
         let name = self.consume_identifier("Expect function name.")?;
         self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
@@ -137,20 +139,28 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let return_type = self.consume_type("Expect correct return type.")?;
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
         let body = self.block_stmt()?;
+        let num_locals = self.count_local_variables(&body);
         Ok(Stmt::Function {
             name,
             params,
             return_type,
-            body
+            body,
+            num_locals,
         })
     }
 
     fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
         let condition = self.expression()?;
-        self.consume(TokenType::LeftBrace, "Condition should be followed by a block.",)?;
-        let then= self.block_stmt()?;
+        self.consume(
+            TokenType::LeftBrace,
+            "Condition should be followed by a block.",
+        )?;
+        let then = self.block_stmt()?;
         let elze = if self.next_eq(TokenType::Else) {
-            self.consume(TokenType::LeftBrace, "Block should follow an 'else' keyword.",)?;
+            self.consume(
+                TokenType::LeftBrace,
+                "Block should follow an 'else' keyword.",
+            )?;
             Some(self.block_stmt()?)
         } else {
             None

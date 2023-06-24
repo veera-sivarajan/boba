@@ -123,7 +123,7 @@ impl CodeGen {
                 elze,
             } => self.if_stmt(condition, then, elze),
             Stmt::Block(stmts) => self.block_stmt(stmts),
-            Stmt::Function { .. } => todo!("welcome to the function babyyy!!!"),
+            Stmt::Function { name, num_locals, .. } => todo!("{name} :: {num_locals}"),
         }
     }
 

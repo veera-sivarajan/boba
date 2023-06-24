@@ -1,7 +1,4 @@
 fn factorial(num: Number) -> Number {
-    if num > 0 {
-        println(1);
-    } else {
-        println(2);
-    }
+    let a = 1;
+    let b = 2;
 }
