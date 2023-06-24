@@ -117,6 +117,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok((identifier, id_type))
     }
 
+    // FIXME: doesn't consider local variables
+    // inside other block and if statements
     fn count_local_variables(&self, stmts: &[Stmt]) -> u8 {
         stmts
             .iter()
@@ -275,10 +277,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
                 TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
                 TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
-                _ => {
-                    println!("{}", expr.kind);
-                    todo!()
-                }
+                _ => todo!("{}", expr.kind),
             }
         } else {
             Err(self.error("Expected a primary expression"))

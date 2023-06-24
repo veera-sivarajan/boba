@@ -142,11 +142,35 @@ impl CodeGen {
         &mut self,
         name: &Token,
         params: &[(Token, Token)],
-        return_type: &Token,
+        _return_type: &Token,
         num_locals: u8,
         body: &[Stmt],
     ) -> Result<(), BobaError> {
-        todo!()
+        self.emit_label(name.to_string())?;
+        self.emit_code("pushq", "%rbp", "")?;
+        self.emit_code("movq", "%rsp", "%rbp")?;
+        let argument_registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
+        for (index, _) in params.iter().enumerate() {
+            if index < 6 {
+                self.emit_code("pushq", argument_registers[index], "")?;
+            } else {
+                todo!("Can't handle functions with more than six parameters.");
+            }
+        }
+        let space_for_locals = num_locals * 8;
+        self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
+        let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
+        for register in callee_saved_registers {
+            self.emit_code("pushq", register, "")?;
+        }
+        self.block_stmt(body)?;
+        for register in callee_saved_registers.iter().rev() {
+            self.emit_code("popq", register, "")?;
+        }
+        self.emit_code("movq", "%rbp", "%rsp")?;
+        self.emit_code("popq", "%rbp", "")?;
+        self.emit_code("ret", "", "")?;
+        Ok(())
     }
 
     fn if_stmt(
