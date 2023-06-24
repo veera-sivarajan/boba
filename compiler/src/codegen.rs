@@ -83,7 +83,8 @@ impl Assembly {
 }
 
 pub struct CodeGen {
-    data: Vec<Token>,
+    data_buffer: Vec<Token>,
+    global_buffer: Vec<Token>,
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
@@ -92,15 +93,16 @@ pub struct CodeGen {
 impl CodeGen {
     pub fn new() -> Self {
         Self {
-            data: Vec::new(),
+            data_buffer: Vec::new(),
+            global_buffer: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
-                global: ".globl main\n".to_string(),
+                global: "".to_string(),
                 header: r#".LC0:
         .string "%d\n"
 "#
                 .to_string(),
-                code: "main:\n".to_string(),
+                code: "".to_string(),
                 data: ".data\n".to_string(),
             },
             labels: Labels::new(),
@@ -112,7 +114,24 @@ impl CodeGen {
             self.codegen(ele)?;
         }
         self.emit_code("ret", "", "")?;
+        self.build_assembly()
+    }
+
+    fn build_assembly(&mut self) -> Result<String, BobaError> {
+        self.build_globals()?;
         Ok(self.assembly.build())
+    }
+
+    fn build_globals(&mut self) -> Result<(), BobaError> {
+        let mut globals = self.global_buffer.iter();
+        if let Some(name) = globals.next() {
+            write!(&mut self.assembly.global, ".globl {name}")?;
+        }
+        for other_names in globals {
+            write!(&mut self.assembly.global, ", {other_names}")?;
+        }
+        writeln!(&mut self.assembly.global)?;
+        Ok(())
     }
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
@@ -138,6 +157,10 @@ impl CodeGen {
         }
     }
 
+    fn add_global_name(&mut self, name: &Token) {
+        self.global_buffer.push(name.clone());
+    }
+
     fn function_decl(
         &mut self,
         name: &Token,
@@ -146,6 +169,7 @@ impl CodeGen {
         num_locals: u8,
         body: &[Stmt],
     ) -> Result<(), BobaError> {
+        self.add_global_name(name);
         self.emit_label(name.to_string())?;
         self.emit_code("pushq", "%rbp", "")?;
         self.emit_code("movq", "%rsp", "%rbp")?;
@@ -301,7 +325,7 @@ impl CodeGen {
         let symbol_name = name.to_string();
         if let Some(expr) = init {
             if let Some(size) = expr.get_size() {
-                self.add_global(name);
+                self.add_data(name);
                 self.emit_data(&symbol_name, size.as_ref(), expr)
             } else {
                 Err(BobaError::Compiler {
@@ -339,7 +363,7 @@ impl CodeGen {
     }
 
     fn symbol(&self, name: &Token) -> Result<String, BobaError> {
-        if self.data.contains(name) {
+        if self.data_buffer.contains(name) {
             Ok(format!("{name}(%rip)"))
         } else {
             Err(BobaError::Compiler {
@@ -349,8 +373,8 @@ impl CodeGen {
         }
     }
 
-    fn add_global(&mut self, token: &Token) {
-        self.data.push(token.clone());
+    fn add_data(&mut self, token: &Token) {
+        self.data_buffer.push(token.clone());
     }
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
