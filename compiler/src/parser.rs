@@ -46,8 +46,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn declaration(&mut self) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Let) {
             self.variable_declaration()
+        } else if self.next_eq(TokenType::Fn) {
+            self.function_decl()
         } else {
-            self.statement()
+            Err(self.error("Expected a 'Let' or a 'fn' declaration."))
         }
     }
 
@@ -99,16 +101,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             self.if_stmt()
         } else if self.next_eq(TokenType::LeftBrace) {
             Ok(Stmt::Block(self.block_stmt()?))
-        } else if self.next_eq(TokenType::Fn) {
-            self.function_decl()
+        } else if self.next_eq(TokenType::Let) {
+            self.variable_declaration()
+        } else if self.peek_check(TokenType::Fn) {
+            Err(self.error("Functions cannot be declared within a local scope."))
         } else {
             self.expression_stmt()
         }
     }
-
-    // fn factorial(num: Number, value: Number) -> Number {
-    //     ...
-    // }
 
     fn parse_name_and_type(&mut self) -> Result<(Token, Token), BobaError> {
         let identifier = self.consume_identifier("Expect parameter name.")?;
@@ -178,7 +178,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn block_stmt(&mut self) -> Result<Vec<Stmt>, BobaError> {
         let mut stmts = Vec::new();
         while !self.peek_check(TokenType::RightBrace) {
-            stmts.push(self.declaration()?);
+            stmts.push(self.statement()?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
         Ok(stmts)
