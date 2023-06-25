@@ -150,8 +150,6 @@ impl Analyzer {
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
-        } else if !self.is_global_scope() {
-            Err(BobaError::LocalFunction(name.clone()))
         } else {
             self.add_variable(&name.to_string(), false, Kind::Function);
             let Stmt::Block(stmts) = body else {
