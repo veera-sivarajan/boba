@@ -11,6 +11,11 @@ pub enum Expr {
     Variable(Token),
     Boolean(bool),
     String(String),
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        args: Vec<Expr>,
+    }
 }
 
 impl Expr {
@@ -49,6 +54,7 @@ impl fmt::Display for Expr {
                 write!(f, "{}", oper.kind)?;
                 write!(f, "{}", *right)
             }
+            Expr::Call { .. } => write!(f, "Function call expression."),
         }
     }
 }

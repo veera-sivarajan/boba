@@ -257,10 +257,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn factor(&mut self) -> Result<Expr, BobaError> {
-        let mut expr = self.primary_expression()?;
+        let mut expr = self.call()?;
         while let Some(oper) = next_eq!(self, TokenType::Slash, TokenType::Star)
         {
-            let right = self.primary_expression()?;
+            let right = self.call()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 oper,
@@ -268,6 +268,35 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             };
         }
         Ok(expr)
+    }
+
+    fn call(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.primary_expression()?;
+        loop {
+            if self.next_eq(TokenType::LeftParen) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, BobaError> {
+        let mut args = Vec::with_capacity(255);
+        if !self.peek_check(TokenType::RightParen) {
+            args.push(self.expression()?);
+            while self.next_eq(TokenType::Comma) {
+                args.push(self.expression()?);
+            }
+        }
+        let paren =
+            self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            args,
+        })
     }
 
     fn primary_expression(&mut self) -> Result<Expr, BobaError> {
