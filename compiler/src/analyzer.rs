@@ -51,8 +51,19 @@ impl Analyzer {
             Stmt::Function { name, body, .. } => {
                 self.function_decl(name, body)
             }
+            Stmt::If { then, elze, ..} => {
+                self.if_stmt(then, elze)
+            }
             _ => todo!(),
         }
+    }
+
+    fn if_stmt(&mut self, then: &Stmt, elze: &Option<Box<Stmt>>) -> Result<(), BobaError> {
+        self.check_stmt(then)?;
+        if let Some(else_stmt) = elze {
+            self.check_stmt(else_stmt)?;
+        }
+        Ok(())
     }
 
     fn function_decl(&mut self, name: &Token, body: &Stmt) -> Result<(), BobaError> {
