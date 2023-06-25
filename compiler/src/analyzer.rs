@@ -10,7 +10,7 @@ pub struct Symbol {
     is_mutable: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 enum Kind {
     GlobalVariable,
     LocalVariable,
@@ -30,12 +30,12 @@ impl Analyzer {
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
         for stmt in ast {
-            self.check_stmt(stmt)?;
+            self.statement(stmt)?;
         }
         Ok(())
     }
 
-    fn check_stmt(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
+    fn statement(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
             Stmt::Let {
                 name,
@@ -51,13 +51,42 @@ impl Analyzer {
                 elze,
                 condition,
             } => self.if_stmt(then, elze, condition),
-            Stmt::Expression(expr) | Stmt::Print(expr) => self.check_expr(expr),
-            _ => todo!(),
+            Stmt::Expression(expr) | Stmt::Print(expr) => self.expression(expr),
         }
     }
 
-    fn check_expr(&mut self, expr: &Expr) -> Result<(), BobaError> {
-        todo!()
+    fn expression(&mut self, expr: &Expr) -> Result<(), BobaError> {
+        match expr {
+            Expr::Number(_) | Expr::Boolean(_) | Expr::String(_) => Ok(()),
+            Expr::Variable(token) => self.variable(token),
+            Expr::Call { callee, args } => self.function_call(callee, args),
+            Expr::Binary { left, oper, right } => self.binary(left, oper, right),
+        }
+    }
+
+    fn binary(&mut self, left: &Expr, _oper: &Token, right: &Expr) -> Result<(), BobaError> {
+        self.expression(left)?;
+        self.expression(right)?;
+        Ok(())
+    }
+
+    fn function_call(&mut self, callee: &Token, args: &[Expr]) -> Result<(), BobaError> {
+        if !self.variable_is_function(&callee.to_string()) {
+            Err(BobaError::UndeclaredFunction(callee.clone()))
+        } else {
+            for arg in args {
+                self.expression(arg)?;
+            }
+            Ok(())
+        }
+    }
+
+    fn variable(&mut self, name: &Token) -> Result<(), BobaError> {
+        if self.variable_is_declared(&name.to_string()).is_none() {
+            Err(BobaError::UndeclaredVariable(name.clone()))
+        } else {
+            Ok(())
+        }
     }
 
     fn block_stmt(
@@ -94,10 +123,10 @@ impl Analyzer {
         elze: &Option<Box<Stmt>>,
         condition: &Expr,
     ) -> Result<(), BobaError> {
-        self.check_expr(condition)?;
-        self.check_stmt(then)?;
+        self.expression(condition)?;
+        self.statement(then)?;
         if let Some(else_stmt) = elze {
-            self.check_stmt(else_stmt)?;
+            self.statement(else_stmt)?;
         }
         Ok(())
     }
@@ -110,6 +139,8 @@ impl Analyzer {
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
+        } else if !self.is_global_scope() {
+            Err(BobaError::LocalFunction(name.clone()))
         } else {
             self.add_variable(&name.to_string(), false, Kind::Function);
             let Stmt::Block(stmts) = body else {
@@ -135,7 +166,7 @@ impl Analyzer {
                 Kind::LocalVariable
             };
             if let Some(expr) = init {
-                self.check_expr(expr)?;
+                self.expression(expr)?;
             }
             self.add_variable(&name.to_string(), is_mutable, kind);
             Ok(())
@@ -153,6 +184,18 @@ impl Analyzer {
     fn variable_is_declared_in_current_scope(&self, name: &str) -> bool {
         self.variable_is_declared(name)
             .is_some_and(|scope| scope == self.current_scope())
+    }
+
+    fn variable_is_function(&self, name: &str) -> bool {
+        if let Some(global_scope) = self.scopes.get(0) {
+            for (symbol, kind) in global_scope {
+                if symbol.name == name && *kind == Kind::Function {
+                    return true;
+                }
+            }
+            return false;
+        }
+        false
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {

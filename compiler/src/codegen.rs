@@ -360,17 +360,15 @@ impl CodeGen {
             Expr::Boolean(value) => self.boolean(value),
             Expr::Call {
                 callee,
-                paren,
                 args,
-            } => self.function_call(callee, paren, args),
+            } => self.function_call(callee, args),
             _ => todo!("{expr}"),
         }
     }
 
     fn function_call(
         &mut self,
-        callee: &str,
-        _paren: &Token,
+        callee: &Token,
         args: &[Expr],
     ) -> Result<RegisterIndex, BobaError> {
         let dummy = self.registers.allocate();

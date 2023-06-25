@@ -1,2 +1,4 @@
 let a = 10;
-let a = 100;
+
+fn main() -> Number {
+}

@@ -12,8 +12,7 @@ pub enum Expr {
     Boolean(bool),
     String(String),
     Call {
-        callee: String,
-        paren: Token,
+        callee: Token,
         args: Vec<Expr>,
     }
 }

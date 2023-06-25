@@ -291,12 +291,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 args.push(self.expression()?);
             }
         }
-        let paren =
-            self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
         if let Expr::Variable(function_name) = &callee {
             Ok(Expr::Call {
-                callee: function_name.to_string(),
-                paren,
+                callee: function_name.clone(),
                 args,
             })
         } else {
