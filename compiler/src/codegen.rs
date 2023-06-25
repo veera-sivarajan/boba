@@ -97,12 +97,12 @@ impl CodeGen {
             global_buffer: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
-                global: "".to_string(),
+                global: String::new(),
                 header: r#".LC0:
         .string "%d\n"
 "#
                 .to_string(),
-                code: "".to_string(),
+                code: String::new(),
                 data: ".data\n".to_string(),
             },
             labels: Labels::new(),
@@ -113,7 +113,6 @@ impl CodeGen {
         for ele in ast {
             self.codegen(ele)?;
         }
-        self.emit_code("ret", "", "")?;
         self.build_assembly()
     }
 

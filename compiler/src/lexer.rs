@@ -1,6 +1,7 @@
 use crate::error::BobaError;
 use std::iter::Peekable;
 use std::str::CharIndices;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
@@ -108,7 +109,7 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-#[derive(Debug, Clone, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenType,
     pub span: Span,
@@ -126,13 +127,21 @@ impl PartialEq for Token {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.kind.hash(state);
+    }
+}
+
+impl Eq for Token {}
+
+#[derive(Default, Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Span {
     pub start: Position,
     pub end: Position,
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Default, Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Position {
     pub line_number: u16,
     pub column_number: u16,
@@ -275,7 +284,10 @@ impl<'src> Lexer<'src> {
                 );
             }
         }
-        Token::new(TokenType::Comment, self.make_span(0, 0))
+        Token {
+            kind: TokenType::Comment,
+            span: Span::default(),
+        }
     }
 
     fn check_next_is(
@@ -379,7 +391,10 @@ impl<'src> Lexer<'src> {
             ),
             _ => unreachable!(),
         };
-        self.tokens.push(token);
+        
+        if token.kind != TokenType::Comment {
+            self.tokens.push(token);
+        }
     }
 
     fn scan_character(&mut self) -> Result<Token, BobaError> {
