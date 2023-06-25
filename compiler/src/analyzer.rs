@@ -43,22 +43,52 @@ impl Analyzer {
                 init,
             } => self.let_decl(name, *is_mutable, init),
             Stmt::Block(stmts) => {
-                self.scopes.push(HashMap::new());
-                self.check(stmts)?;
-                self.scopes.pop();
-                Ok(())
+                // self.scopes.push(HashMap::new());
+                // self.check(stmts)?;
+                // self.scopes.pop();
+                // Ok(())
+                self.block_stmt(stmts, None)
             }
-            Stmt::Function { name, body, .. } => {
-                self.function_decl(name, body)
-            }
-            Stmt::If { then, elze, ..} => {
-                self.if_stmt(then, elze)
-            }
+            Stmt::Function {
+                name, body, params, ..
+            } => self.function_decl(name, body, params),
+            Stmt::If {
+                then,
+                elze,
+                condition,
+            } => self.if_stmt(then, elze, condition),
+            Stmt::Expression(expr) | Stmt::Print(expr) => self.check_expr(expr),
             _ => todo!(),
         }
     }
 
-    fn if_stmt(&mut self, then: &Stmt, elze: &Option<Box<Stmt>>) -> Result<(), BobaError> {
+    fn check_expr(&mut self, expr: &Expr) -> Result<(), BobaError> {
+        todo!()
+    }
+
+    fn block_stmt(&mut self, stmts: &[Stmt], params: Option<&[(Token, Token)]>) -> Result<(), BobaError> {
+        self.scopes.push(HashMap::new());
+        if let Some(params) = params {
+            for (param, _param_type) in params {
+                if self.variable_is_declared_in_current_scope(&param.to_string()) {
+                    return Err(BobaError::VariableRedeclaration(param.clone()));
+                } else {
+                    self.add_variable(&param.to_string(), false, Kind::LocalVariable);
+                }
+            }
+        }
+        self.check(stmts)?;
+        self.scopes.pop();
+        Ok(())
+    }
+
+    fn if_stmt(
+        &mut self,
+        then: &Stmt,
+        elze: &Option<Box<Stmt>>,
+        condition: &Expr,
+    ) -> Result<(), BobaError> {
+        self.check_expr(condition)?;
         self.check_stmt(then)?;
         if let Some(else_stmt) = elze {
             self.check_stmt(else_stmt)?;
@@ -66,12 +96,20 @@ impl Analyzer {
         Ok(())
     }
 
-    fn function_decl(&mut self, name: &Token, body: &Stmt) -> Result<(), BobaError> {
+    fn function_decl(
+        &mut self,
+        name: &Token,
+        body: &Stmt,
+        params: &[(Token, Token)],
+    ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
-            self.check_stmt(body)?;
             self.add_variable(&name.to_string(), false, Kind::Function);
+            let Stmt::Block(stmts) = body else {
+                unreachable!()
+            };
+            self.block_stmt(stmts, Some(params))?;
             Ok(())
         }
     }
@@ -90,6 +128,9 @@ impl Analyzer {
             } else {
                 Kind::LocalVariable
             };
+            if let Some(expr) = init {
+                self.check_expr(expr)?;
+            }
             self.add_variable(&name.to_string(), is_mutable, kind);
             Ok(())
         }
