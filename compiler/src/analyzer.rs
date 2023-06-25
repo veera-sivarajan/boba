@@ -10,6 +10,7 @@ pub struct Symbol {
     is_mutable: bool,
 }
 
+#[derive(Debug)]
 enum Kind {
     GlobalVariable,
     LocalVariable,
@@ -100,7 +101,7 @@ impl Analyzer {
         for (index, scope) in self.scopes.iter().rev().enumerate() {
             for (key, _value) in scope {
                 if key.name == name {
-                    return Some(index as u8);
+                    return Some(self.current_scope() - index as u8);
                 }
             }
         }
