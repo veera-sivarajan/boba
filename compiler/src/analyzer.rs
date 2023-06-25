@@ -10,12 +10,14 @@ pub struct Symbol {
     is_mutable: bool,
 }
 
-enum Type {
-    Unknown,
+enum Kind {
+    GlobalVariable,
+    LocalVariable,
+    Function,
 }
 
 pub struct Analyzer {
-    scopes: Vec<HashMap<Symbol, Type>>,
+    scopes: Vec<HashMap<Symbol, Kind>>,
 }
 
 impl Analyzer {
@@ -39,7 +41,26 @@ impl Analyzer {
                 is_mutable,
                 init,
             } => self.let_decl(name, *is_mutable, init),
+            Stmt::Block(stmts) => {
+                self.scopes.push(HashMap::new());
+                self.check(stmts)?;
+                self.scopes.pop();
+                Ok(())
+            }
+            Stmt::Function { name, body, .. } => {
+                self.function_decl(name, body)
+            }
             _ => todo!(),
+        }
+    }
+
+    fn function_decl(&mut self, name: &Token, body: &Stmt) -> Result<(), BobaError> {
+        if self.variable_is_declared_in_current_scope(&name.to_string()) {
+            Err(BobaError::VariableRedeclaration(name.clone()))
+        } else {
+            self.check_stmt(body)?;
+            self.add_variable(&name.to_string(), false, Kind::Function);
+            Ok(())
         }
     }
 
@@ -52,7 +73,12 @@ impl Analyzer {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
-            self.add_variable(&name.to_string(), is_mutable);
+            let kind = if self.current_scope() == 0 {
+                Kind::GlobalVariable
+            } else {
+                Kind::LocalVariable
+            };
+            self.add_variable(&name.to_string(), is_mutable, kind);
             Ok(())
         }
     }
@@ -81,10 +107,10 @@ impl Analyzer {
         None
     }
 
-    fn add_variable(&mut self, name: &str, is_mutable: bool) {
+    fn add_variable(&mut self, name: &str, is_mutable: bool, kind: Kind) {
         if let Some(map) = self.scopes.last_mut() {
             let name = name.to_string();
-            map.insert(Symbol { name, is_mutable }, Type::Unknown);
+            map.insert(Symbol { name, is_mutable }, kind);
         }
     }
 }
