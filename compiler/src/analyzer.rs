@@ -10,7 +10,7 @@ pub struct Symbol {
     is_mutable: bool,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 enum Kind {
     GlobalVariable,
     LocalVariable,
@@ -60,17 +60,28 @@ impl Analyzer {
             Expr::Number(_) | Expr::Boolean(_) | Expr::String(_) => Ok(()),
             Expr::Variable(token) => self.variable(token),
             Expr::Call { callee, args } => self.function_call(callee, args),
-            Expr::Binary { left, oper, right } => self.binary(left, oper, right),
+            Expr::Binary { left, oper, right } => {
+                self.binary(left, oper, right)
+            }
         }
     }
 
-    fn binary(&mut self, left: &Expr, _oper: &Token, right: &Expr) -> Result<(), BobaError> {
+    fn binary(
+        &mut self,
+        left: &Expr,
+        _oper: &Token,
+        right: &Expr,
+    ) -> Result<(), BobaError> {
         self.expression(left)?;
         self.expression(right)?;
         Ok(())
     }
 
-    fn function_call(&mut self, callee: &Token, args: &[Expr]) -> Result<(), BobaError> {
+    fn function_call(
+        &mut self,
+        callee: &Token,
+        args: &[Expr],
+    ) -> Result<(), BobaError> {
         if !self.variable_is_function(&callee.to_string()) {
             Err(BobaError::UndeclaredFunction(callee.clone()))
         } else {
@@ -189,19 +200,23 @@ impl Analyzer {
     fn variable_is_function(&self, name: &str) -> bool {
         if let Some(global_scope) = self.scopes.get(0) {
             for (symbol, kind) in global_scope {
-                if symbol.name == name && *kind == Kind::Function {
+                if symbol.name == name && matches!(kind, Kind::Function) {
                     return true;
                 }
             }
-            return false;
-        }
+        } 
         false
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {
         for (index, scope) in self.scopes.iter().rev().enumerate() {
-            for (key, _value) in scope {
-                if key.name == name {
+            for (key, value) in scope {
+                if key.name == name
+                    && matches!(
+                        value,
+                        Kind::LocalVariable | Kind::GlobalVariable
+                    )
+                {
                     return Some(self.current_scope() - index as u8);
                 }
             }
