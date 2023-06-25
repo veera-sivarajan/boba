@@ -137,7 +137,11 @@ impl CodeGen {
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
             Stmt::Let { name, init, .. } => self.let_stmt(name, init),
-            Stmt::Expression(_expr) => todo!(),
+            Stmt::Expression(expr) => {
+                let register = self.expression(expr)?;
+                self.registers.deallocate(register);
+                Ok(())
+            },
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::If {
                 condition,
@@ -325,7 +329,7 @@ impl CodeGen {
         let symbol_name = name.to_string();
         if let Some(expr) = init {
             if let Some(size) = expr.get_size() {
-                self.add_data(name);
+                self.add_data(name); // add_data() and emit_data() should be combined into one function
                 self.emit_data(&symbol_name, size.as_ref(), expr)
             } else {
                 Err(BobaError::Compiler {
@@ -351,8 +355,16 @@ impl CodeGen {
             Expr::Number(num) => self.number(*num),
             Expr::Variable(token) => self.variable(token),
             Expr::Boolean(value) => self.boolean(value),
-            _ => todo!(),
+            Expr::Call { callee, paren, args } => self.function_call(callee, paren, args),
+            _ => todo!("{expr}"),
         }
+    }
+
+    fn function_call(&mut self, callee: &Expr, paren: &Token, args: &[Expr]) -> Result<RegisterIndex, BobaError> {
+
+
+
+        todo!()
     }
 
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
