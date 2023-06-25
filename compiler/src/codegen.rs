@@ -141,7 +141,7 @@ impl CodeGen {
                 let register = self.expression(expr)?;
                 self.registers.deallocate(register);
                 Ok(())
-            },
+            }
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::If {
                 condition,
@@ -252,14 +252,14 @@ impl CodeGen {
 
     fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
         let register = self.expression(expr)?;
-        self.emit_code("pushq", "%rbp", "")?;
-        self.emit_code("movq", "%rsp", "%rbp")?;
         self.emit_code("movq", &register, "%rsi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
-        self.emit_code("movl", "$0", "%eax")?;
+        self.emit_code("pushq", "%r10", "")?;
+        self.emit_code("pushq", "%r11", "")?;
         self.emit_code("call", "printf@PLT", "")?;
-        self.emit_code("movl", "$0", "%eax")?;
+        self.emit_code("popq", "%r11", "")?;
+        self.emit_code("popq", "%r10", "")?;
         self.emit_code("popq", "%rbp", "")
     }
 
@@ -355,16 +355,37 @@ impl CodeGen {
             Expr::Number(num) => self.number(*num),
             Expr::Variable(token) => self.variable(token),
             Expr::Boolean(value) => self.boolean(value),
-            Expr::Call { callee, paren, args } => self.function_call(callee, paren, args),
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => self.function_call(callee, paren, args),
             _ => todo!("{expr}"),
         }
     }
 
-    fn function_call(&mut self, callee: &Expr, paren: &Token, args: &[Expr]) -> Result<RegisterIndex, BobaError> {
-
-
-
-        todo!()
+    fn function_call(
+        &mut self,
+        callee: &str,
+        _paren: &Token,
+        args: &[Expr],
+    ) -> Result<RegisterIndex, BobaError> {
+        let mut arguments = vec![];
+        for arg in args {
+            arguments.push(self.expression(arg)?);
+        }
+        let registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
+        for (value, register) in arguments.iter().zip(registers.iter()) {
+            self.emit_code("movq", value, register)?;
+        }
+        self.emit_code("pushq", "%r10", "")?;
+        self.emit_code("pushq", "%r11", "")?;
+        self.emit_code("call", callee, "")?;
+        self.emit_code("popq", "%r11", "")?;
+        self.emit_code("popq", "%r10", "")?;
+        let result = self.registers.allocate();
+        self.emit_code("movq", "%rax", &result)?;
+        Ok(result)
     }
 
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {

@@ -292,11 +292,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
         let paren =
             self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
-        Ok(Expr::Call {
-            callee: Box::new(callee),
-            paren,
-            args,
-        })
+        if let Expr::Variable(function_name) = &callee {
+            Ok(Expr::Call {
+                callee: function_name.to_string(),
+                paren,
+                args,
+            })
+        } else {
+            Err(self.error(format!("Expected a function name but found {callee:?}").as_str()))
+        }
     }
 
     fn primary_expression(&mut self) -> Result<Expr, BobaError> {

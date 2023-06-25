@@ -1,9 +1,8 @@
-fn compute(a: Number, b: Number, c: Number) -> Number {
-    let x = 1;
-    let y = 10;
+let a = 1;
+let b = 2;
+fn factorial() -> Number {
 }
 
 fn main() -> Number {
-
-
+    factorial();
 }
