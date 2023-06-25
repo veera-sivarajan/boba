@@ -1,22 +1,20 @@
 mod codegen;
 mod error;
 mod expr;
-mod inference;
+mod analyzer;
 mod lexer;
 mod parser;
 mod stmt;
 
 use crate::error::BobaError;
-
+// Option<E> to Result<(), E>
 fn compile_helper(source: &str) -> Result<String, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;
     if !tokens.is_empty() {
         let mut parser = parser::Parser::new(tokens.into_iter());
         let ast = parser.parse()?;
-        // println!("{ast:?}");
-        // inference::infer_types(&ast);
-        // inference::StaticAnalysis::new().check(&ast)?;
+        analyzer::Analyzer::new().check(&ast)?;
         let mut codegen = codegen::CodeGen::new();
         codegen.compile(&ast)
     } else {

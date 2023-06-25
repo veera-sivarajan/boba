@@ -12,15 +12,15 @@ pub enum Stmt {
     Print(Expr),
     If {
         condition: Expr,
-        then: Vec<Stmt>,
-        elze: Option<Vec<Stmt>>,
+        then: Box<Stmt>,
+        elze: Option<Box<Stmt>>,
     },
     Block(Vec<Stmt>),
     Function {
         name: Token,
         params: Vec<(Token, Token)>,
         return_type: Token,
-        body: Vec<Stmt>,
+        body: Box<Stmt>,
         num_locals: u8,
     }
 }

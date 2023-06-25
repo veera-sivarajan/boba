@@ -1,4 +1,4 @@
-use crate::lexer::{Position, Span};
+use crate::lexer::{Token, Position, Span};
 use std::fmt;
 
 impl fmt::Display for Position {
@@ -33,6 +33,7 @@ pub enum BobaError {
     Compiler { msg: Box<str>, span: Span },
     Formatting,
     TypeError { msg: Box<str>, span: Span },
+    VariableRedeclaration(Token),
 }
 
 impl fmt::Display for BobaError {
@@ -75,6 +76,9 @@ impl fmt::Display for BobaError {
                 "Compiler Internal Error: Cannot write to assembly file."
             ),
             TypeError { msg, span } => write!(f, "TypeError: {msg} at {span}."),
+            VariableRedeclaration(token) => {
+                write!(f, "Cannot re-declare multiple variable with same name '{}' at {}", token, token.span)
+            }
         }
     }
 }

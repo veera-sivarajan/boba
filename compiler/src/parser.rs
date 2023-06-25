@@ -142,6 +142,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
         let body = self.block_stmt()?;
         let num_locals = self.count_local_variables(&body);
+        let body = Box::new(Stmt::Block(body));
         Ok(Stmt::Function {
             name,
             params,
@@ -157,13 +158,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenType::LeftBrace,
             "Condition should be followed by a block.",
         )?;
-        let then = self.block_stmt()?;
+        let then = Box::new(Stmt::Block(self.block_stmt()?));
         let elze = if self.next_eq(TokenType::Else) {
             self.consume(
                 TokenType::LeftBrace,
                 "Block should follow an 'else' keyword.",
             )?;
-            Some(self.block_stmt()?)
+            Some(Box::new(Stmt::Block(self.block_stmt()?)))
         } else {
             None
         };

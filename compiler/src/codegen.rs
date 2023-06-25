@@ -170,7 +170,7 @@ impl CodeGen {
         params: &[(Token, Token)],
         _return_type: &Token,
         num_locals: u8,
-        body: &[Stmt],
+        body: &Stmt,
     ) -> Result<(), BobaError> {
         self.add_global_name(name);
         self.emit_label(name.to_string())?;
@@ -190,7 +190,7 @@ impl CodeGen {
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "")?;
         }
-        self.block_stmt(body)?;
+        self.codegen(body)?;
         for register in callee_saved_registers.iter().rev() {
             self.emit_code("popq", register, "")?;
         }
@@ -203,17 +203,17 @@ impl CodeGen {
     fn if_stmt(
         &mut self,
         condition: &Expr,
-        then: &[Stmt],
-        elze: &Option<Vec<Stmt>>,
+        then: &Stmt,
+        elze: &Option<Box<Stmt>>,
     ) -> Result<(), BobaError> {
         let false_label = self.labels.create();
         let done_label = self.labels.create();
         self.boolean_expression(condition, &false_label)?;
-        self.block_stmt(then)?;
+        self.codegen(then)?;
         self.emit_code("jmp", &done_label, "")?;
         self.emit_label(false_label)?;
         if let Some(else_body) = elze {
-            self.block_stmt(else_body)?;
+            self.codegen(else_body)?;
         }
         self.emit_label(done_label)?;
         Ok(())
