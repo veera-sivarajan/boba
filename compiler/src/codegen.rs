@@ -230,7 +230,7 @@ impl CodeGen {
         };
         let left = self.expression(left)?;
         let right = self.expression(right)?;
-        self.emit_code("cmp", right, left)?;
+        self.emit_code("cmp", &right, &left)?;
         match oper.kind {
             TokenType::Less => self.emit_code("jnl", false_label, "")?,
             TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
@@ -240,6 +240,8 @@ impl CodeGen {
             }
             _ => unreachable!(),
         }
+        self.registers.deallocate(left);
+        self.registers.deallocate(right);
         Ok(())
     }
 
@@ -257,13 +259,11 @@ impl CodeGen {
         self.emit_code("movq", &register, "%rsi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
-        // self.emit_code("pushq", "%r10", "")?;
-        // self.emit_code("pushq", "%r11", "")?;
         self.emit_code("xor", "%eax", "%eax")?;
         self.emit_code("call", "printf@PLT", "")?;
-        // self.emit_code("popq", "%rbp", "")
         self.emit_code("popq", &dummy, "")?;
         self.registers.deallocate(dummy);
+        self.registers.deallocate(register);
         Ok(())
     }
 
