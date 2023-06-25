@@ -42,13 +42,7 @@ impl Analyzer {
                 is_mutable,
                 init,
             } => self.let_decl(name, *is_mutable, init),
-            Stmt::Block(stmts) => {
-                // self.scopes.push(HashMap::new());
-                // self.check(stmts)?;
-                // self.scopes.pop();
-                // Ok(())
-                self.block_stmt(stmts, None)
-            }
+            Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
                 name, body, params, ..
             } => self.function_decl(name, body, params),
@@ -66,14 +60,26 @@ impl Analyzer {
         todo!()
     }
 
-    fn block_stmt(&mut self, stmts: &[Stmt], params: Option<&[(Token, Token)]>) -> Result<(), BobaError> {
+    fn block_stmt(
+        &mut self,
+        stmts: &[Stmt],
+        params: Option<&[(Token, Token)]>,
+    ) -> Result<(), BobaError> {
         self.scopes.push(HashMap::new());
         if let Some(params) = params {
             for (param, _param_type) in params {
-                if self.variable_is_declared_in_current_scope(&param.to_string()) {
-                    return Err(BobaError::VariableRedeclaration(param.clone()));
+                if self
+                    .variable_is_declared_in_current_scope(&param.to_string())
+                {
+                    return Err(BobaError::VariableRedeclaration(
+                        param.clone(),
+                    ));
                 } else {
-                    self.add_variable(&param.to_string(), false, Kind::LocalVariable);
+                    self.add_variable(
+                        &param.to_string(),
+                        false,
+                        Kind::LocalVariable,
+                    );
                 }
             }
         }
