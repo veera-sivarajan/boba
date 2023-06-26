@@ -14,23 +14,49 @@ pub struct Symbol {
 enum Kind {
     GlobalVariable,
     LocalVariable,
-    Function,
 }
 
 pub struct Analyzer {
     scopes: Vec<HashMap<Symbol, Kind>>,
+    functions: Vec<Token>,
 }
 
 impl Analyzer {
     pub fn new() -> Self {
         Self {
             scopes: vec![HashMap::new()],
+            functions: vec![],
         }
     }
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+        self.declare_all_functions(ast)?;
         for stmt in ast {
             self.statement(stmt)?;
+        }
+        Ok(())
+    }
+
+    fn add_function(&mut self, name: &Token) {
+        self.functions.push(name.clone());
+    }
+
+    fn function_is_defined(&self, name: &Token) -> bool {
+        self.functions.contains(name)
+    }
+
+    fn declare_all_functions(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+        for stmt in ast {
+            match stmt {
+                Stmt::Function { name, .. } => {
+                    if self.function_is_defined(name) {
+                        return Err(BobaError::FunctionRedeclaration(name.clone()));
+                    } else {
+                        self.add_function(name);
+                    }
+                }
+                _ => continue,
+            }
         }
         Ok(())
     }
@@ -82,7 +108,7 @@ impl Analyzer {
         callee: &Token,
         args: &[Expr],
     ) -> Result<(), BobaError> {
-        if !self.variable_is_function(&callee.to_string()) {
+        if !self.function_is_defined(callee) {
             Err(BobaError::UndeclaredFunction(callee.clone()))
         } else {
             for arg in args {
@@ -148,16 +174,11 @@ impl Analyzer {
         body: &Stmt,
         params: &[(Token, Token)],
     ) -> Result<(), BobaError> {
-        if self.variable_is_declared_in_current_scope(&name.to_string()) {
-            Err(BobaError::VariableRedeclaration(name.clone()))
-        } else {
-            self.add_variable(&name.to_string(), false, Kind::Function);
-            let Stmt::Block(stmts) = body else {
-                unreachable!()
-            };
-            self.block_stmt(stmts, Some(params))?;
-            Ok(())
-        }
+        let Stmt::Block(stmts) = body else {
+            unreachable!()
+        };
+        self.block_stmt(stmts, Some(params))?;
+        Ok(())
     }
 
     fn let_decl(
@@ -193,17 +214,6 @@ impl Analyzer {
     fn variable_is_declared_in_current_scope(&self, name: &str) -> bool {
         self.variable_is_declared(name)
             .is_some_and(|scope| scope == self.current_scope())
-    }
-
-    fn variable_is_function(&self, name: &str) -> bool {
-        if let Some(global_scope) = self.scopes.get(0) {
-            for (symbol, kind) in global_scope {
-                if symbol.name == name && matches!(kind, Kind::Function) {
-                    return true;
-                }
-            }
-        } 
-        false
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {

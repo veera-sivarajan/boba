@@ -34,6 +34,7 @@ pub enum BobaError {
     Formatting,
     TypeError { msg: Box<str>, span: Span },
     VariableRedeclaration(Token),
+    FunctionRedeclaration(Token),
     UndeclaredVariable(Token),
     UndeclaredFunction(Token),
     LocalFunction(Token),
@@ -81,6 +82,9 @@ impl fmt::Display for BobaError {
             TypeError { msg, span } => write!(f, "TypeError: {msg} at {span}."),
             VariableRedeclaration(token) => {
                 write!(f, "Cannot re-declare multiple variable with same name '{}' at {}", token, token.span)
+            }
+            FunctionRedeclaration(token) => {
+                write!(f, "Cannot re-declare function '{}' at {}.", token, token.span)
             }
             UndeclaredVariable(token) => {
                 write!(f, "Cannot use undeclared variable '{}' at {}", token, token.span)
