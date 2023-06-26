@@ -17,11 +17,13 @@ pub enum Expr {
     }
 }
 
-impl Expr {
-    pub fn is_constant(&self) -> bool {
-        match self {
-            Expr::Number(_) | Expr::String(_) | Expr::Boolean(_) => true,
-            _ => false,
+impl From<&Expr> for Token {
+    fn from(value: &Expr) -> Token {
+        match value {
+            Expr::Binary { oper, .. } => oper.clone(),
+            Expr::Variable(token) => token.clone(),
+            Expr::Call { callee, .. } => callee.clone(),
+            _ => panic!("Cannot turn value into token.")
         }
     }
 }

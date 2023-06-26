@@ -1,6 +1,8 @@
 use crate::expr::Expr;
 use crate::lexer::Token;
 
+pub type Parameter = (Expr, Token);
+
 #[derive(Clone, Debug)]
 pub enum Stmt {
     LocalVariable {
@@ -23,7 +25,7 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     Function {
         name: Token,
-        params: Vec<(Token, Token)>,
+        params: Vec<Parameter>,
         return_type: Token,
         body: Box<Stmt>,
     }

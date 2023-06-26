@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
-use crate::stmt::Stmt;
+use crate::stmt::{Stmt, Parameter};
 use std::iter::Peekable;
 
 macro_rules! next_eq {
@@ -130,21 +130,21 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
-    fn parse_name_and_type(&mut self) -> Result<(Token, Token), BobaError> {
+    fn parse_parameter_and_type(&mut self) -> Result<Parameter, BobaError> {
         let identifier = self.consume_identifier("Expect parameter name.")?;
         self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
         let id_type = self.consume_type("Expect parameter type.")?;
-        Ok((identifier, id_type))
+        Ok((Expr::Variable(identifier), id_type))
     }
 
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
         let name = self.consume_identifier("Expect function name.")?;
         self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
-        let mut params: Vec<(Token, Token)> = Vec::with_capacity(255);
+        let mut params: Vec<Parameter> = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightParen) {
-            params.push(self.parse_name_and_type()?);
+            params.push(self.parse_parameter_and_type()?);
             while self.next_eq(TokenType::Comma) {
-                params.push(self.parse_name_and_type()?);
+                params.push(self.parse_parameter_and_type()?);
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;

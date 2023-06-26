@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
-use crate::lexer::{Token, TokenType};
-use crate::stmt::Stmt;
+use crate::lexer::Token;
+use crate::stmt::{Stmt, Parameter};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -148,7 +148,7 @@ impl Analyzer {
     fn block_stmt(
         &mut self,
         stmts: &[Stmt],
-        params: Option<&[(Token, Token)]>,
+        params: Option<&[Parameter]>,
     ) -> Result<(), BobaError> {
         self.scopes.push(HashMap::new());
         if let Some(params) = params {
@@ -157,7 +157,7 @@ impl Analyzer {
                     .variable_is_declared_in_current_scope(&param.to_string())
                 {
                     return Err(BobaError::VariableRedeclaration(
-                        param.clone(),
+                        param.into(),
                     ));
                 } else {
                     self.add_variable(
@@ -191,7 +191,7 @@ impl Analyzer {
         &mut self,
         _name: &Token,
         body: &Stmt,
-        params: &[(Token, Token)],
+        params: &[Parameter],
     ) -> Result<(), BobaError> {
         let Stmt::Block(stmts) = body else {
             unreachable!("Expected function body to be a block statement.")

@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
-use crate::stmt::Stmt;
+use crate::stmt::{Stmt, Parameter};
 use std::fmt::Write;
 
 #[derive(Default)]
@@ -153,10 +153,9 @@ impl CodeGen {
                 name,
                 params,
                 return_type,
-                num_locals,
                 body,
             } => {
-                self.function_decl(name, params, return_type, *num_locals, body)
+                self.function_decl(name, params, return_type, body)
             }
         }
     }
@@ -168,9 +167,8 @@ impl CodeGen {
     fn function_decl(
         &mut self,
         name: &Token,
-        params: &[(Token, Token)],
+        params: &[Parameter],
         _return_type: &Token,
-        num_locals: u8,
         body: &Stmt,
     ) -> Result<(), BobaError> {
         self.add_global_name(name);
@@ -185,8 +183,8 @@ impl CodeGen {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = num_locals * 8;
-        self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
+        let space_for_locals = todo!(); 
+        // self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "")?;
