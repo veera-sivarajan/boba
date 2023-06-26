@@ -31,3 +31,14 @@ pub enum Stmt {
     }
 }
 
+impl From<&Stmt> for Token {
+    fn from(stmt: &Stmt) -> Token {
+        match stmt {
+            Stmt::LocalVariable { name, .. } => name.clone(),
+            Stmt::GlobalVariable { name, .. } => name.clone(),
+            Stmt::Function { name, .. } => name.clone(),
+            _ => panic!("Cannot turn stmt into token."),
+        }
+    }
+}
+

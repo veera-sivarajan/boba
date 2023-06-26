@@ -130,6 +130,7 @@ impl PartialEq for Token {
 impl Hash for Token {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.kind.hash(state);
+        self.span.hash(state);
     }
 }
 

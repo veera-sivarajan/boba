@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::Token;
-use crate::stmt::{Stmt, Parameter};
+use crate::stmt::{Parameter, Stmt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -19,6 +19,7 @@ enum Kind {
 pub struct Analyzer {
     scopes: Vec<HashMap<Symbol, Kind>>,
     functions: Vec<Token>,
+    symbol_table: Vec<HashMap<Token, u8>>,
 }
 
 impl Analyzer {
@@ -26,6 +27,7 @@ impl Analyzer {
         Self {
             scopes: vec![HashMap::new()],
             functions: vec![],
+            symbol_table: vec![],
         }
     }
 
@@ -51,16 +53,26 @@ impl Analyzer {
             match stmt {
                 Stmt::Function { name, .. } => {
                     if self.function_is_defined(name) {
-                        return Err(BobaError::FunctionRedeclaration(name.clone()));
+                        return Err(BobaError::FunctionRedeclaration(
+                            name.clone(),
+                        ));
                     } else {
                         self.add_function(name);
                     }
                 }
                 Stmt::GlobalVariable { name, .. } => {
-                    if self.variable_is_declared_in_current_scope(&name.to_string()) {
-                        return Err(BobaError::VariableRedeclaration(name.clone()));
+                    if self.variable_is_declared_in_current_scope(
+                        &name.to_string(),
+                    ) {
+                        return Err(BobaError::VariableRedeclaration(
+                            name.clone(),
+                        ));
                     } else {
-                        self.add_variable(&name.to_string(), false, Kind::GlobalVariable);
+                        self.add_variable(
+                            &name.to_string(),
+                            false,
+                            Kind::GlobalVariable,
+                        );
                     }
                 }
                 _ => continue,
@@ -71,7 +83,11 @@ impl Analyzer {
     }
 
     fn main_is_defined(&self) -> Result<(), BobaError> {
-        if !self.functions.iter().any(|decl| &decl.to_string() == "main") {
+        if !self
+            .functions
+            .iter()
+            .any(|decl| &decl.to_string() == "main")
+        {
             Err(BobaError::MainNotFound)
         } else {
             Ok(())
@@ -86,7 +102,9 @@ impl Analyzer {
                 init,
                 index,
             } => self.local_variable_decl(name, *is_mutable, init, *index),
-            Stmt::GlobalVariable { init, .. } => self.global_variable_decl(init),
+            Stmt::GlobalVariable { init, .. } => {
+                self.global_variable_decl(init)
+            }
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
                 name, body, params, ..
@@ -156,9 +174,7 @@ impl Analyzer {
                 if self
                     .variable_is_declared_in_current_scope(&param.to_string())
                 {
-                    return Err(BobaError::VariableRedeclaration(
-                        param.into(),
-                    ));
+                    return Err(BobaError::VariableRedeclaration(param.into()));
                 } else {
                     self.add_variable(
                         &param.to_string(),
@@ -197,7 +213,38 @@ impl Analyzer {
             unreachable!("Expected function body to be a block statement.")
         };
         self.block_stmt(stmts, Some(params))?;
+        self.create_symbol_table(stmts, params);
         Ok(())
+    }
+
+    fn filter_locals_helper(&self, stmts: &[Stmt]) -> Vec<Token> {
+        stmts
+            .iter()
+            .filter(|s| matches!(s, Stmt::LocalVariable { .. }))
+            .map(|s| s.into())
+            .collect()
+    }
+
+    fn filter_locals(&self, stmt: &Stmt) -> Vec<Token> {
+        match stmt {
+            Stmt::Block(stmts) => self.filter_locals_helper(stmts),
+            Stmt::If { then, elze, .. } => {
+                let mut result = self.filter_locals(then);
+                if let Some(ele) = elze {
+                    result.extend(self.filter_locals(ele));
+                }
+                result
+            }
+            _ => vec![],
+        }
+    }
+
+    fn create_symbol_table(&mut self, body: &[Stmt], params: &[Parameter]) {
+        let symbol_table: HashMap<Token, u8> = HashMap::new();
+        let mut locals = vec![];
+        for stmt in body {
+            locals.extend(self.filter_locals(stmt));
+        }
     }
 
     fn global_variable_decl(&mut self, init: &Expr) -> Result<(), BobaError> {
