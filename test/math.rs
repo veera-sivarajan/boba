@@ -1,12 +1,11 @@
-let b = 100;
-let a = 10;
-
-fn main() -> Number {
-    factorial();
+fn fact() -> Number {
+    let a = 10;
+    let b = 100;
 }
 
-fn factorial() -> Number {
-    println(a + b);
+fn main() -> Number {
+    let c = 98;
+    let d = 76;
 }
 
 

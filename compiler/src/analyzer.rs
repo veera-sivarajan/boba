@@ -84,7 +84,8 @@ impl Analyzer {
                 name,
                 is_mutable,
                 init,
-            } => self.local_variable_decl(name, *is_mutable, init),
+                index,
+            } => self.local_variable_decl(name, *is_mutable, init, *index),
             Stmt::GlobalVariable { init, .. } => self.global_variable_decl(init),
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
@@ -209,10 +210,12 @@ impl Analyzer {
         name: &Token,
         is_mutable: bool,
         init: &Expr,
+        index: u8,
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
+            println!("Variable {name} at index {index}");
             let kind = if self.current_scope() == 0 {
                 Kind::GlobalVariable
             } else {
