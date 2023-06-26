@@ -31,6 +31,7 @@ impl Analyzer {
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
         self.declare_all_globals(ast)?;
+        self.main_is_defined()?;
         for stmt in ast {
             self.statement(stmt)?;
         }
@@ -65,7 +66,16 @@ impl Analyzer {
                 _ => continue,
             }
         }
+
         Ok(())
+    }
+
+    fn main_is_defined(&self) -> Result<(), BobaError> {
+        if !self.functions.iter().any(|decl| &decl.to_string() == "main") {
+            Err(BobaError::MainNotFound)
+        } else {
+            Ok(())
+        }
     }
 
     fn statement(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
