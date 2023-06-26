@@ -137,15 +137,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok((identifier, id_type))
     }
 
-    // FIXME: doesn't consider local variables
-    // inside other block and if statements
-    fn count_local_variables(&self, stmts: &[Stmt]) -> u8 {
-        stmts
-            .iter()
-            .filter(|stmt| matches!(stmt, Stmt::LocalVariable { .. }))
-            .count() as u8
-    }
-
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
         let name = self.consume_identifier("Expect function name.")?;
         self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
@@ -162,14 +153,12 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
         self.local_variable_index = 0;
         let body = self.block_stmt()?;
-        let num_locals = self.count_local_variables(&body);
         let body = Box::new(Stmt::Block(body));
         Ok(Stmt::Function {
             name,
             params,
             return_type,
             body,
-            num_locals,
         })
     }
 

@@ -26,7 +26,6 @@ pub enum Stmt {
         params: Vec<(Token, Token)>,
         return_type: Token,
         body: Box<Stmt>,
-        num_locals: u8,
     }
 }
 
