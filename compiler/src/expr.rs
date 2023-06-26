@@ -24,14 +24,6 @@ impl Expr {
             _ => false,
         }
     }
-
-    pub fn get_size(&self) -> Option<Box<str>> {
-        match self {
-            Expr::Number(_) | Expr::Boolean(_) => Some("quad".into()),
-            Expr::String(_) => Some("string".into()),
-            _ => None
-        }
-    }
 }
 
 use std::fmt;

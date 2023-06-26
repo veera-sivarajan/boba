@@ -45,7 +45,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn declaration(&mut self) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Let) {
-            self.variable_declaration()
+            self.global_variable_decl()
         } else if self.next_eq(TokenType::Fn) {
             self.function_decl()
         } else {
@@ -68,16 +68,30 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    fn variable_declaration(&mut self) -> Result<Stmt, BobaError> {
-        let is_mutable = self.next_eq(TokenType::Mutable);
-        let name = self.consume_identifier("Expect variable name")?;
-        let init = if self.next_eq(TokenType::Equal) {
-            Some(self.expression()?)
-        } else {
-            None
-        };
+    fn global_variable_decl(&mut self) -> Result<Stmt, BobaError> {
+        let name = self.consume_identifier("Expect global variable name.")?;
+        self.consume(
+            TokenType::Equal,
+            "Global variables should be initalized at declaration.",
+        )?;
+        let init = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon")?;
-        Ok(Stmt::Let {
+        Ok(Stmt::GlobalVariable {
+            name,
+            init
+        })
+    }
+
+    fn local_variable_decl(&mut self) -> Result<Stmt, BobaError> {
+        let is_mutable = self.next_eq(TokenType::Mutable);
+        let name = self.consume_identifier("Expect variable name.")?;
+        self.consume(
+            TokenType::Equal,
+            "Variables should be initalized at declaration.",
+        )?;
+        let init = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect semicolon")?;
+        Ok(Stmt::LocalVariable {
             name,
             is_mutable,
             init,
@@ -102,9 +116,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else if self.next_eq(TokenType::LeftBrace) {
             Ok(Stmt::Block(self.block_stmt()?))
         } else if self.next_eq(TokenType::Let) {
-            self.variable_declaration()
+            self.local_variable_decl()
         } else if self.peek_check(TokenType::Fn) {
-            Err(self.error("Functions cannot be declared within a local scope."))
+            Err(self
+                .error("Functions cannot be declared within a local scope."))
         } else {
             self.expression_stmt()
         }
@@ -122,7 +137,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn count_local_variables(&self, stmts: &[Stmt]) -> u8 {
         stmts
             .iter()
-            .filter(|stmt| matches!(stmt, Stmt::Let { .. }))
+            .filter(|stmt| matches!(stmt, Stmt::LocalVariable { .. }))
             .count() as u8
     }
 
@@ -298,7 +313,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 args,
             })
         } else {
-            Err(self.error(format!("Expected a function name but found {callee:?}").as_str()))
+            Err(self.error(
+                format!("Expected a function name but found {callee:?}")
+                    .as_str(),
+            ))
         }
     }
 

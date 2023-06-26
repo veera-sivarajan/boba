@@ -3,10 +3,14 @@ use crate::lexer::Token;
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
-    Let {
+    LocalVariable {
         name: Token,
         is_mutable: bool,
-        init: Option<Expr>,
+        init: Expr,
+    },
+    GlobalVariable {
+        name: Token,
+        init: Expr,
     },
     Expression(Expr),
     Print(Expr),
