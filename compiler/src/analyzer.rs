@@ -30,7 +30,7 @@ impl Analyzer {
     }
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
-        self.declare_all_functions(ast)?;
+        self.declare_all_globals(ast)?;
         for stmt in ast {
             self.statement(stmt)?;
         }
@@ -45,7 +45,7 @@ impl Analyzer {
         self.functions.contains(name)
     }
 
-    fn declare_all_functions(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+    fn declare_all_globals(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
         for stmt in ast {
             match stmt {
                 Stmt::Function { name, .. } => {
@@ -53,6 +53,13 @@ impl Analyzer {
                         return Err(BobaError::FunctionRedeclaration(name.clone()));
                     } else {
                         self.add_function(name);
+                    }
+                }
+                Stmt::GlobalVariable { name, .. } => {
+                    if self.variable_is_declared_in_current_scope(&name.to_string()) {
+                        return Err(BobaError::VariableRedeclaration(name.clone()));
+                    } else {
+                        self.add_variable(&name.to_string(), false, Kind::GlobalVariable);
                     }
                 }
                 _ => continue,
@@ -63,11 +70,12 @@ impl Analyzer {
 
     fn statement(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::Let {
+            Stmt::LocalVariable {
                 name,
                 is_mutable,
                 init,
-            } => self.let_decl(name, *is_mutable, init),
+            } => self.local_variable_decl(name, *is_mutable, init),
+            Stmt::GlobalVariable { init, .. } => self.global_variable_decl(init),
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
                 name, body, params, ..
@@ -170,22 +178,27 @@ impl Analyzer {
 
     fn function_decl(
         &mut self,
-        name: &Token,
+        _name: &Token,
         body: &Stmt,
         params: &[(Token, Token)],
     ) -> Result<(), BobaError> {
         let Stmt::Block(stmts) = body else {
-            unreachable!()
+            unreachable!("Expected function body to be a block statement.")
         };
         self.block_stmt(stmts, Some(params))?;
         Ok(())
     }
 
-    fn let_decl(
+    fn global_variable_decl(&mut self, init: &Expr) -> Result<(), BobaError> {
+        self.expression(init)?;
+        Ok(())
+    }
+
+    fn local_variable_decl(
         &mut self,
         name: &Token,
         is_mutable: bool,
-        init: &Option<Expr>,
+        init: &Expr,
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
@@ -195,9 +208,7 @@ impl Analyzer {
             } else {
                 Kind::LocalVariable
             };
-            if let Some(expr) = init {
-                self.expression(expr)?;
-            }
+            self.expression(init)?;
             self.add_variable(&name.to_string(), is_mutable, kind);
             Ok(())
         }

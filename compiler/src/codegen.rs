@@ -135,7 +135,8 @@ impl CodeGen {
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::Let { name, init, .. } => self.let_stmt(name, init),
+            Stmt::LocalVariable { name, init, .. } => todo!(),
+            Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
             Stmt::Expression(expr) => {
                 let register = self.expression(expr)?;
                 self.registers.deallocate(register);
@@ -324,30 +325,13 @@ impl CodeGen {
             .map_err(|e| e.into())
     }
 
-    fn let_stmt(
+    fn global_variable_decl(
         &mut self,
         name: &Token,
-        init: &Option<Expr>,
+        init: &Expr,
     ) -> Result<(), BobaError> {
-        let symbol_name = name.to_string();
-        if let Some(expr) = init {
-            if let Some(size) = expr.get_size() {
-                self.add_data(name); // add_data() and emit_data() should be combined into one function
-                self.emit_data(&symbol_name, size.as_ref(), expr)
-            } else {
-                Err(BobaError::Compiler {
-                    msg: "Global variables can be initialized with constants only"
-                        .into(),
-                    span: name.span,
-                })
-            }
-        } else {
-            Err(BobaError::Compiler {
-                msg: "Global variables should be initated with constants"
-                    .into(),
-                span: name.span,
-            })
-        }
+        self.add_data(name); // add_data() and emit_data() should be combined into one function
+        self.emit_data(&name.to_string(), "quad", init)
     }
 
     fn expression(&mut self, expr: &Expr) -> Result<RegisterIndex, BobaError> {
@@ -400,15 +384,8 @@ impl CodeGen {
         Ok(register)
     }
 
-    fn symbol(&self, name: &Token) -> Result<String, BobaError> {
-        if self.data_buffer.contains(name) {
-            Ok(format!("{name}(%rip)"))
-        } else {
-            Err(BobaError::Compiler {
-                msg: format!("Undeclared variable {name}").into(),
-                span: name.span,
-            })
-        }
+    fn symbol(&self, name: &Token) -> Box<str> {
+        format!("{name}(%rip)").into()
     }
 
     fn add_data(&mut self, token: &Token) {
@@ -417,7 +394,7 @@ impl CodeGen {
 
     fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
-        self.emit_code("movq", &self.symbol(token)?, &register)?;
+        self.emit_code("movq", self.symbol(token), &register)?;
         Ok(register)
     }
 
