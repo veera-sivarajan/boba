@@ -194,7 +194,7 @@ impl CodeGen {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = 2;
+        let space_for_locals = 16;
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {

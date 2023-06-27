@@ -1,6 +1,6 @@
-let what = 10;
+let b = 100;
+
 fn main() -> Number {
-    let local = 20;
-    let last = local + what;
-    println(last);
+    let a = 10;
+    println(a + b);
 }
