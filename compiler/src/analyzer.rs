@@ -13,7 +13,15 @@ pub enum Kind {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Type {
-    Number
+    Number,
+}
+
+impl From<&Type> for u8 {
+    fn from(value: &Type) -> u8 {
+        match value {
+            Type::Number => 8,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -83,11 +91,7 @@ impl Analyzer {
                             name.clone(),
                         ));
                     } else {
-                        self.add_variable(
-                            name,
-                            false,
-                            Kind::GlobalVariable,
-                        );
+                        self.add_variable(name, false, Kind::GlobalVariable);
                     }
                 }
                 _ => continue,
@@ -137,16 +141,8 @@ impl Analyzer {
     fn expression(&mut self, mut expr: &mut Expr) -> Result<(), BobaError> {
         match &mut expr {
             Expr::Number(_) | Expr::Boolean(_) | Expr::String(_) => Ok(()),
-            // Expr::Variable(token) => self.variable(token),
             Expr::Variable { name, ty_pe, kind } => {
-                // self.variable(name, ty_pe, kind)},
-                if let Some(info) = self.get_info(name) {
-                    *ty_pe = Some(info.ty_pe.clone());
-                    *kind =  Some(info.kind.clone());
-                    Ok(())
-                } else {
-                    Err(BobaError::UndeclaredVariable(name.clone()))
-                }
+                self.variable(name, ty_pe, kind)
             }
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
@@ -181,15 +177,20 @@ impl Analyzer {
         }
     }
 
-    // fn variable(&mut self, name: &mut Token, ty_pe: &mut Option<Type>, mut kind: &mut Option<Kind>) -> Result<(), BobaError> {
-    //     if let Some(info) = self.get_info(name) {
-    //         ty_pe = &mut Some(info.ty_pe.clone()).clone();
-    //         kind = &mut Some(info.kind.clone()).clone();
-    //         Ok(())
-    //     } else {
-    //         Err(BobaError::UndeclaredVariable(name.clone()))
-    //     }
-    // }
+    fn variable(
+        &mut self,
+        name: &mut Token,
+        ty_pe: &mut Option<Type>,
+        kind: &mut Option<Kind>,
+    ) -> Result<(), BobaError> {
+        if let Some(info) = self.get_info(name) {
+            *ty_pe = Some(info.ty_pe.clone());
+            *kind = Some(info.kind.clone());
+            Ok(())
+        } else {
+            Err(BobaError::UndeclaredVariable(name.clone()))
+        }
+    }
 
     fn new_scope(&mut self) {
         self.symbol_table.push(HashMap::new());
@@ -252,7 +253,10 @@ impl Analyzer {
         Ok(())
     }
 
-    fn global_variable_decl(&mut self, init: &mut Expr) -> Result<(), BobaError> {
+    fn global_variable_decl(
+        &mut self,
+        init: &mut Expr,
+    ) -> Result<(), BobaError> {
         self.expression(init)?;
         Ok(())
     }
@@ -276,15 +280,15 @@ impl Analyzer {
         } else {
             self.expression(init)?;
             let variable_index = self.get_variable_index();
-            self.add_variable(name, is_mutable, Kind::LocalVariable(variable_index));
+            self.add_variable(
+                name,
+                is_mutable,
+                Kind::LocalVariable(variable_index),
+            );
             *ty_pe = Some(Type::Number);
             *kind = Some(Kind::LocalVariable(variable_index));
             Ok(())
         }
-    }
-
-    fn is_global_scope(&self) -> bool {
-        self.symbol_table.len() == 1
     }
 
     fn get_info(&self, name: &Token) -> Option<&Info> {
@@ -299,23 +303,18 @@ impl Analyzer {
     }
 
     fn variable_is_declared_in_current_scope(&self, name: &Token) -> bool {
-        let current_scope = self.symbol_table.last().expect("No Symbol table for current scope.");
+        let current_scope = self
+            .symbol_table
+            .last()
+            .expect("No Symbol table for current scope.");
         current_scope.contains_key(&name.to_string())
     }
 
-    fn variable_is_declared(&self, name: &Token) -> bool {
-        for scope in self.symbol_table.iter().rev() {
-            if scope.contains_key(&name.to_string()) {
-                return true;
-            } else {
-                continue;
-            }
-        }
-        false
-    }
-
     fn add_variable(&mut self, name: &Token, is_mutable: bool, kind: Kind) {
-        let scope = self.symbol_table.last_mut().expect("Symbol table is empty.");
+        let scope = self
+            .symbol_table
+            .last_mut()
+            .expect("Symbol table is empty.");
         scope.insert(name.to_string(), Info::new(kind, is_mutable));
     }
 }

@@ -7,7 +7,6 @@ mod parser;
 mod stmt;
 
 use crate::error::BobaError;
-// Option<E> to Result<(), E>
 fn compile_helper(source: &str) -> Result<String, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;

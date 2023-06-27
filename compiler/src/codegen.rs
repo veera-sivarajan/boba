@@ -72,9 +72,9 @@ impl ScratchRegisters {
 #[derive(Default, Clone)]
 pub struct Assembly {
     pub header: String,
-    pub code: String,
-    pub data: String,
-    pub global: String,
+    pub code: String,  // code
+    pub data: String,  // global variables
+    pub global: String, // function names
 }
 
 impl Assembly {
@@ -84,8 +84,7 @@ impl Assembly {
 }
 
 pub struct CodeGen {
-    data_buffer: Vec<Token>,
-    global_buffer: Vec<Token>,
+    global_buffer: Vec<Token>,  // function name
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
@@ -94,7 +93,6 @@ pub struct CodeGen {
 impl CodeGen {
     pub fn new() -> Self {
         Self {
-            data_buffer: Vec::new(),
             global_buffer: Vec::new(),
             registers: ScratchRegisters::new(),
             assembly: Assembly {
@@ -161,10 +159,11 @@ impl CodeGen {
         }
     }
 
-    fn local_variable_decl(&mut self, name: &Token, init: &Expr, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<(), BobaError> {
+    fn local_variable_decl(&mut self, _name: &Token, init: &Expr, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<(), BobaError> {
         let register = self.expression(init)?;
+        let size: u8 = ty_pe.as_ref().expect("Type of local variable is none.").into();
         if let Some(Kind::LocalVariable(index)) = kind {
-            let index = (index + 1) * 8;
+            let index = (index + 1) * size;
             self.emit_code("movq", &register, format!("-{index}(%rbp)"))?;
         };
         self.registers.deallocate(register);
@@ -336,7 +335,6 @@ impl CodeGen {
         name: &Token,
         init: &Expr,
     ) -> Result<(), BobaError> {
-        self.add_data(name); // add_data() and emit_data() should be combined into one function
         self.emit_data(&name.to_string(), "quad", init)
     }
 
@@ -387,21 +385,15 @@ impl CodeGen {
         Ok(register)
     }
 
-    fn symbol(&self, name: &Token) -> Box<str> {
-        format!("{name}(%rip)").into()
-    }
-
-    fn add_data(&mut self, token: &Token) {
-        self.data_buffer.push(token.clone());
-    }
-
     fn variable(&mut self, name: &Token, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
         if let Some(Kind::Parameter(index)) | Some(Kind::LocalVariable(index)) = kind {
-            let index = (index + 1) * 8;
+            let size: u8 = ty_pe.as_ref().expect("ty_pe is none.").into();
+            let index = (index + 1) * size;
             self.emit_code("movq", format!("-{index}(%rbp)"), &register)?;
         } else {
-            self.emit_code("movq", self.symbol(name), &register)?;
+            let symbol = format!("{name}(%rip)");
+            self.emit_code("movq", symbol, &register)?;
         }
         Ok(register)
     }
