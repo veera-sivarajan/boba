@@ -9,7 +9,6 @@ pub enum Stmt {
         name: Token,
         is_mutable: bool,
         init: Expr,
-        index: u8,
     },
     GlobalVariable {
         name: Token,

@@ -15,6 +15,9 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
         let mut parser = parser::Parser::new(tokens.into_iter());
         let mut ast = parser.parse()?;
         analyzer::Analyzer::new().check(&mut ast)?;
+        for stmt in &ast {
+            println!("{stmt:#?}");
+        }
         let mut codegen = codegen::CodeGen::new();
         codegen.compile(&ast)
     } else {

@@ -15,7 +15,6 @@ macro_rules! next_eq {
 pub struct Parser<T: Iterator<Item = Token>> {
     cursor: Peekable<T>,
     statements: Vec<Stmt>,
-    local_variable_index: u8,
 }
 
 impl<T: Iterator<Item = Token>> Parser<T> {
@@ -23,7 +22,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Parser {
             statements: Vec::with_capacity(tokens.size_hint().0),
             cursor: tokens.peekable(),
-            local_variable_index: 0,
         }
     }
 
@@ -93,13 +91,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         )?;
         let init = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon")?;
-        let index = self.local_variable_index;
-        self.local_variable_index += 1;
         Ok(Stmt::LocalVariable {
             name,
             is_mutable,
             init,
-            index,
         })
     }
 
@@ -151,7 +146,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
         let return_type = self.consume_type("Expect correct return type.")?;
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
-        self.local_variable_index = 0;
         let body = self.block_stmt()?;
         let body = Box::new(Stmt::Block(body));
         Ok(Stmt::Function {
