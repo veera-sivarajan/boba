@@ -5,31 +5,28 @@ use crate::stmt::{Parameter, Stmt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-enum Kind {
+pub enum Kind {
     GlobalVariable,
-    LocalVariable,
-    Parameter,
+    LocalVariable(u8),
+    Parameter(u8),
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-enum Type {
+pub enum Type {
     Number
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Info {
-    name: String,
     kind: Kind,
-    index: u8,
     ty_pe: Type,
     is_mutable: bool,
 }
 
 impl Info {
-    fn new(kind: Kind, index: u8, is_mutable: bool) -> Self {
+    fn new(kind: Kind, is_mutable: bool) -> Self {
         Info {
             kind,
-            index,
             ty_pe: Type::Number,
             is_mutable,
         }
@@ -39,6 +36,7 @@ impl Info {
 pub struct Analyzer {
     symbol_table: Vec<HashMap<String, Info>>,
     functions: Vec<Token>,
+    variable_index: u8,
 }
 
 impl Analyzer {
@@ -46,6 +44,7 @@ impl Analyzer {
         Self {
             symbol_table: vec![HashMap::new()],
             functions: vec![],
+            variable_index: 0,
         }
     }
 
@@ -79,15 +78,13 @@ impl Analyzer {
                     }
                 }
                 Stmt::GlobalVariable { name, .. } => {
-                    if self.variable_is_declared_in_current_scope(
-                        &name.to_string(),
-                    ) {
+                    if self.variable_is_declared_in_current_scope(name) {
                         return Err(BobaError::VariableRedeclaration(
                             name.clone(),
                         ));
                     } else {
                         self.add_variable(
-                            &name.to_string(),
+                            name,
                             false,
                             Kind::GlobalVariable,
                         );
@@ -112,7 +109,7 @@ impl Analyzer {
         }
     }
 
-    fn statement(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
+    fn statement(&mut self, stmt: &mut Stmt) -> Result<(), BobaError> {
         match stmt {
             Stmt::LocalVariable {
                 name,
@@ -136,10 +133,20 @@ impl Analyzer {
         }
     }
 
-    fn expression(&mut self, expr: &Expr) -> Result<(), BobaError> {
-        match expr {
+    fn expression(&mut self, mut expr: &mut Expr) -> Result<(), BobaError> {
+        match &mut expr {
             Expr::Number(_) | Expr::Boolean(_) | Expr::String(_) => Ok(()),
-            Expr::Variable(token) => self.variable(token),
+            // Expr::Variable(token) => self.variable(token),
+            Expr::Variable { name, ty_pe, kind } => {
+                // self.variable(name, ty_pe, kind)},
+                if let Some(info) = self.get_info(name) {
+                    *ty_pe = Some(info.ty_pe.clone());
+                    *kind =  Some(info.kind.clone());
+                    Ok(())
+                } else {
+                    Err(BobaError::UndeclaredVariable(name.clone()))
+                }
+            }
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
@@ -149,9 +156,9 @@ impl Analyzer {
 
     fn binary(
         &mut self,
-        left: &Expr,
+        left: &mut Expr,
         _oper: &Token,
-        right: &Expr,
+        right: &mut Expr,
     ) -> Result<(), BobaError> {
         self.expression(left)?;
         self.expression(right)?;
@@ -161,7 +168,7 @@ impl Analyzer {
     fn function_call(
         &mut self,
         callee: &Token,
-        args: &[Expr],
+        args: &mut [Expr],
     ) -> Result<(), BobaError> {
         if !self.function_is_defined(callee) {
             Err(BobaError::UndeclaredFunction(callee.clone()))
@@ -173,51 +180,54 @@ impl Analyzer {
         }
     }
 
-    fn variable(&mut self, name: &Token) -> Result<(), BobaError> {
-        if self.variable_is_declared(&name.to_string()).is_none() {
-            Err(BobaError::UndeclaredVariable(name.clone()))
-        } else {
-            Ok(())
-        }
+    // fn variable(&mut self, name: &mut Token, ty_pe: &mut Option<Type>, mut kind: &mut Option<Kind>) -> Result<(), BobaError> {
+    //     if let Some(info) = self.get_info(name) {
+    //         ty_pe = &mut Some(info.ty_pe.clone()).clone();
+    //         kind = &mut Some(info.kind.clone()).clone();
+    //         Ok(())
+    //     } else {
+    //         Err(BobaError::UndeclaredVariable(name.clone()))
+    //     }
+    // }
+
+    fn new_scope(&mut self) {
+        self.symbol_table.push(HashMap::new());
     }
 
-    fn add_to_symbol_table(&mut self, name: Token) {
-        let map = self.symbol_table.last_mut().expect("Expected a symbol table.");
-        map.push(Info::new(name));
+    fn exit_scope(&mut self) {
+        self.symbol_table.pop();
     }
 
     fn block_stmt(
         &mut self,
-        stmts: &[Stmt],
+        stmts: &mut [Stmt],
         params: Option<&[Parameter]>,
     ) -> Result<(), BobaError> {
-        self.scopes.push(HashMap::new());
+        self.new_scope();
         if let Some(params) = params {
             for (param, _param_type) in params {
-                if self
-                    .variable_is_declared_in_current_scope(&param.to_string())
-                {
+                if self.variable_is_declared_in_current_scope(&param.into()) {
                     return Err(BobaError::VariableRedeclaration(param.into()));
                 } else {
-                    self.add_to_symbol_table(param.into());
+                    let variable_index = self.get_variable_index();
                     self.add_variable(
-                        &param.to_string(),
+                        &param.into(),
                         false,
-                        Kind::LocalVariable,
+                        Kind::Parameter(variable_index),
                     );
                 }
             }
         }
         self.check(stmts)?;
-        self.scopes.pop();
+        self.exit_scope();
         Ok(())
     }
 
     fn if_stmt(
         &mut self,
-        then: &Stmt,
-        elze: &Option<Box<Stmt>>,
-        condition: &Expr,
+        then: &mut Stmt,
+        elze: &mut Option<Box<Stmt>>,
+        condition: &mut Expr,
     ) -> Result<(), BobaError> {
         self.expression(condition)?;
         self.statement(then)?;
@@ -230,83 +240,78 @@ impl Analyzer {
     fn function_decl(
         &mut self,
         _name: &Token,
-        body: &Stmt,
+        body: &mut Stmt,
         params: &[Parameter],
     ) -> Result<(), BobaError> {
         let Stmt::Block(stmts) = body else {
             unreachable!("Expected function body to be a block statement.")
         };
-        self.symbol_table.push(vec![]);
+        self.variable_index = 0;
         self.block_stmt(stmts, Some(params))?;
         Ok(())
     }
 
-    fn global_variable_decl(&mut self, init: &Expr) -> Result<(), BobaError> {
+    fn global_variable_decl(&mut self, init: &mut Expr) -> Result<(), BobaError> {
         self.expression(init)?;
         Ok(())
+    }
+
+    fn get_variable_index(&mut self) -> u8 {
+        let value = self.variable_index;
+        self.variable_index += 1;
+        value
     }
 
     fn local_variable_decl(
         &mut self,
         name: &Token,
         is_mutable: bool,
-        init: &Expr,
+        init: &mut Expr,
         _index: u8,
     ) -> Result<(), BobaError> {
-        if self.variable_is_declared_in_current_scope(&name.to_string()) {
+        if self.variable_is_declared_in_current_scope(name) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
-            let kind = if self.current_scope() == 0 {
-                Kind::GlobalVariable
-            } else {
-                Kind::LocalVariable
-            };
             self.expression(init)?;
-            self.add_variable(&name.to_string(), is_mutable, kind);
-            self.add_to_symbol_table(name.clone());
+            let variable_index = self.get_variable_index();
+            self.add_variable(name, is_mutable, Kind::LocalVariable(variable_index));
             Ok(())
         }
     }
 
-    fn current_scope(&self) -> u8 {
-        self.scopes.len() as u8 - 1
-    }
-
     fn is_global_scope(&self) -> bool {
-        self.current_scope() == 0
+        self.symbol_table.len() == 1
     }
 
-    fn variable_is_declared_in_current_scope(&self, name: &str) -> bool {
-        self.variable_is_declared(name)
-            .is_some_and(|scope| scope == self.current_scope())
+    fn get_info(&self, name: &Token) -> Option<&Info> {
+        for scope in self.symbol_table.iter().rev() {
+            if scope.contains_key(&name.to_string()) {
+                return scope.get(&name.to_string());
+            } else {
+                continue;
+            }
+        }
+        None
     }
 
-    fn variable_is_declared(&self, name: &str) -> Option<u8> {
-        // for (index, scope) in self.scopes.iter().rev().enumerate() {
-        //     for (key, value) in scope {
-        //         if key.name == name
-        //             && matches!(
-        //                 value,
-        //                 Kind::LocalVariable | Kind::GlobalVariable
-        //             )
-        //         {
-        //             return Some(self.current_scope() - index as u8);
-        //         }
-        //     }
-        // }
-        // None
-
+    fn variable_is_declared_in_current_scope(&self, name: &Token) -> bool {
+        let current_scope = self.symbol_table.last().expect("No Symbol table for current scope.");
+        current_scope.contains_key(&name.to_string())
     }
 
-    // fn add_variable(&mut self, name: &str, is_mutable: bool, kind: Kind) {
-    //     if let Some(map) = self.scopes.last_mut() {
-    //         let name = name.to_string();
-    //         map.insert(Info { name, is_mutable }, kind);
-    //     }
-    // }
+    fn variable_is_declared(&self, name: &Token) -> bool {
+        for scope in self.symbol_table.iter().rev() {
+            if scope.contains_key(&name.to_string()) {
+                return true;
+            } else {
+                continue;
+            }
+        }
+        false
+    }
 
-    fn add_symbol(&mut self, name: &Token, is_mutable: &bool, kind: &Kind, index: &u8) {
+    fn add_variable(&mut self, name: &Token, is_mutable: bool, kind: Kind) {
         let scope = self.symbol_table.last_mut().expect("Symbol table is empty.");
-        scope.insert(name.to_string(), Info::new(*kind, *index, *is_mutable));
+        scope.insert(name.to_string(), Info::new(kind, is_mutable));
     }
 }

@@ -134,7 +134,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let identifier = self.consume_identifier("Expect parameter name.")?;
         self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
         let id_type = self.consume_type("Expect parameter type.")?;
-        Ok((Expr::Variable(identifier), id_type))
+        Ok((Expr::new_variable(identifier), id_type))
     }
 
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
@@ -302,9 +302,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
-        if let Expr::Variable(function_name) = &callee {
+        if let Expr::Variable { name, .. } = &callee {
             Ok(Expr::Call {
-                callee: function_name.clone(),
+                callee: name.clone(),
                 args,
             })
         } else {
@@ -319,7 +319,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if let Some(expr) = self.cursor.next() {
             match expr.kind {
                 TokenType::Number(num) => Ok(Expr::Number(num)),
-                TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
+                TokenType::Identifier(_) => Ok(Expr::new_variable(expr)),
                 TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
                 TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
                 _ => todo!("{}", expr.kind),

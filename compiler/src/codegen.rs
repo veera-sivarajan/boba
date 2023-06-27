@@ -183,8 +183,8 @@ impl CodeGen {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = todo!(); 
-        // self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
+        let space_for_locals = 8;
+        self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "")?;
@@ -338,7 +338,7 @@ impl CodeGen {
                 self.binary(left, oper, right)
             }
             Expr::Number(num) => self.number(*num),
-            Expr::Variable(token) => self.variable(token),
+            Expr::Variable{ name, .. } => self.variable(name),
             Expr::Boolean(value) => self.boolean(value),
             Expr::Call {
                 callee,

@@ -13,13 +13,8 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
     let tokens = lexer.scan()?;
     if !tokens.is_empty() {
         let mut parser = parser::Parser::new(tokens.into_iter());
-        let ast = parser.parse()?;
-        let symbol_table = analyzer::Analyzer::new().check(&ast)?;
-        for table in symbol_table {
-            for info in table {
-                println!("Info: {info:?}");
-            }
-        }
+        let mut ast = parser.parse()?;
+        analyzer::Analyzer::new().check(&mut ast)?;
         let mut codegen = codegen::CodeGen::new();
         codegen.compile(&ast)
     } else {
