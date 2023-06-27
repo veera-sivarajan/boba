@@ -3,6 +3,7 @@ use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
 use crate::stmt::{Stmt, Parameter};
 use std::fmt::Write;
+use crate::analyzer::{Kind, Type};
 
 #[derive(Default)]
 struct Labels {
@@ -135,7 +136,7 @@ impl CodeGen {
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::LocalVariable { name, init, .. } => todo!(),
+            Stmt::LocalVariable { name, init, ty_pe, kind } => self.local_variable_decl(name, init, ty_pe, kind),
             Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
             Stmt::Expression(expr) => {
                 let register = self.expression(expr)?;
@@ -158,6 +159,13 @@ impl CodeGen {
                 self.function_decl(name, params, return_type, body)
             }
         }
+    }
+
+    fn local_variable_decl(&mut self, name: &Token, init: &Expr, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<(), BobaError> {
+        let register = self.expression(init)?;
+        let
+
+
     }
 
     fn add_global_name(&mut self, name: &Token) {
