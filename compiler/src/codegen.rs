@@ -136,7 +136,7 @@ impl CodeGen {
 
     fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::LocalVariable { name, init, ty_pe, kind } => self.local_variable_decl(name, init, ty_pe, kind),
+            Stmt::LocalVariable { name, init, ty_pe, kind, .. } => self.local_variable_decl(name, init, ty_pe, kind),
             Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
             Stmt::Expression(expr) => {
                 let register = self.expression(expr)?;
@@ -163,9 +163,12 @@ impl CodeGen {
 
     fn local_variable_decl(&mut self, name: &Token, init: &Expr, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<(), BobaError> {
         let register = self.expression(init)?;
-        let
-
-
+        if let Some(Kind::LocalVariable(index)) = kind {
+            let index = (index + 1) * 8;
+            self.emit_code("movq", &register, format!("-{index}(%rbp)"))?;
+        };
+        self.registers.deallocate(register);
+        Ok(())
     }
 
     fn add_global_name(&mut self, name: &Token) {
@@ -191,7 +194,7 @@ impl CodeGen {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = 8;
+        let space_for_locals = 2;
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
@@ -346,7 +349,7 @@ impl CodeGen {
                 self.binary(left, oper, right)
             }
             Expr::Number(num) => self.number(*num),
-            Expr::Variable{ name, .. } => self.variable(name),
+            Expr::Variable{ name, ty_pe, kind  } => self.variable(name, ty_pe, kind),
             Expr::Boolean(value) => self.boolean(value),
             Expr::Call {
                 callee,
@@ -398,9 +401,14 @@ impl CodeGen {
         self.data_buffer.push(token.clone());
     }
 
-    fn variable(&mut self, token: &Token) -> Result<RegisterIndex, BobaError> {
+    fn variable(&mut self, name: &Token, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
-        self.emit_code("movq", self.symbol(token), &register)?;
+        if let Some(Kind::Parameter(index)) | Some(Kind::LocalVariable(index)) = kind {
+            let index = (index + 1) * 8;
+            self.emit_code("movq", format!("-{index}(%rbp)"), &register)?;
+        } else {
+            self.emit_code("movq", self.symbol(name), &register)?;
+        }
         Ok(register)
     }
 
