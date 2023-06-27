@@ -1,12 +1,20 @@
-fn fact() -> Number {
-    let a = 10;
-    let b = 100;
+let global = 100;
+
+fn dummy() -> Number {}
+
+fn factorial(x: Number, y: Number) -> Number {
+    let apple = 10;
+    let ball = 20;
+    if x > y {
+        let car = 30;
+        println(apple + car);
+    } else {
+        let apple = 100;
+        let ball = dummy();
+        println(apple + ball);
+    }
 }
 
 fn main() -> Number {
-    let c = 98;
-    let d = 76;
+    factorial();
 }
-
-
-

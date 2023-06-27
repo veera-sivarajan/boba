@@ -5,21 +5,43 @@ use crate::stmt::{Parameter, Stmt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct Symbol {
-    name: String,
-    is_mutable: bool,
-}
-
-#[derive(Debug)]
 enum Kind {
     GlobalVariable,
     LocalVariable,
 }
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+enum Type {
+    Number
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Symbol {
+    name: String,
+    kind: Kind,
+    index: u8,
+    ty_pe: Type,
+    is_mutable: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Info {
+    name: String,
+    size: u8,
+}
+
+impl Info {
+    fn new(token: Token) -> Info {
+        Info {
+            name: token.to_string(),
+            size: 8,
+        }
+    }
+}
+
 pub struct Analyzer {
-    scopes: Vec<HashMap<Symbol, Kind>>,
+    symbol_table: Vec<HashMap<String, Symbol>>,
     functions: Vec<Token>,
-    symbol_table: Vec<HashMap<Token, u8>>,
 }
 
 impl Analyzer {
@@ -31,13 +53,13 @@ impl Analyzer {
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<Vec<Info>>, BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
         for stmt in ast {
             self.statement(stmt)?;
         }
-        Ok(())
+        Ok(self.symbol_table.clone())
     }
 
     fn add_function(&mut self, name: &Token) {
@@ -163,6 +185,11 @@ impl Analyzer {
         }
     }
 
+    fn add_to_symbol_table(&mut self, name: Token) {
+        let map = self.symbol_table.last_mut().expect("Expected a symbol table.");
+        map.push(Info::new(name));
+    }
+
     fn block_stmt(
         &mut self,
         stmts: &[Stmt],
@@ -176,6 +203,7 @@ impl Analyzer {
                 {
                     return Err(BobaError::VariableRedeclaration(param.into()));
                 } else {
+                    self.add_to_symbol_table(param.into());
                     self.add_variable(
                         &param.to_string(),
                         false,
@@ -212,39 +240,9 @@ impl Analyzer {
         let Stmt::Block(stmts) = body else {
             unreachable!("Expected function body to be a block statement.")
         };
+        self.symbol_table.push(vec![]);
         self.block_stmt(stmts, Some(params))?;
-        self.create_symbol_table(stmts, params);
         Ok(())
-    }
-
-    fn filter_locals_helper(&self, stmts: &[Stmt]) -> Vec<Token> {
-        stmts
-            .iter()
-            .filter(|s| matches!(s, Stmt::LocalVariable { .. }))
-            .map(|s| s.into())
-            .collect()
-    }
-
-    fn filter_locals(&self, stmt: &Stmt) -> Vec<Token> {
-        match stmt {
-            Stmt::Block(stmts) => self.filter_locals_helper(stmts),
-            Stmt::If { then, elze, .. } => {
-                let mut result = self.filter_locals(then);
-                if let Some(ele) = elze {
-                    result.extend(self.filter_locals(ele));
-                }
-                result
-            }
-            _ => vec![],
-        }
-    }
-
-    fn create_symbol_table(&mut self, body: &[Stmt], params: &[Parameter]) {
-        let symbol_table: HashMap<Token, u8> = HashMap::new();
-        let mut locals = vec![];
-        for stmt in body {
-            locals.extend(self.filter_locals(stmt));
-        }
     }
 
     fn global_variable_decl(&mut self, init: &Expr) -> Result<(), BobaError> {
@@ -257,12 +255,11 @@ impl Analyzer {
         name: &Token,
         is_mutable: bool,
         init: &Expr,
-        index: u8,
+        _index: u8,
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(&name.to_string()) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
-            println!("Variable {name} at index {index}");
             let kind = if self.current_scope() == 0 {
                 Kind::GlobalVariable
             } else {
@@ -270,6 +267,7 @@ impl Analyzer {
             };
             self.expression(init)?;
             self.add_variable(&name.to_string(), is_mutable, kind);
+            self.add_to_symbol_table(name.clone());
             Ok(())
         }
     }
