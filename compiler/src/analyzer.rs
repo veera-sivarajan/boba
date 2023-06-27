@@ -39,7 +39,6 @@ impl Info {
 pub struct Analyzer {
     symbol_table: Vec<HashMap<String, Info>>,
     functions: Vec<Token>,
-    scope_index: usize,
 }
 
 impl Analyzer {
@@ -47,17 +46,16 @@ impl Analyzer {
         Self {
             symbol_table: vec![HashMap::new()],
             functions: vec![],
-            scope_index: 0,
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<HashMap<String, Info>>, BobaError> {
+    pub fn check(&mut self, ast: &mut [Stmt]) -> Result<(), BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
         for stmt in ast {
             self.statement(stmt)?;
         }
-        Ok(self.symbol_table.clone())
+        Ok(())
     }
 
     fn add_function(&mut self, name: &Token) {
@@ -297,8 +295,7 @@ impl Analyzer {
         //     }
         // }
         // None
-        for scope in self.scope_index..=0 {
-            
+
     }
 
     // fn add_variable(&mut self, name: &str, is_mutable: bool, kind: Kind) {
@@ -309,7 +306,7 @@ impl Analyzer {
     // }
 
     fn add_symbol(&mut self, name: &Token, is_mutable: &bool, kind: &Kind, index: &u8) {
-        let scope = self.symbol_table.get_mut(self.scope_index).expect("Symbol table is empty.");
+        let scope = self.symbol_table.last_mut().expect("Symbol table is empty.");
         scope.insert(name.to_string(), Info::new(*kind, *index, *is_mutable));
     }
 }
