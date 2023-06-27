@@ -8,6 +8,7 @@ use std::collections::HashMap;
 enum Kind {
     GlobalVariable,
     LocalVariable,
+    Parameter,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -16,7 +17,7 @@ enum Type {
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct Symbol {
+pub struct Info {
     name: String,
     kind: Kind,
     index: u8,
@@ -24,36 +25,33 @@ pub struct Symbol {
     is_mutable: bool,
 }
 
-#[derive(Clone, Debug)]
-pub struct Info {
-    name: String,
-    size: u8,
-}
-
 impl Info {
-    fn new(token: Token) -> Info {
+    fn new(kind: Kind, index: u8, is_mutable: bool) -> Self {
         Info {
-            name: token.to_string(),
-            size: 8,
+            kind,
+            index,
+            ty_pe: Type::Number,
+            is_mutable,
         }
     }
 }
 
 pub struct Analyzer {
-    symbol_table: Vec<HashMap<String, Symbol>>,
+    symbol_table: Vec<HashMap<String, Info>>,
     functions: Vec<Token>,
+    scope_index: usize,
 }
 
 impl Analyzer {
     pub fn new() -> Self {
         Self {
-            scopes: vec![HashMap::new()],
+            symbol_table: vec![HashMap::new()],
             functions: vec![],
-            symbol_table: vec![],
+            scope_index: 0,
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<Vec<Info>>, BobaError> {
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<HashMap<String, Info>>, BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
         for stmt in ast {
@@ -286,25 +284,32 @@ impl Analyzer {
     }
 
     fn variable_is_declared(&self, name: &str) -> Option<u8> {
-        for (index, scope) in self.scopes.iter().rev().enumerate() {
-            for (key, value) in scope {
-                if key.name == name
-                    && matches!(
-                        value,
-                        Kind::LocalVariable | Kind::GlobalVariable
-                    )
-                {
-                    return Some(self.current_scope() - index as u8);
-                }
-            }
-        }
-        None
+        // for (index, scope) in self.scopes.iter().rev().enumerate() {
+        //     for (key, value) in scope {
+        //         if key.name == name
+        //             && matches!(
+        //                 value,
+        //                 Kind::LocalVariable | Kind::GlobalVariable
+        //             )
+        //         {
+        //             return Some(self.current_scope() - index as u8);
+        //         }
+        //     }
+        // }
+        // None
+        for scope in self.scope_index..=0 {
+            
     }
 
-    fn add_variable(&mut self, name: &str, is_mutable: bool, kind: Kind) {
-        if let Some(map) = self.scopes.last_mut() {
-            let name = name.to_string();
-            map.insert(Symbol { name, is_mutable }, kind);
-        }
+    // fn add_variable(&mut self, name: &str, is_mutable: bool, kind: Kind) {
+    //     if let Some(map) = self.scopes.last_mut() {
+    //         let name = name.to_string();
+    //         map.insert(Info { name, is_mutable }, kind);
+    //     }
+    // }
+
+    fn add_symbol(&mut self, name: &Token, is_mutable: &bool, kind: &Kind, index: &u8) {
+        let scope = self.symbol_table.get_mut(self.scope_index).expect("Symbol table is empty.");
+        scope.insert(name.to_string(), Info::new(*kind, *index, *is_mutable));
     }
 }

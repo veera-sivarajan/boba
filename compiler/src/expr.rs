@@ -1,4 +1,5 @@
 use crate::lexer::Token;
+use crate::analyzer::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -8,12 +9,29 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Number(i64),
-    Variable(Token),
+    // Variable(Token),
+    Variable {
+        name: Token,
+        index: Option<u8>,
+        ty_pe: Option<Type>,
+        kind: Option<Kind>,
+    },
     Boolean(bool),
     String(String),
     Call {
         callee: Token,
         args: Vec<Expr>,
+    }
+}
+
+impl Expr {
+    fn new_variable(name: Token) -> Expr {
+        Expr::Variable {
+            name,
+            index: None,
+            ty_pe: None,
+            kind: None,
+        }
     }
 }
 
