@@ -91,11 +91,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         )?;
         let init = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon")?;
-        Ok(Stmt::LocalVariable {
+        Ok(Stmt::new_local(
             name,
             is_mutable,
-            init,
-        })
+            init
+        ))
     }
 
     fn consume(

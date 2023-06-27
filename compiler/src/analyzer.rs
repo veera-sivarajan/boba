@@ -115,7 +115,9 @@ impl Analyzer {
                 name,
                 is_mutable,
                 init,
-            } => self.local_variable_decl(name, *is_mutable, init),
+                ty_pe,
+                kind,
+            } => self.local_variable_decl(name, *is_mutable, init, ty_pe, kind),
             Stmt::GlobalVariable { init, .. } => {
                 self.global_variable_decl(init)
             }
@@ -266,6 +268,8 @@ impl Analyzer {
         name: &Token,
         is_mutable: bool,
         init: &mut Expr,
+        ty_pe: &mut Option<Type>,
+        kind: &mut Option<Kind>,
     ) -> Result<(), BobaError> {
         if self.variable_is_declared_in_current_scope(name) {
             Err(BobaError::VariableRedeclaration(name.clone()))
@@ -273,6 +277,8 @@ impl Analyzer {
             self.expression(init)?;
             let variable_index = self.get_variable_index();
             self.add_variable(name, is_mutable, Kind::LocalVariable(variable_index));
+            *ty_pe = Some(Type::Number);
+            *kind = Some(Kind::LocalVariable(variable_index));
             Ok(())
         }
     }

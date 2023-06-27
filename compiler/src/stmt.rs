@@ -1,5 +1,6 @@
 use crate::expr::Expr;
 use crate::lexer::Token;
+use crate::analyzer::{Kind, Type};
 
 pub type Parameter = (Expr, Token);
 
@@ -9,6 +10,8 @@ pub enum Stmt {
         name: Token,
         is_mutable: bool,
         init: Expr,
+        ty_pe: Option<Type>,
+        kind: Option<Kind>,
     },
     GlobalVariable {
         name: Token,
@@ -29,6 +32,19 @@ pub enum Stmt {
         body: Box<Stmt>,
     }
 }
+
+impl Stmt {
+    pub fn new_local(name: Token, is_mutable: bool, init: Expr) -> Self {
+        Stmt::LocalVariable {
+            name,
+            is_mutable,
+            init,
+            ty_pe: None,
+            kind: None,
+        }
+    }
+}
+        
 
 impl From<&Stmt> for Token {
     fn from(stmt: &Stmt) -> Token {
