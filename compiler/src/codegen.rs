@@ -263,15 +263,12 @@ impl CodeGen {
 
     fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
         let register = self.expression(expr)?;
-        let dummy = self.registers.allocate();
-        self.emit_code("pushq", &dummy, "")?;
+        self.emit_code("andq", "$-16", "%rsp")?;
         self.emit_code("movq", &register, "%rsi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
         self.emit_code("xor", "%eax", "%eax")?;
         self.emit_code("call", "printf@PLT", "")?;
-        self.emit_code("popq", &dummy, "")?;
-        self.registers.deallocate(dummy);
         self.registers.deallocate(register);
         Ok(())
     }
@@ -364,8 +361,7 @@ impl CodeGen {
         callee: &Token,
         args: &[Expr],
     ) -> Result<RegisterIndex, BobaError> {
-        let dummy = self.registers.allocate();
-        self.emit_code("pushq", &dummy, "")?;
+        self.emit_code("andq", "$-16", "%rsp")?;
         let mut arguments = vec![];
         for arg in args {
             arguments.push(self.expression(arg)?);
@@ -381,8 +377,6 @@ impl CodeGen {
         self.emit_code("popq", "%r10", "")?;
         let result = self.registers.allocate();
         self.emit_code("movq", "%rax", &result)?;
-        self.emit_code("popq", &dummy, "")?;
-        self.registers.deallocate(dummy);
         Ok(result)
     }
 
