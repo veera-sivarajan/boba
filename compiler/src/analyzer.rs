@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
-use crate::stmt::{Parameter, Stmt, LLStmt};
+use crate::stmt::{LLStmt, Parameter, Stmt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -125,12 +125,15 @@ impl Analyzer {
                 is_mutable,
                 init,
             } => self.local_variable_decl(name, *is_mutable, init),
-            Stmt::GlobalVariable { name, init} => {
+            Stmt::GlobalVariable { name, init } => {
                 self.global_variable_decl(name, init)
             }
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
-                name, body, params, return_type 
+                name,
+                body,
+                params,
+                return_type,
             } => self.function_decl(name, body, params, return_type),
             Stmt::If {
                 then,
@@ -140,9 +143,7 @@ impl Analyzer {
             Stmt::Expression(expr) => {
                 Ok(LLStmt::Expression(self.expression(expr)?))
             }
-            Stmt::Print(expr) => {
-                Ok(LLStmt::Print(self.expression(expr)?))
-            }
+            Stmt::Print(expr) => Ok(LLStmt::Print(self.expression(expr)?)),
         }
     }
 
@@ -151,9 +152,7 @@ impl Analyzer {
             Expr::Number(value) => Ok(LLExpr::Number(*value)),
             Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
             Expr::String(value) => Ok(LLExpr::String(value.clone())),
-            Expr::Variable(name) => {
-                self.variable(name )
-            }
+            Expr::Variable(name) => self.variable(name),
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
@@ -184,7 +183,7 @@ impl Analyzer {
         if !self.function_is_defined(callee) {
             Err(BobaError::UndeclaredFunction(callee.clone()))
         } else {
-            let mut ll_args= vec![];
+            let mut ll_args = vec![];
             for arg in args {
                 ll_args.push(self.expression(arg)?);
             }
@@ -195,10 +194,7 @@ impl Analyzer {
         }
     }
 
-    fn variable(
-        &mut self,
-        name: &Token,
-    ) -> Result<LLExpr, BobaError> {
+    fn variable(&mut self, name: &Token) -> Result<LLExpr, BobaError> {
         if let Some(info) = self.get_info(name) {
             Ok(LLExpr::Variable {
                 name: name.to_string(),
@@ -291,7 +287,7 @@ impl Analyzer {
         let init = self.expression(init)?;
         Ok(LLStmt::GlobalVariable {
             name: name.to_string(),
-            init
+            init,
         })
     }
 

@@ -1,3 +1,7 @@
 fn main() -> Number {
-    println(1);
+    if true {
+        println(1);
+    } else {
+        println(2);
+    }
 }

@@ -1,9 +1,9 @@
+use crate::analyzer::{Kind, Type};
 use crate::error::BobaError;
 use crate::expr::LLExpr;
 use crate::lexer::{Token, TokenType};
 use crate::stmt::LLStmt;
 use std::fmt::Write;
-use crate::analyzer::{Kind, Type};
 
 #[derive(Default)]
 struct Labels {
@@ -72,8 +72,8 @@ impl ScratchRegisters {
 #[derive(Default, Clone)]
 pub struct Assembly {
     pub header: String,
-    pub code: String,  // code
-    pub data: String,  // global variables
+    pub code: String,   // code
+    pub data: String,   // global variables
     pub global: String, // function names
 }
 
@@ -84,7 +84,7 @@ impl Assembly {
 }
 
 pub struct CodeGen {
-    global_buffer: Vec<Box<str>>,  // function name
+    global_buffer: Vec<Box<str>>, // function name
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
@@ -134,8 +134,14 @@ impl CodeGen {
 
     fn codegen(&mut self, stmt: &LLStmt) -> Result<(), BobaError> {
         match stmt {
-            LLStmt::LocalVariable {init, ty_pe, kind: Kind::LocalVariable(index)} => self.local_variable_decl(init, ty_pe, index),
-            LLStmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
+            LLStmt::LocalVariable {
+                init,
+                ty_pe,
+                kind: Kind::LocalVariable(index),
+            } => self.local_variable_decl(init, ty_pe, index),
+            LLStmt::GlobalVariable { name, init } => {
+                self.global_variable_decl(name, init)
+            }
             LLStmt::Expression(expr) => {
                 let register = self.expression(expr)?;
                 self.registers.deallocate(register);
@@ -153,14 +159,17 @@ impl CodeGen {
                 params_count,
                 locals_count,
                 body,
-            } => {
-                self.function_decl(name, *params_count, locals_count, body)
-            }
+            } => self.function_decl(name, *params_count, locals_count, body),
             _ => unreachable!(),
         }
     }
 
-    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: &Type, index: &u8) -> Result<(), BobaError> {
+    fn local_variable_decl(
+        &mut self,
+        init: &LLExpr,
+        ty_pe: &Type,
+        index: &u8,
+    ) -> Result<(), BobaError> {
         let register = self.expression(init)?;
         let size: u8 = ty_pe.into();
         let index = (index + 1) * size;
@@ -187,7 +196,11 @@ impl CodeGen {
         let argument_registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
         for index in 0..params_count {
             if index < 6 {
-                self.emit_code("pushq", argument_registers[index as usize], "")?;
+                self.emit_code(
+                    "pushq",
+                    argument_registers[index as usize],
+                    "",
+                )?;
             } else {
                 todo!("Can't handle functions with more than six parameters.");
             }
@@ -233,7 +246,7 @@ impl CodeGen {
         false_label: &str,
     ) -> Result<(), BobaError> {
         let LLExpr::Binary { left, oper, right } = condition else {
-            panic!("Expect a boolean expression.");
+            panic!("Expect a boolean expression but found {condition}");
         };
         let left = self.expression(left)?;
         let right = self.expression(right)?;
@@ -337,18 +350,20 @@ impl CodeGen {
         self.emit_data(name, "quad", init)
     }
 
-    fn expression(&mut self, expr: &LLExpr) -> Result<RegisterIndex, BobaError> {
+    fn expression(
+        &mut self,
+        expr: &LLExpr,
+    ) -> Result<RegisterIndex, BobaError> {
         match expr {
             LLExpr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
             }
             LLExpr::Number(num) => self.number(*num),
-            LLExpr::Variable{ name, ty_pe, kind  } => self.variable(name, ty_pe, kind),
+            LLExpr::Variable { name, ty_pe, kind } => {
+                self.variable(name, ty_pe, kind)
+            }
             LLExpr::Boolean(value) => self.boolean(value),
-            LLExpr::Call {
-                callee,
-                args,
-            } => self.function_call(callee, args),
+            LLExpr::Call { callee, args } => self.function_call(callee, args),
             _ => todo!("{expr}"),
         }
     }
@@ -384,7 +399,12 @@ impl CodeGen {
         Ok(register)
     }
 
-    fn variable(&mut self, name: &str, ty_pe: &Type, kind: &Kind) -> Result<RegisterIndex, BobaError> {
+    fn variable(
+        &mut self,
+        name: &str,
+        ty_pe: &Type,
+        kind: &Kind,
+    ) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
         if let Kind::Parameter(index) | Kind::LocalVariable(index) = kind {
             let size: u8 = ty_pe.into();

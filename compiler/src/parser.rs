@@ -1,7 +1,7 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
-use crate::stmt::{Stmt, Parameter};
+use crate::stmt::{Parameter, Stmt};
 use std::iter::Peekable;
 
 macro_rules! next_eq {
@@ -76,10 +76,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         )?;
         let init = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon")?;
-        Ok(Stmt::GlobalVariable {
-            name,
-            init
-        })
+        Ok(Stmt::GlobalVariable { name, init })
     }
 
     fn local_variable_decl(&mut self) -> Result<Stmt, BobaError> {
@@ -94,7 +91,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(Stmt::LocalVariable {
             name,
             is_mutable,
-            init
+            init,
         })
     }
 

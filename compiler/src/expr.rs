@@ -1,5 +1,5 @@
-use crate::lexer::Token;
 use crate::analyzer::{Kind, Type};
+use crate::lexer::Token;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -15,7 +15,7 @@ pub enum Expr {
     Call {
         callee: Token,
         args: Vec<Expr>,
-    }
+    },
 }
 
 // impl From<&mut Expr> for Token {
@@ -29,14 +29,13 @@ pub enum Expr {
 //     }
 // }
 
-
 impl From<&Expr> for Token {
     fn from(value: &Expr) -> Token {
         match value {
             Expr::Binary { oper, .. } => oper.clone(),
             Expr::Variable(name) => name.clone(),
             Expr::Call { callee, .. } => callee.clone(),
-            _ => panic!("Cannot turn value into token.")
+            _ => panic!("Cannot turn value into token."),
         }
     }
 }
@@ -89,7 +88,7 @@ pub enum LLExpr {
     Call {
         callee: String,
         args: Vec<LLExpr>,
-    }
+    },
 }
 
 impl fmt::Display for LLExpr {
@@ -104,7 +103,7 @@ impl fmt::Display for LLExpr {
                     write!(f, "0")
                 }
             }
-            LLExpr::Variable{ name, .. } => write!(f, "{name}"),
+            LLExpr::Variable { name, .. } => write!(f, "{name}"),
             LLExpr::Binary { left, oper, right } => {
                 write!(f, "{}", *left)?;
                 write!(f, "{}", oper.kind)?;

@@ -1,6 +1,6 @@
+use crate::analyzer::{Kind, Type};
 use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
-use crate::analyzer::{Kind, Type};
 
 pub type Parameter = (Expr, Token);
 
@@ -28,7 +28,7 @@ pub enum Stmt {
         params: Vec<Parameter>,
         return_type: Token,
         body: Box<Stmt>,
-    }
+    },
 }
 
 impl From<&Stmt> for Token {
@@ -68,6 +68,3 @@ pub enum LLStmt {
         body: Box<LLStmt>,
     },
 }
-        
-       
-

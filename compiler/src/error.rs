@@ -1,4 +1,4 @@
-use crate::lexer::{Token, Position, Span};
+use crate::lexer::{Position, Span, Token};
 use std::fmt;
 
 impl fmt::Display for Position {
@@ -85,18 +85,36 @@ impl fmt::Display for BobaError {
                 write!(f, "Cannot re-declare multiple variable with same name '{}' at {}", token, token.span)
             }
             FunctionRedeclaration(token) => {
-                write!(f, "Error: Cannot re-declare function '{}' at {}.", token, token.span)
+                write!(
+                    f,
+                    "Error: Cannot re-declare function '{}' at {}.",
+                    token, token.span
+                )
             }
             UndeclaredVariable(token) => {
-                write!(f, "Error: Cannot use undeclared variable '{}' at {}", token, token.span)
+                write!(
+                    f,
+                    "Error: Cannot use undeclared variable '{}' at {}",
+                    token, token.span
+                )
             }
             UndeclaredFunction(token) => {
-                write!(f, "Error: Cannot call undeclared function '{}' at {}", token, token.span)
+                write!(
+                    f,
+                    "Error: Cannot call undeclared function '{}' at {}",
+                    token, token.span
+                )
             }
             LocalFunction(token) => {
-                write!(f, "Error: Function '{}' should be declared globally at {}", token, token.span)
+                write!(
+                    f,
+                    "Error: Function '{}' should be declared globally at {}",
+                    token, token.span
+                )
             }
-            MainNotFound => write!(f, "Error: Consider adding a main function."),
+            MainNotFound => {
+                write!(f, "Error: Consider adding a main function.")
+            }
         }
     }
 }

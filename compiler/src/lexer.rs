@@ -1,7 +1,7 @@
 use crate::error::BobaError;
+use std::hash::{Hash, Hasher};
 use std::iter::Peekable;
 use std::str::CharIndices;
-use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
@@ -392,7 +392,7 @@ impl<'src> Lexer<'src> {
             ),
             _ => unreachable!(),
         };
-        
+
         if token.kind != TokenType::Comment {
             self.tokens.push(token);
         }
