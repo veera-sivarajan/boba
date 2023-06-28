@@ -58,7 +58,7 @@ impl Analyzer {
         }
     }
 
-    pub fn check(&mut self, ast: &mut [Stmt]) -> Result<Vec<LLStmt>, BobaError> {
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
         for stmt in ast {
@@ -116,7 +116,7 @@ impl Analyzer {
         }
     }
 
-    fn statement(&mut self, stmt: &mut Stmt) -> Result<LLStmt, BobaError> {
+    fn statement(&mut self, stmt: &Stmt) -> Result<LLStmt, BobaError> {
         match stmt {
             Stmt::LocalVariable {
                 name,
@@ -125,8 +125,8 @@ impl Analyzer {
                 ty_pe,
                 kind,
             } => self.local_variable_decl(name, *is_mutable, init, ty_pe, kind),
-            Stmt::GlobalVariable { init, .. } => {
-                self.global_variable_decl(init)
+            Stmt::GlobalVariable { name, init} => {
+                self.global_variable_decl(name, init)
             }
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
@@ -217,9 +217,9 @@ impl Analyzer {
 
     fn block_stmt(
         &mut self,
-        stmts: &mut [Stmt],
+        stmts: &[Stmt],
         params: Option<&[Parameter]>,
-    ) -> Result<(), BobaError> {
+    ) -> Result<LLStmt, BobaError> {
         self.new_scope();
         if let Some(params) = params {
             for (param, _param_type) in params {
@@ -235,9 +235,9 @@ impl Analyzer {
                 }
             }
         }
-        self.check(stmts)?;
+        let ll_stmts = self.check(stmts)?;
         self.exit_scope();
-        Ok(())
+        Ok(LLStmt::Block(ll_stmts))
     }
 
     fn if_stmt(
@@ -256,24 +256,33 @@ impl Analyzer {
 
     fn function_decl(
         &mut self,
-        _name: &Token,
-        body: &mut Stmt,
+        name: &Token,
+        body: &Stmt,
         params: &[Parameter],
-    ) -> Result<(), BobaError> {
+    ) -> Result<LLStmt, BobaError> {
         let Stmt::Block(stmts) = body else {
             unreachable!("Expected function body to be a block statement.")
         };
         self.variable_index = 0;
-        self.block_stmt(stmts, Some(params))?;
-        Ok(())
+        let body = Box::new(self.block_stmt(stmts, Some(params))?);
+        Ok(LLStmt::Function {
+            name: name.to_string(),
+            params_count: params.len() as u8,
+            locals_count: 2,
+            body,
+        })
     }
 
     fn global_variable_decl(
         &mut self,
-        init: &mut Expr,
-    ) -> Result<(), BobaError> {
-        self.expression(init)?;
-        Ok(())
+        name: &Token,
+        init: &Expr,
+    ) -> Result<LLStmt, BobaError> {
+        let init = self.expression(init)?;
+        Ok(LLStmt::GlobalVariable {
+            name: name.to_string(),
+            init
+        })
     }
 
     fn get_variable_index(&mut self) -> u8 {
@@ -286,9 +295,9 @@ impl Analyzer {
         &mut self,
         name: &Token,
         is_mutable: bool,
-        init: &mut Expr,
-        ty_pe: &mut Option<Type>,
-        kind: &mut Option<Kind>,
+        init: &Expr,
+        ty_pe: &Option<Type>,
+        kind: &Option<Kind>,
     ) -> Result<LLStmt, BobaError> {
         if self.variable_is_declared_in_current_scope(name) {
             Err(BobaError::VariableRedeclaration(name.clone()))
@@ -300,8 +309,6 @@ impl Analyzer {
                 is_mutable,
                 Kind::LocalVariable(variable_index),
             );
-            // *ty_pe = Some(Type::Number);
-            // *kind = Some(Kind::LocalVariable(variable_index));
             Ok(LLStmt::LocalVariable {
                 init,
                 ty_pe: Type::Number,

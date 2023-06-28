@@ -70,6 +70,7 @@ pub enum LLStmt {
     },
     Expression(LLExpr),
     Print(LLExpr),
+    Block(Vec<LLStmt>),
     If {
         condition: LLExpr,
         then: Box<LLStmt>,
