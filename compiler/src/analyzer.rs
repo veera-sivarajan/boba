@@ -45,7 +45,6 @@ pub struct Analyzer {
     symbol_table: Vec<HashMap<String, Info>>,
     functions: Vec<Token>,
     variable_index: u8,
-    statements: Vec<LLStmt>,
 }
 
 impl Analyzer {
@@ -54,18 +53,21 @@ impl Analyzer {
             symbol_table: vec![HashMap::new()],
             functions: vec![],
             variable_index: 0,
-            statements: vec![],
         }
     }
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
+        self.resolve(ast)
+    }
+
+    fn resolve(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
+        let mut result = vec![];
         for stmt in ast {
-            let node = self.statement(stmt)?;
-            self.statements.push(node);
+            result.push(self.statement(stmt)?);
         }
-        Ok(self.statements.clone())
+        Ok(result)
     }
 
     fn add_function(&mut self, name: &Token) {
@@ -236,7 +238,7 @@ impl Analyzer {
                 }
             }
         }
-        let ll_stmts = self.check(stmts)?;
+        let ll_stmts = self.resolve(stmts)?;
         self.exit_scope();
         Ok(LLStmt::Block(ll_stmts))
     }
@@ -276,7 +278,7 @@ impl Analyzer {
         Ok(LLStmt::Function {
             name: name.to_string(),
             params_count: params.len() as u8,
-            locals_count: self.variable_index + 1,
+            locals_count: self.variable_index,
             body,
         })
     }
