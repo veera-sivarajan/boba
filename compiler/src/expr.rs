@@ -85,4 +85,24 @@ impl From<&Expr> for String {
         value.to_string()
     }
 }
-            
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum LLExpr {
+    Binary {
+        left: Box<LLExpr>,
+        oper: Token,
+        right: Box<LLExpr>,
+    },
+    Number(i64),
+    Variable {
+        name: String,
+        ty_pe: Type,
+        kind: Kind,
+    },
+    Boolean(bool),
+    String(String),
+    Call {
+        callee: String,
+        args: Vec<Expr>,
+    }
+}

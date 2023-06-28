@@ -1,4 +1,4 @@
-use crate::expr::Expr;
+use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
 use crate::analyzer::{Kind, Type};
 
@@ -56,4 +56,32 @@ impl From<&Stmt> for Token {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum LLStmt {
+    LocalVariable {
+        init: LLExpr,
+        ty_pe: Type,
+        kind: Kind,
+    },
+    GlobalVariable {
+        name: String,
+        init: LLExpr,
+    },
+    Expression(LLExpr),
+    Print(LLExpr),
+    If {
+        condition: LLExpr,
+        then: Box<LLStmt>,
+        elze: Option<Box<LLStmt>>,
+    },
+    Function {
+        name: String,
+        params_count: u8,
+        locals_count: u8,
+        body: Box<LLStmt>,
+    },
+}
+        
+       
 
