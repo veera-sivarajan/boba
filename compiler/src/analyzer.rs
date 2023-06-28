@@ -1,7 +1,7 @@
 use crate::error::BobaError;
-use crate::expr::Expr;
+use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
-use crate::stmt::{Parameter, Stmt};
+use crate::stmt::{Parameter, Stmt, LLStmt};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -45,6 +45,7 @@ pub struct Analyzer {
     symbol_table: Vec<HashMap<String, Info>>,
     functions: Vec<Token>,
     variable_index: u8,
+    statements: Vec<LLStmt>,
 }
 
 impl Analyzer {
@@ -53,16 +54,18 @@ impl Analyzer {
             symbol_table: vec![HashMap::new()],
             functions: vec![],
             variable_index: 0,
+            statements: vec![],
         }
     }
 
-    pub fn check(&mut self, ast: &mut [Stmt]) -> Result<(), BobaError> {
+    pub fn check(&mut self, ast: &mut [Stmt]) -> Result<Vec<LLStmt>, BobaError> {
         self.declare_all_globals(ast)?;
         self.main_is_defined()?;
         for stmt in ast {
-            self.statement(stmt)?;
+            let node = self.statement(stmt)?;
+            self.statements.push(node);
         }
-        Ok(())
+        Ok(self.statements.clone())
     }
 
     fn add_function(&mut self, name: &Token) {
@@ -113,7 +116,7 @@ impl Analyzer {
         }
     }
 
-    fn statement(&mut self, stmt: &mut Stmt) -> Result<(), BobaError> {
+    fn statement(&mut self, stmt: &mut Stmt) -> Result<LLStmt, BobaError> {
         match stmt {
             Stmt::LocalVariable {
                 name,
@@ -138,9 +141,11 @@ impl Analyzer {
         }
     }
 
-    fn expression(&mut self, mut expr: &mut Expr) -> Result<(), BobaError> {
-        match &mut expr {
-            Expr::Number(_) | Expr::Boolean(_) | Expr::String(_) => Ok(()),
+    fn expression(&mut self, expr: &Expr) -> Result<LLExpr, BobaError> {
+        match expr {
+            Expr::Number(value) => Ok(LLExpr::Number(*value)),
+            Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
+            Expr::String(value) => Ok(LLExpr::String(value.clone())),
             Expr::Variable { name, ty_pe, kind } => {
                 self.variable(name, ty_pe, kind)
             }
@@ -153,40 +158,50 @@ impl Analyzer {
 
     fn binary(
         &mut self,
-        left: &mut Expr,
-        _oper: &Token,
-        right: &mut Expr,
-    ) -> Result<(), BobaError> {
-        self.expression(left)?;
-        self.expression(right)?;
-        Ok(())
+        left: &Expr,
+        oper: &Token,
+        right: &Expr,
+    ) -> Result<LLExpr, BobaError> {
+        let left = Box::new(self.expression(left)?);
+        let right = Box::new(self.expression(right)?);
+        Ok(LLExpr::Binary {
+            left,
+            oper: oper.clone(),
+            right,
+        })
     }
 
     fn function_call(
         &mut self,
         callee: &Token,
-        args: &mut [Expr],
-    ) -> Result<(), BobaError> {
+        args: &[Expr],
+    ) -> Result<LLExpr, BobaError> {
         if !self.function_is_defined(callee) {
             Err(BobaError::UndeclaredFunction(callee.clone()))
         } else {
+            let mut ll_args= vec![];
             for arg in args {
-                self.expression(arg)?;
+                ll_args.push(self.expression(arg)?);
             }
-            Ok(())
+            Ok(LLExpr::Call {
+                callee: callee.to_string(),
+                args: ll_args,
+            })
         }
     }
 
     fn variable(
         &mut self,
-        name: &mut Token,
-        ty_pe: &mut Option<Type>,
-        kind: &mut Option<Kind>,
-    ) -> Result<(), BobaError> {
+        name: &Token,
+        ty_pe: &Option<Type>,
+        kind: &Option<Kind>,
+    ) -> Result<LLExpr, BobaError> {
         if let Some(info) = self.get_info(name) {
-            *ty_pe = Some(info.ty_pe.clone());
-            *kind = Some(info.kind.clone());
-            Ok(())
+            Ok(LLExpr::Variable {
+                name: name.to_string(),
+                ty_pe: info.ty_pe.clone(),
+                kind: info.kind.clone(),
+            })
         } else {
             Err(BobaError::UndeclaredVariable(name.clone()))
         }
@@ -274,20 +289,24 @@ impl Analyzer {
         init: &mut Expr,
         ty_pe: &mut Option<Type>,
         kind: &mut Option<Kind>,
-    ) -> Result<(), BobaError> {
+    ) -> Result<LLStmt, BobaError> {
         if self.variable_is_declared_in_current_scope(name) {
             Err(BobaError::VariableRedeclaration(name.clone()))
         } else {
-            self.expression(init)?;
+            let init = self.expression(init)?;
             let variable_index = self.get_variable_index();
             self.add_variable(
                 name,
                 is_mutable,
                 Kind::LocalVariable(variable_index),
             );
-            *ty_pe = Some(Type::Number);
-            *kind = Some(Kind::LocalVariable(variable_index));
-            Ok(())
+            // *ty_pe = Some(Type::Number);
+            // *kind = Some(Kind::LocalVariable(variable_index));
+            Ok(LLStmt::LocalVariable {
+                init,
+                ty_pe: Type::Number,
+                kind: Kind::LocalVariable(variable_index),
+            })
         }
     }
 

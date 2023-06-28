@@ -103,6 +103,6 @@ pub enum LLExpr {
     String(String),
     Call {
         callee: String,
-        args: Vec<Expr>,
+        args: Vec<LLExpr>,
     }
 }
