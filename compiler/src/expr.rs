@@ -9,12 +9,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Number(i64),
-    // Variable(Token),
-    Variable {
-        name: Token,
-        ty_pe: Option<Type>,
-        kind: Option<Kind>,
-    },
+    Variable(Token),
     Boolean(bool),
     String(String),
     Call {
@@ -23,21 +18,11 @@ pub enum Expr {
     }
 }
 
-impl Expr {
-    pub fn new_variable(name: Token) -> Expr {
-        Expr::Variable {
-            name,
-            ty_pe: None,
-            kind: None,
-        }
-    }
-}
-
 impl From<&mut Expr> for Token {
     fn from(value: &mut Expr) -> Token {
         match value {
             Expr::Binary { oper, .. } => oper.clone(),
-            Expr::Variable { name, ..} => name.clone(),
+            Expr::Variable(name) => name.clone(),
             Expr::Call { callee, .. } => callee.clone(),
             _ => panic!("Cannot turn value into token.")
         }
@@ -49,7 +34,7 @@ impl From<&Expr> for Token {
     fn from(value: &Expr) -> Token {
         match value {
             Expr::Binary { oper, .. } => oper.clone(),
-            Expr::Variable { name, ..} => name.clone(),
+            Expr::Variable(name) => name.clone(),
             Expr::Call { callee, .. } => callee.clone(),
             _ => panic!("Cannot turn value into token.")
         }
@@ -69,7 +54,7 @@ impl fmt::Display for Expr {
                     write!(f, "0")
                 }
             }
-            Expr::Variable {name, ..} => write!(f, "{name}"),
+            Expr::Variable(name) => write!(f, "{name}"),
             Expr::Binary { left, oper, right } => {
                 write!(f, "{}", *left)?;
                 write!(f, "{}", oper.kind)?;

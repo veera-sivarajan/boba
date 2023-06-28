@@ -91,11 +91,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         )?;
         let init = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect semicolon")?;
-        Ok(Stmt::new_local(
+        Ok(Stmt::LocalVariable {
             name,
             is_mutable,
             init
-        ))
+        })
     }
 
     fn consume(
@@ -129,7 +129,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let identifier = self.consume_identifier("Expect parameter name.")?;
         self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
         let id_type = self.consume_type("Expect parameter type.")?;
-        Ok((Expr::new_variable(identifier), id_type))
+        Ok((Expr::Variable(identifier), id_type))
     }
 
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {

@@ -122,22 +122,22 @@ impl Analyzer {
                 name,
                 is_mutable,
                 init,
-                ty_pe,
-                kind,
-            } => self.local_variable_decl(name, *is_mutable, init, ty_pe, kind),
+            } => self.local_variable_decl(name, *is_mutable, init),
             Stmt::GlobalVariable { name, init} => {
                 self.global_variable_decl(name, init)
             }
             Stmt::Block(stmts) => self.block_stmt(stmts, None),
             Stmt::Function {
-                name, body, params, ..
-            } => self.function_decl(name, body, params),
+                name, body, params, return_type 
+            } => self.function_decl(name, body, params, return_type),
             Stmt::If {
                 then,
                 elze,
                 condition,
             } => self.if_stmt(then, elze, condition),
-            Stmt::Expression(expr) | Stmt::Print(expr) => self.expression(expr),
+            Stmt::Expression(expr) | Stmt::Print(expr) => {
+                Ok(LLStmt::Expression(self.expression(expr)?))
+            }
         }
     }
 
@@ -146,8 +146,8 @@ impl Analyzer {
             Expr::Number(value) => Ok(LLExpr::Number(*value)),
             Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
             Expr::String(value) => Ok(LLExpr::String(value.clone())),
-            Expr::Variable { name, ty_pe, kind } => {
-                self.variable(name, ty_pe, kind)
+            Expr::Variable(name) => {
+                self.variable(name )
             }
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
@@ -193,8 +193,6 @@ impl Analyzer {
     fn variable(
         &mut self,
         name: &Token,
-        ty_pe: &Option<Type>,
-        kind: &Option<Kind>,
     ) -> Result<LLExpr, BobaError> {
         if let Some(info) = self.get_info(name) {
             Ok(LLExpr::Variable {
@@ -242,16 +240,22 @@ impl Analyzer {
 
     fn if_stmt(
         &mut self,
-        then: &mut Stmt,
-        elze: &mut Option<Box<Stmt>>,
-        condition: &mut Expr,
-    ) -> Result<(), BobaError> {
-        self.expression(condition)?;
-        self.statement(then)?;
-        if let Some(else_stmt) = elze {
-            self.statement(else_stmt)?;
-        }
-        Ok(())
+        then: &Stmt,
+        elze: &Option<Box<Stmt>>,
+        condition: &Expr,
+    ) -> Result<LLStmt, BobaError> {
+        let condition = self.expression(condition)?;
+        let then = Box::new(self.statement(then)?);
+        let elze = if let Some(else_stmt) = elze {
+            Some(Box::new(self.statement(else_stmt)?))
+        } else {
+            None
+        };
+        Ok(LLStmt::If {
+            condition,
+            then,
+            elze,
+        })
     }
 
     fn function_decl(
@@ -259,6 +263,7 @@ impl Analyzer {
         name: &Token,
         body: &Stmt,
         params: &[Parameter],
+        _return_type: &Token,
     ) -> Result<LLStmt, BobaError> {
         let Stmt::Block(stmts) = body else {
             unreachable!("Expected function body to be a block statement.")
@@ -268,7 +273,7 @@ impl Analyzer {
         Ok(LLStmt::Function {
             name: name.to_string(),
             params_count: params.len() as u8,
-            locals_count: 2,
+            locals_count: self.variable_index + 1,
             body,
         })
     }
@@ -296,8 +301,6 @@ impl Analyzer {
         name: &Token,
         is_mutable: bool,
         init: &Expr,
-        ty_pe: &Option<Type>,
-        kind: &Option<Kind>,
     ) -> Result<LLStmt, BobaError> {
         if self.variable_is_declared_in_current_scope(name) {
             Err(BobaError::VariableRedeclaration(name.clone()))
