@@ -18,16 +18,16 @@ pub enum Expr {
     }
 }
 
-impl From<&mut Expr> for Token {
-    fn from(value: &mut Expr) -> Token {
-        match value {
-            Expr::Binary { oper, .. } => oper.clone(),
-            Expr::Variable(name) => name.clone(),
-            Expr::Call { callee, .. } => callee.clone(),
-            _ => panic!("Cannot turn value into token.")
-        }
-    }
-}
+// impl From<&mut Expr> for Token {
+//     fn from(value: &mut Expr) -> Token {
+//         match value {
+//             Expr::Binary { oper, .. } => oper.clone(),
+//             Expr::Variable(name) => name.clone(),
+//             Expr::Call { callee, .. } => callee.clone(),
+//             _ => panic!("Cannot turn value into token.")
+//         }
+//     }
+// }
 
 
 impl From<&Expr> for Token {
@@ -89,5 +89,34 @@ pub enum LLExpr {
     Call {
         callee: String,
         args: Vec<LLExpr>,
+    }
+}
+
+impl fmt::Display for LLExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LLExpr::Number(value) => write!(f, "{value}"),
+            LLExpr::String(value) => write!(f, "{value}"),
+            LLExpr::Boolean(value) => {
+                if *value {
+                    write!(f, "1")
+                } else {
+                    write!(f, "0")
+                }
+            }
+            LLExpr::Variable{ name, .. } => write!(f, "{name}"),
+            LLExpr::Binary { left, oper, right } => {
+                write!(f, "{}", *left)?;
+                write!(f, "{}", oper.kind)?;
+                write!(f, "{}", *right)
+            }
+            LLExpr::Call { .. } => write!(f, "Function call expression."),
+        }
+    }
+}
+
+impl From<&LLExpr> for String {
+    fn from(value: &LLExpr) -> Self {
+        value.to_string()
     }
 }

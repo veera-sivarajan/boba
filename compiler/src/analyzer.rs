@@ -135,8 +135,11 @@ impl Analyzer {
                 elze,
                 condition,
             } => self.if_stmt(then, elze, condition),
-            Stmt::Expression(expr) | Stmt::Print(expr) => {
+            Stmt::Expression(expr) => {
                 Ok(LLStmt::Expression(self.expression(expr)?))
+            }
+            Stmt::Print(expr) => {
+                Ok(LLStmt::Print(self.expression(expr)?))
             }
         }
     }

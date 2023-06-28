@@ -296,7 +296,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
-        if let Expr::Variable { name, .. } = &callee {
+        if let Expr::Variable(name) = &callee {
             Ok(Expr::Call {
                 callee: name.clone(),
                 args,
@@ -313,7 +313,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if let Some(expr) = self.cursor.next() {
             match expr.kind {
                 TokenType::Number(num) => Ok(Expr::Number(num)),
-                TokenType::Identifier(_) => Ok(Expr::new_variable(expr)),
+                TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
                 TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
                 TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
                 _ => todo!("{}", expr.kind),

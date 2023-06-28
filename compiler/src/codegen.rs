@@ -1,7 +1,7 @@
 use crate::error::BobaError;
-use crate::expr::Expr;
+use crate::expr::LLExpr;
 use crate::lexer::{Token, TokenType};
-use crate::stmt::{Stmt, Parameter};
+use crate::stmt::LLStmt;
 use std::fmt::Write;
 use crate::analyzer::{Kind, Type};
 
@@ -84,7 +84,7 @@ impl Assembly {
 }
 
 pub struct CodeGen {
-    global_buffer: Vec<Token>,  // function name
+    global_buffer: Vec<Box<str>>,  // function name
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
@@ -108,7 +108,7 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(&mut self, ast: &[Stmt]) -> Result<String, BobaError> {
+    pub fn compile(&mut self, ast: &[LLStmt]) -> Result<String, BobaError> {
         for ele in ast {
             self.codegen(ele)?;
         }
@@ -132,68 +132,67 @@ impl CodeGen {
         Ok(())
     }
 
-    fn codegen(&mut self, stmt: &Stmt) -> Result<(), BobaError> {
+    fn codegen(&mut self, stmt: &LLStmt) -> Result<(), BobaError> {
         match stmt {
-            Stmt::LocalVariable { name, init, ty_pe, kind, .. } => self.local_variable_decl(name, init, ty_pe, kind),
-            Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
-            Stmt::Expression(expr) => {
+            LLStmt::LocalVariable {init, ty_pe, kind: Kind::LocalVariable(index)} => self.local_variable_decl(init, ty_pe, index),
+            LLStmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
+            LLStmt::Expression(expr) => {
                 let register = self.expression(expr)?;
                 self.registers.deallocate(register);
                 Ok(())
             }
-            Stmt::Print(expr) => self.print_stmt(expr),
-            Stmt::If {
+            LLStmt::Print(expr) => self.print_stmt(expr),
+            LLStmt::If {
                 condition,
                 then,
                 elze,
             } => self.if_stmt(condition, then, elze),
-            Stmt::Block(stmts) => self.block_stmt(stmts),
-            Stmt::Function {
+            LLStmt::Block(stmts) => self.block_stmt(stmts),
+            LLStmt::Function {
                 name,
-                params,
-                return_type,
+                params_count,
+                locals_count,
                 body,
             } => {
-                self.function_decl(name, params, return_type, body)
+                self.function_decl(name, *params_count, locals_count, body)
             }
+            _ => unreachable!(),
         }
     }
 
-    fn local_variable_decl(&mut self, _name: &Token, init: &Expr, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<(), BobaError> {
+    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: &Type, index: &u8) -> Result<(), BobaError> {
         let register = self.expression(init)?;
-        let size: u8 = ty_pe.as_ref().expect("Type of local variable is none.").into();
-        if let Some(Kind::LocalVariable(index)) = kind {
-            let index = (index + 1) * size;
-            self.emit_code("movq", &register, format!("-{index}(%rbp)"))?;
-        };
+        let size: u8 = ty_pe.into();
+        let index = (index + 1) * size;
+        self.emit_code("movq", &register, format!("-{index}(%rbp)"))?;
         self.registers.deallocate(register);
         Ok(())
     }
 
-    fn add_global_name(&mut self, name: &Token) {
-        self.global_buffer.push(name.clone());
+    fn add_global_name(&mut self, name: &str) {
+        self.global_buffer.push(name.into());
     }
 
     fn function_decl(
         &mut self,
-        name: &Token,
-        params: &[Parameter],
-        _return_type: &Token,
-        body: &Stmt,
+        name: &str,
+        params_count: u8,
+        locals_count: &u8,
+        body: &LLStmt,
     ) -> Result<(), BobaError> {
         self.add_global_name(name);
-        self.emit_label(name.to_string())?;
+        self.emit_label(name)?;
         self.emit_code("pushq", "%rbp", "")?;
         self.emit_code("movq", "%rsp", "%rbp")?;
         let argument_registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
-        for (index, _) in params.iter().enumerate() {
+        for index in 0..params_count {
             if index < 6 {
-                self.emit_code("pushq", argument_registers[index], "")?;
+                self.emit_code("pushq", argument_registers[index as usize], "")?;
             } else {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = 16;
+        let space_for_locals = locals_count * 8;
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
@@ -211,9 +210,9 @@ impl CodeGen {
 
     fn if_stmt(
         &mut self,
-        condition: &Expr,
-        then: &Stmt,
-        elze: &Option<Box<Stmt>>,
+        condition: &LLExpr,
+        then: &LLStmt,
+        elze: &Option<Box<LLStmt>>,
     ) -> Result<(), BobaError> {
         let false_label = self.labels.create();
         let done_label = self.labels.create();
@@ -230,10 +229,10 @@ impl CodeGen {
 
     fn boolean_expression(
         &mut self,
-        condition: &Expr,
+        condition: &LLExpr,
         false_label: &str,
     ) -> Result<(), BobaError> {
-        let Expr::Binary { left, oper, right } = condition else {
+        let LLExpr::Binary { left, oper, right } = condition else {
             panic!("Expect a boolean expression.");
         };
         let left = self.expression(left)?;
@@ -253,14 +252,14 @@ impl CodeGen {
         Ok(())
     }
 
-    fn block_stmt(&mut self, stmts: &[Stmt]) -> Result<(), BobaError> {
+    fn block_stmt(&mut self, stmts: &[LLStmt]) -> Result<(), BobaError> {
         for stmt in stmts {
             self.codegen(stmt)?;
         }
         Ok(())
     }
 
-    fn print_stmt(&mut self, expr: &Expr) -> Result<(), BobaError> {
+    fn print_stmt(&mut self, expr: &LLExpr) -> Result<(), BobaError> {
         let register = self.expression(expr)?;
         self.emit_code("andq", "$-16", "%rsp")?;
         self.emit_code("movq", &register, "%rsi")?;
@@ -332,21 +331,21 @@ impl CodeGen {
 
     fn global_variable_decl(
         &mut self,
-        name: &Token,
-        init: &Expr,
+        name: &str,
+        init: &LLExpr,
     ) -> Result<(), BobaError> {
-        self.emit_data(&name.to_string(), "quad", init)
+        self.emit_data(name, "quad", init)
     }
 
-    fn expression(&mut self, expr: &Expr) -> Result<RegisterIndex, BobaError> {
+    fn expression(&mut self, expr: &LLExpr) -> Result<RegisterIndex, BobaError> {
         match expr {
-            Expr::Binary { left, oper, right } => {
+            LLExpr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
             }
-            Expr::Number(num) => self.number(*num),
-            Expr::Variable{ name, ty_pe, kind  } => self.variable(name, ty_pe, kind),
-            Expr::Boolean(value) => self.boolean(value),
-            Expr::Call {
+            LLExpr::Number(num) => self.number(*num),
+            LLExpr::Variable{ name, ty_pe, kind  } => self.variable(name, ty_pe, kind),
+            LLExpr::Boolean(value) => self.boolean(value),
+            LLExpr::Call {
                 callee,
                 args,
             } => self.function_call(callee, args),
@@ -356,8 +355,8 @@ impl CodeGen {
 
     fn function_call(
         &mut self,
-        callee: &Token,
-        args: &[Expr],
+        callee: &str,
+        args: &[LLExpr],
     ) -> Result<RegisterIndex, BobaError> {
         self.emit_code("andq", "$-16", "%rsp")?;
         let mut arguments = vec![];
@@ -385,10 +384,10 @@ impl CodeGen {
         Ok(register)
     }
 
-    fn variable(&mut self, name: &Token, ty_pe: &Option<Type>, kind: &Option<Kind>) -> Result<RegisterIndex, BobaError> {
+    fn variable(&mut self, name: &str, ty_pe: &Type, kind: &Kind) -> Result<RegisterIndex, BobaError> {
         let register = self.registers.allocate();
-        if let Some(Kind::Parameter(index)) | Some(Kind::LocalVariable(index)) = kind {
-            let size: u8 = ty_pe.as_ref().expect("ty_pe is none.").into();
+        if let Kind::Parameter(index) | Kind::LocalVariable(index) = kind {
+            let size: u8 = ty_pe.into();
             let index = (index + 1) * size;
             self.emit_code("movq", format!("-{index}(%rbp)"), &register)?;
         } else {
@@ -400,9 +399,9 @@ impl CodeGen {
 
     fn binary(
         &mut self,
-        left: &Expr,
+        left: &LLExpr,
         oper: &Token,
-        right: &Expr,
+        right: &LLExpr,
     ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;

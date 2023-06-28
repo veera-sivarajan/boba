@@ -12,13 +12,16 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
     let tokens = lexer.scan()?;
     if !tokens.is_empty() {
         let mut parser = parser::Parser::new(tokens.into_iter());
-        let mut ast = parser.parse()?;
-        analyzer::Analyzer::new().check(&mut ast)?;
+        let ast = parser.parse()?;
         for stmt in &ast {
             println!("{stmt:#?}");
         }
+        let ll_ast = analyzer::Analyzer::new().check(&ast)?;
+        for stmt in &ll_ast {
+            println!("{stmt:#?}");
+        }
         let mut codegen = codegen::CodeGen::new();
-        codegen.compile(&ast)
+        codegen.compile(&ll_ast)
     } else {
         Err(BobaError::General("Consider adding a 'main' function.".into()))
     }
