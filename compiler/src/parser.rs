@@ -105,7 +105,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    fn statement(&mut self) -> Result<Stmt, BobaError> {
+    fn statement(&mut self, function_name: Option<Token>) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Print) {
             self.print_stmt()
         } else if self.next_eq(TokenType::If) {
@@ -117,8 +117,22 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else if self.peek_check(TokenType::Fn) {
             Err(self
                 .error("Functions cannot be declared within a local scope."))
+        } else if self.next_eq(TokenType::Return) {
+            self.return_stmt(function_name)
         } else {
             self.expression_stmt()
+        }
+    }
+
+    fn return_stmt(&mut self, name: Option<Token>) -> Result<Stmt, BobaError> {
+        if let Some(name) = name {
+            let expr = self.expression()?;
+            Ok(Stmt::Return {
+                name,
+                expr,
+            })
+        } else {
+            Err(self.error("Return statement can be placed only within a function."))
         }
     }
 
@@ -143,7 +157,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
         let return_type = self.consume_type("Expect correct return type.")?;
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
-        let body = self.block_stmt()?;
+        let body = self.block_stmt(Some(name.clone()))?;
         let body = Box::new(Stmt::Block(body));
         Ok(Stmt::Function {
             name,
@@ -159,13 +173,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenType::LeftBrace,
             "Condition should be followed by a block.",
         )?;
-        let then = Box::new(Stmt::Block(self.block_stmt()?));
+        let then = Box::new(Stmt::Block(self.block_stmt(None)?));
         let elze = if self.next_eq(TokenType::Else) {
             self.consume(
                 TokenType::LeftBrace,
                 "Block should follow an 'else' keyword.",
             )?;
-            Some(Box::new(Stmt::Block(self.block_stmt()?)))
+            Some(Box::new(Stmt::Block(self.block_stmt(None)?)))
         } else {
             None
         };
@@ -176,10 +190,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         })
     }
 
-    fn block_stmt(&mut self) -> Result<Vec<Stmt>, BobaError> {
+    fn block_stmt(&mut self, function_name: Option<Token>) -> Result<Vec<Stmt>, BobaError> {
         let mut stmts = Vec::new();
         while !self.peek_check(TokenType::RightBrace) {
-            stmts.push(self.statement()?);
+            stmts.push(self.statement(function_name)?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
         Ok(stmts)
