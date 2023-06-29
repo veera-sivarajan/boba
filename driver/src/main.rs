@@ -7,18 +7,18 @@ fn assemble(output: String) -> std::io::Result<()> {
         .create(true)
         .truncate(true)
         .write(true)
-        .open("/home/veera/projects/boba/output/math.s")?;
+        .open("/home/veera/projects/boba/misc/input.s")?;
     assembly_file.write_all(output.as_bytes())?;
     Command::new("gcc")
-        .arg("/home/veera/projects/boba/output/math.s")
+        .arg("/home/veera/projects/boba/misc/input.s")
         .arg("-o")
-        .arg("/home/veera/projects/boba/output/math")
+        .arg("/home/veera/projects/boba/misc/input")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to invoke gcc.");
     println!("========Program Output===========");
-    Command::new("/home/veera/projects/boba/output/math")
+    Command::new("/home/veera/projects/boba/misc/input")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -27,7 +27,7 @@ fn assemble(output: String) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    let source = include_str!("/home/veera/projects/boba/test/print.rs");
+    let source = include_str!("/home/veera/projects/boba/misc/input.rs");
     match compiler::compile(source.trim_end()) {
         Ok(assembly) => assemble(assembly),
         Err(err) => {
