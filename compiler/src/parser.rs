@@ -109,9 +109,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if self.next_eq(TokenType::Print) {
             self.print_stmt()
         } else if self.next_eq(TokenType::If) {
-            self.if_stmt()
+            self.if_stmt(function_name)
         } else if self.next_eq(TokenType::LeftBrace) {
-            Ok(Stmt::Block(self.block_stmt()?))
+            Ok(Stmt::Block(self.block_stmt(None)?))
         } else if self.next_eq(TokenType::Let) {
             self.local_variable_decl()
         } else if self.peek_check(TokenType::Fn) {
@@ -127,6 +127,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn return_stmt(&mut self, name: Option<Token>) -> Result<Stmt, BobaError> {
         if let Some(name) = name {
             let expr = self.expression()?;
+            self.consume(TokenType::Semicolon, "Expect semicolon.")?;
             Ok(Stmt::Return {
                 name,
                 expr,
@@ -167,19 +168,19 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         })
     }
 
-    fn if_stmt(&mut self) -> Result<Stmt, BobaError> {
+    fn if_stmt(&mut self, function_name: Option<Token>) -> Result<Stmt, BobaError> {
         let condition = self.expression()?;
         self.consume(
             TokenType::LeftBrace,
             "Condition should be followed by a block.",
         )?;
-        let then = Box::new(Stmt::Block(self.block_stmt(None)?));
+        let then = Box::new(Stmt::Block(self.block_stmt(function_name.clone())?));
         let elze = if self.next_eq(TokenType::Else) {
             self.consume(
                 TokenType::LeftBrace,
                 "Block should follow an 'else' keyword.",
             )?;
-            Some(Box::new(Stmt::Block(self.block_stmt(None)?)))
+            Some(Box::new(Stmt::Block(self.block_stmt(function_name)?)))
         } else {
             None
         };
@@ -193,7 +194,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn block_stmt(&mut self, function_name: Option<Token>) -> Result<Vec<Stmt>, BobaError> {
         let mut stmts = Vec::new();
         while !self.peek_check(TokenType::RightBrace) {
-            stmts.push(self.statement(function_name)?);
+            stmts.push(self.statement(function_name.clone())?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
         Ok(stmts)

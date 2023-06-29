@@ -281,10 +281,11 @@ impl Analyzer {
         };
         self.variable_index = 0;
         let body = Box::new(self.block_stmt(stmts, Some(params))?);
+        let params_count = params.len() as u8;
         Ok(LLStmt::Function {
             name: name.to_string(),
-            params_count: params.len() as u8,
-            locals_count: self.variable_index,
+            params_count,
+            locals_count: self.variable_index - params_count,
             body,
         })
     }

@@ -139,6 +139,7 @@ impl CodeGen {
                 ty_pe,
                 kind: Kind::LocalVariable(index),
             } => self.local_variable_decl(init, ty_pe, index),
+            LLStmt::LocalVariable { .. } => unreachable!(),
             LLStmt::GlobalVariable { name, init } => {
                 self.global_variable_decl(name, init)
             }
@@ -160,8 +161,16 @@ impl CodeGen {
                 locals_count,
                 body,
             } => self.function_decl(name, *params_count, locals_count, body),
-            _ => unreachable!(),
+            LLStmt::Return { name, expr } => self.return_stmt(name, expr),
         }
+    }
+
+    fn return_stmt(&mut self, name: &str, expr: &LLExpr) -> Result<(), BobaError> {
+        let register = self.expression(expr)?;
+        self.emit_code("movq", &register, "%rax")?;
+        self.emit_code("jmp", format!(".{name}_epilogue"), "")?;
+        self.registers.deallocate(register);
+        Ok(())
     }
 
     fn local_variable_decl(
@@ -212,6 +221,7 @@ impl CodeGen {
             self.emit_code("pushq", register, "")?;
         }
         self.codegen(body)?;
+        self.emit_label(format!(".{name}_epilogue"))?;
         for register in callee_saved_registers.iter().rev() {
             self.emit_code("popq", register, "")?;
         }
