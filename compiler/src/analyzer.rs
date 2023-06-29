@@ -144,7 +144,17 @@ impl Analyzer {
                 Ok(LLStmt::Expression(self.expression(expr)?))
             }
             Stmt::Print(expr) => Ok(LLStmt::Print(self.expression(expr)?)),
+            Stmt::Return { name, expr } => self.return_stmt(name, expr),
         }
+    }
+
+    fn return_stmt(&mut self, name: &Token, expr: &Expr) -> Result<LLStmt, BobaError> {
+        let name = name.to_string();
+        let expr = self.expression(expr)?;
+        Ok(LLStmt::Return {
+            name,
+            expr,
+        })
     }
 
     fn expression(&mut self, expr: &Expr) -> Result<LLExpr, BobaError> {
