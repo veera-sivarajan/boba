@@ -497,6 +497,7 @@ mod test_lexer {
                     .iter()
                     .map(|t| t.kind.clone())
                     .collect::<Vec<TokenType>>();
+                println!("Output: {:#?}", output);
                 output.as_slice() == expected_tokens
             }
             Err(error) => {
@@ -542,7 +543,7 @@ mod test_lexer {
     fn numbers() {
         assert!(test_runner("1", &[TokenType::Number(1)]));
         assert!(test_runner("123", &[TokenType::Number(123)]));
-        assert!(test_runner("1.00", &[TokenType::Number(1)]));
+        assert!(test_runner("-123", &[TokenType::Minus, TokenType::Number(123)]));
     }
 
     #[test]
@@ -579,10 +580,10 @@ fn factorial(num: Number) -> Number {
                 TokenType::LeftParen,
                 TokenType::Identifier("num".into()),
                 TokenType::Colon,
-                TokenType::Identifier("Number".into()),
+                TokenType::Type("Number".into()),
                 TokenType::RightParen,
                 TokenType::Arrow,
-                TokenType::Identifier("Number".into()),
+                TokenType::Type("Number".into()),
                 TokenType::LeftBrace,
                 TokenType::Let,
                 TokenType::Identifier("a".into()),
