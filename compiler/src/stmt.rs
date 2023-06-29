@@ -29,6 +29,10 @@ pub enum Stmt {
         return_type: Token,
         body: Box<Stmt>,
     },
+    Return {
+        name: Token,
+        expr: Expr,
+    },
 }
 
 impl From<&Stmt> for Token {
@@ -66,5 +70,9 @@ pub enum LLStmt {
         params_count: u8,
         locals_count: u8,
         body: Box<LLStmt>,
+    },
+    Return {
+        name: String,
+        expr: LLExpr,
     },
 }
