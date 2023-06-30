@@ -137,9 +137,8 @@ impl CodeGen {
             LLStmt::LocalVariable {
                 init,
                 ty_pe,
-                kind: Kind::LocalVariable(index),
-            } => self.local_variable_decl(init, ty_pe, index),
-            LLStmt::LocalVariable { .. } => unreachable!(),
+                variable_index,
+            } => self.local_variable_decl(init, ty_pe, variable_index),
             LLStmt::GlobalVariable { name, init } => {
                 self.global_variable_decl(name, init)
             }
@@ -165,7 +164,11 @@ impl CodeGen {
         }
     }
 
-    fn return_stmt(&mut self, name: &str, expr: &LLExpr) -> Result<(), BobaError> {
+    fn return_stmt(
+        &mut self,
+        name: &str,
+        expr: &LLExpr,
+    ) -> Result<(), BobaError> {
         let register = self.expression(expr)?;
         self.emit_code("movq", &register, "%rax")?;
         self.emit_code("jmp", format!(".{name}_epilogue"), "")?;

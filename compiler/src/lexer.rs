@@ -478,7 +478,7 @@ impl<'src> Lexer<'src> {
             "let" => TokenType::Let,
             "mut" => TokenType::Mutable,
             "while" => TokenType::While,
-            "String" | "i8" | "Bool" | "Char" => TokenType::Type(lexeme),
+            "String" | "i64" | "Bool" | "Char" => TokenType::Type(lexeme),
             _ => TokenType::Identifier(lexeme),
         };
         let span = self.make_span(start_pos, len);
@@ -543,7 +543,10 @@ mod test_lexer {
     fn numbers() {
         assert!(test_runner("1", &[TokenType::Number(1)]));
         assert!(test_runner("123", &[TokenType::Number(123)]));
-        assert!(test_runner("-123", &[TokenType::Minus, TokenType::Number(123)]));
+        assert!(test_runner(
+            "-123",
+            &[TokenType::Minus, TokenType::Number(123)]
+        ));
     }
 
     #[test]
@@ -570,7 +573,7 @@ mod test_lexer {
     fn function_declarations() {
         assert!(test_runner(
             "
-fn factorial(num: i8) -> i8 {
+fn factorial(num: i64) -> i64 {
     let a = 1 + 2;
 }
 ",
@@ -580,10 +583,10 @@ fn factorial(num: i8) -> i8 {
                 TokenType::LeftParen,
                 TokenType::Identifier("num".into()),
                 TokenType::Colon,
-                TokenType::Type("i8".into()),
+                TokenType::Type("i64".into()),
                 TokenType::RightParen,
                 TokenType::Arrow,
-                TokenType::Type("i8".into()),
+                TokenType::Type("i64".into()),
                 TokenType::LeftBrace,
                 TokenType::Let,
                 TokenType::Identifier("a".into()),

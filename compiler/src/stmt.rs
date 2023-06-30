@@ -1,4 +1,4 @@
-use crate::analyzer::{Kind, Type};
+use crate::analyzer::Type;
 use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
 
@@ -51,7 +51,7 @@ pub enum LLStmt {
     LocalVariable {
         init: LLExpr,
         ty_pe: Type,
-        kind: Kind,
+        variable_index: u8,
     },
     GlobalVariable {
         name: String,

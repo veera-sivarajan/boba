@@ -41,6 +41,9 @@ fn main() -> std::io::Result<()> {
 mod tests {
     use super::*;
 
+    // Absolute garbage code written with no regard for code quality
+    // but it gets the job done
+
     fn execute(assembly: &str, expected_output: &str) -> bool {
         let mut assembly_file = OpenOptions::new()
             .create(true)
@@ -89,11 +92,13 @@ mod tests {
     #[test]
     #[allow(clippy::manual_flatten)]
     fn test_all_files() {
-        if let Ok(entries) = std::fs::read_dir("/home/veera/projects/boba/test") {
+        if let Ok(entries) = std::fs::read_dir("/home/veera/projects/boba/test")
+        {
             for entry in entries {
                 if let Ok(dir_entry) = entry {
                     let entry = dir_entry.path();
-                    let stem = entry.file_stem().map(|v| v.to_str().unwrap()).unwrap();
+                    let stem =
+                        entry.file_stem().map(|v| v.to_str().unwrap()).unwrap();
                     if test_runner(stem) {
                         continue;
                     } else {

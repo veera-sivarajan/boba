@@ -148,13 +148,14 @@ impl Analyzer {
         }
     }
 
-    fn return_stmt(&mut self, name: &Token, expr: &Expr) -> Result<LLStmt, BobaError> {
+    fn return_stmt(
+        &mut self,
+        name: &Token,
+        expr: &Expr,
+    ) -> Result<LLStmt, BobaError> {
         let name = name.to_string();
         let expr = self.expression(expr)?;
-        Ok(LLStmt::Return {
-            name,
-            expr,
-        })
+        Ok(LLStmt::Return { name, expr })
     }
 
     fn expression(&mut self, expr: &Expr) -> Result<LLExpr, BobaError> {
@@ -327,7 +328,7 @@ impl Analyzer {
             Ok(LLStmt::LocalVariable {
                 init,
                 ty_pe: Type::Number,
-                kind: Kind::LocalVariable(variable_index),
+                variable_index,
             })
         }
     }
