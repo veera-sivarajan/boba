@@ -18,17 +18,6 @@ pub enum Expr {
     },
 }
 
-// impl From<&mut Expr> for Token {
-//     fn from(value: &mut Expr) -> Token {
-//         match value {
-//             Expr::Binary { oper, .. } => oper.clone(),
-//             Expr::Variable(name) => name.clone(),
-//             Expr::Call { callee, .. } => callee.clone(),
-//             _ => panic!("Cannot turn value into token.")
-//         }
-//     }
-// }
-
 impl From<&Expr> for Token {
     fn from(value: &Expr) -> Token {
         match value {

@@ -7,12 +7,13 @@ mod parser;
 mod stmt;
 
 use crate::error::BobaError;
+use crate::parser::Parser;
 
 fn compile_helper(source: &str) -> Result<String, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;
     if !tokens.is_empty() {
-        let mut parser = parser::Parser::new(tokens.into_iter());
+        let mut parser = Parser::new(tokens.into_iter());
         let ast = parser.parse()?;
         let ll_ast = analyzer::Analyzer::new().check(&ast)?;
         codegen::CodeGen::new().compile(&ll_ast)
@@ -25,7 +26,8 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
 
 pub fn compile(source: &str) -> Result<String, BobaError> {
     if !source.is_empty() {
-        eprintln!("Compiling: {source}");
+        eprintln!("========Source Code===========");
+        eprintln!("{source}");
         compile_helper(source)
     } else {
         Err(BobaError::General("Empty source file.".into()))
