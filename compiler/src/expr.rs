@@ -17,7 +17,7 @@ pub enum Expr {
         args: Vec<Expr>,
     },
     Assign {
-        name: Token,
+        name: Box<Expr>,
         value: Box<Expr>,
     }
 }
@@ -28,6 +28,13 @@ impl From<&Expr> for Token {
             Expr::Binary { oper, .. } => oper.clone(),
             Expr::Variable(name) => name.clone(),
             Expr::Call { callee, .. } => callee.clone(),
+            // Expr::Assign { name, ..} => {
+            //     match name.clone() {
+            //         Expr::Variable(name) => name.clone(),
+            //         _ => unreachable!(),
+            //     }
+            // }
+            Expr::Assign {name, .. } => Token::from(&**name),
             _ => panic!("Cannot turn value into token."),
         }
     }
@@ -78,16 +85,18 @@ pub enum LLExpr {
         name: String,
         ty_pe: Type,
         kind: Kind,
+        is_mutable: bool,
     },
     Boolean(bool),
-    String(String),
+    // String(String),
     Call {
         callee: String,
         args: Vec<LLExpr>,
     },
     Assign {
-        name: String,
+        name: Box<LLExpr>,
         value: Box<LLExpr>,
+        index: u8,
     },
 }
 
@@ -95,7 +104,7 @@ impl fmt::Display for LLExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LLExpr::Number(value) => write!(f, "{value}"),
-            LLExpr::String(value) => write!(f, "{value}"),
+            // LLExpr::String(value) => write!(f, "{value}"),
             LLExpr::Boolean(value) => {
                 if *value {
                     write!(f, "1")

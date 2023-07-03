@@ -162,7 +162,7 @@ impl Analyzer {
         match expr {
             Expr::Number(value) => Ok(LLExpr::Number(*value)),
             Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
-            Expr::String(value) => Ok(LLExpr::String(value.clone())),
+            Expr::String(value) => todo!(),
             Expr::Variable(name) => self.variable(name),
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
@@ -172,18 +172,20 @@ impl Analyzer {
         }
     }
 
-    fn assignment(&mut self, name: &Token, value: &Expr) -> Result<LLExpr, BobaError> {
-        if let Some(info) = self.get_info(name) {
-            if info.is_mutable {
+    fn assignment(&mut self, name: &Expr, value: &Expr) -> Result<LLExpr, BobaError> {
+        let lhs = self.expression(name)?;
+        if let LLExpr::Variable { is_mutable, kind: Kind::Parameter(index) | Kind::LocalVariable(index), .. } = lhs {
+            if is_mutable {
                 Ok(LLExpr::Assign {
-                    name: name.to_string(),
+                    name: Box::new(lhs),
                     value: Box::new(self.expression(value)?),
+                    index,
                 })
             } else {
-                Err(BobaError::AssignToImmutable(name.clone()))
+                Err(BobaError::AssignToImmutable(name.into()))
             }
         } else {
-            Err(BobaError::UndeclaredVariable(name.clone()))
+            Err(BobaError::AssignToNonVariable(name.into()))
         }
     }
 
@@ -227,6 +229,7 @@ impl Analyzer {
                 name: name.to_string(),
                 ty_pe: info.ty_pe.clone(),
                 kind: info.kind.clone(),
+                is_mutable: info.is_mutable,
             })
         } else {
             Err(BobaError::UndeclaredVariable(name.clone()))

@@ -232,8 +232,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if let Some(equals) = next_eq!(self, TokenType::Equal) {
             let value = self.assignment()?;
             match expr {
-                Expr::Variable(variable_name) => Ok(Expr::Assign {
-                    name: variable_name,
+                Expr::Variable(_) => Ok(Expr::Assign {
+                    name: Box::new(expr),
                     value: Box::new(value),
                 }),
                 _ => Err(self.error(

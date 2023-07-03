@@ -40,6 +40,7 @@ pub enum BobaError {
     LocalFunction(Token),
     MainNotFound,
     AssignToImmutable(Token),
+    AssignToNonVariable(Token),
 }
 
 impl fmt::Display for BobaError {
@@ -118,6 +119,9 @@ impl fmt::Display for BobaError {
             }
             AssignToImmutable(token) => {
                 write!(f, "Error: Cannot assign to immutable variable '{}' at '{}'", token, token.span)
+            }
+            AssignToNonVariable(token) => {
+                write!(f, "Error: Attempting to assign to a non variable '{}' at {}.", token, token.span)
             }
         }
     }
