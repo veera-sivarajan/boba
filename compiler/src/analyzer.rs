@@ -172,9 +172,18 @@ impl Analyzer {
         }
     }
 
-    fn assignment(&mut self, name: &Expr, value: &Expr) -> Result<LLExpr, BobaError> {
+    fn assignment(
+        &mut self,
+        name: &Expr,
+        value: &Expr,
+    ) -> Result<LLExpr, BobaError> {
         let lhs = self.expression(name)?;
-        if let LLExpr::Variable { is_mutable, kind: Kind::Parameter(index) | Kind::LocalVariable(index), .. } = lhs {
+        if let LLExpr::Variable {
+            is_mutable,
+            kind: Kind::Parameter(index) | Kind::LocalVariable(index),
+            ..
+        } = lhs
+        {
             if is_mutable {
                 Ok(LLExpr::Assign {
                     name: Box::new(lhs),

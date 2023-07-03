@@ -372,16 +372,23 @@ impl CodeGen {
                 self.binary(left, oper, right)
             }
             LLExpr::Number(num) => self.number(*num),
-            LLExpr::Variable { name, ty_pe, kind, .. } => {
-                self.variable(name, ty_pe, kind)
-            }
+            LLExpr::Variable {
+                name, ty_pe, kind, ..
+            } => self.variable(name, ty_pe, kind),
             LLExpr::Boolean(value) => self.boolean(value),
             LLExpr::Call { callee, args } => self.function_call(callee, args),
-            LLExpr::Assign { name, value, index} => self.assignment(name, value, *index),
+            LLExpr::Assign { name, value, index } => {
+                self.assignment(name, value, *index)
+            }
         }
     }
 
-    fn assignment(&mut self, name: &LLExpr, value: &LLExpr, index: u8) -> Result<RegisterIndex, BobaError> {
+    fn assignment(
+        &mut self,
+        name: &LLExpr,
+        value: &LLExpr,
+        index: u8,
+    ) -> Result<RegisterIndex, BobaError> {
         let name = self.expression(name)?;
         let value = self.expression(value)?;
         // TODO: Fix size of variable

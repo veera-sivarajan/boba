@@ -19,7 +19,7 @@ pub enum Expr {
     Assign {
         name: Box<Expr>,
         value: Box<Expr>,
-    }
+    },
 }
 
 impl From<&Expr> for Token {
@@ -28,13 +28,7 @@ impl From<&Expr> for Token {
             Expr::Binary { oper, .. } => oper.clone(),
             Expr::Variable(name) => name.clone(),
             Expr::Call { callee, .. } => callee.clone(),
-            // Expr::Assign { name, ..} => {
-            //     match name.clone() {
-            //         Expr::Variable(name) => name.clone(),
-            //         _ => unreachable!(),
-            //     }
-            // }
-            Expr::Assign {name, .. } => Token::from(&**name),
+            Expr::Assign { name, .. } => Token::from(name.as_ref()),
             _ => panic!("Cannot turn value into token."),
         }
     }

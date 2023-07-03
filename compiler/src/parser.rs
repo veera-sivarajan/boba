@@ -237,7 +237,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     value: Box::new(value),
                 }),
                 _ => Err(self.error(
-                    format!("Expect variable name but found {expr:?}").as_str()))
+                    format!("Expect variable name but found {expr:?}").as_str(),
+                )),
             }
         } else {
             Ok(expr)

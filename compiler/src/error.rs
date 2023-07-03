@@ -118,10 +118,18 @@ impl fmt::Display for BobaError {
                 write!(f, "Error: Consider adding a main function.")
             }
             AssignToImmutable(token) => {
-                write!(f, "Error: Cannot assign to immutable variable '{}' at '{}'", token, token.span)
+                write!(
+                    f,
+                    "Error: Cannot assign to immutable variable '{}' at '{}'",
+                    token, token.span
+                )
             }
             AssignToNonVariable(token) => {
-                write!(f, "Error: Attempting to assign to a non variable '{}' at {}.", token, token.span)
+                write!(
+                    f,
+                    "Error: Attempting to assign to a non variable '{}' at {}.",
+                    token, token.span
+                )
             }
         }
     }
