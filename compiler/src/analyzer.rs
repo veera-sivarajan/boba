@@ -168,6 +168,22 @@ impl Analyzer {
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
             }
+            Expr::Assign { name, value } => self.assignment(name, value),
+        }
+    }
+
+    fn assignment(&mut self, name: &Token, value: &Expr) -> Result<LLExpr, BobaError> {
+        if let Some(info) = self.get_info(name) {
+            if info.is_mutable {
+                Ok(LLExpr::Assign {
+                    name: name.to_string(),
+                    value: Box::new(self.expression(value)?),
+                })
+            } else {
+                Err(BobaError::AssignToImmutable(name.clone()))
+            }
+        } else {
+            Err(BobaError::UndeclaredVariable(name.clone()))
         }
     }
 

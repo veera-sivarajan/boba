@@ -16,6 +16,10 @@ pub enum Expr {
         callee: Token,
         args: Vec<Expr>,
     },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    }
 }
 
 impl From<&Expr> for Token {
@@ -49,6 +53,9 @@ impl fmt::Display for Expr {
                 write!(f, "{}", *right)
             }
             Expr::Call { .. } => write!(f, "Function call expression."),
+            Expr::Assign { name, .. } => {
+                write!(f, "{name}")
+            }
         }
     }
 }
@@ -78,6 +85,10 @@ pub enum LLExpr {
         callee: String,
         args: Vec<LLExpr>,
     },
+    Assign {
+        name: String,
+        value: Box<LLExpr>,
+    },
 }
 
 impl fmt::Display for LLExpr {
@@ -99,6 +110,7 @@ impl fmt::Display for LLExpr {
                 write!(f, "{}", *right)
             }
             LLExpr::Call { .. } => write!(f, "Function call expression."),
+            LLExpr::Assign { name, .. } => write!(f, "{name}"),
         }
     }
 }

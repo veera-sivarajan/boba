@@ -224,7 +224,24 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn expression(&mut self) -> Result<Expr, BobaError> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, BobaError> {
+        let expr = self.equality()?;
+        if let Some(equals) = next_eq!(self, TokenType::Equal) {
+            let value = self.assignment()?;
+            match expr {
+                Expr::Variable(variable_name) => Ok(Expr::Assign {
+                    name: variable_name,
+                    value: Box::new(value),
+                }),
+                _ => Err(self.error(
+                    format!("Expect variable name but found {expr:?}").as_str()))
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     fn equality(&mut self) -> Result<Expr, BobaError> {

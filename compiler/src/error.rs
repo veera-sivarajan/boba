@@ -39,6 +39,7 @@ pub enum BobaError {
     UndeclaredFunction(Token),
     LocalFunction(Token),
     MainNotFound,
+    AssignToImmutable(Token),
 }
 
 impl fmt::Display for BobaError {
@@ -114,6 +115,9 @@ impl fmt::Display for BobaError {
             }
             MainNotFound => {
                 write!(f, "Error: Consider adding a main function.")
+            }
+            AssignToImmutable(token) => {
+                write!(f, "Error: Cannot assign to immutable variable '{}' at '{}'", token, token.span)
             }
         }
     }
