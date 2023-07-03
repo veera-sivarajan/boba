@@ -41,6 +41,7 @@ pub enum BobaError {
     MainNotFound,
     AssignToImmutable(Token),
     AssignToNonVariable(Token),
+    AssignToGlobalVariable(Token),
 }
 
 impl fmt::Display for BobaError {
@@ -128,6 +129,13 @@ impl fmt::Display for BobaError {
                 write!(
                     f,
                     "Error: Attempting to assign to a non variable '{}' at {}.",
+                    token, token.span
+                )
+            }
+            AssignToGlobalVariable(token) => {
+                write!(
+                    f,
+                    "Error: Global variable '{}' cannot be mutated at {}.",
                     token, token.span
                 )
             }

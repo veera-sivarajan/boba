@@ -88,7 +88,6 @@ pub enum LLExpr {
         args: Vec<LLExpr>,
     },
     Assign {
-        name: Box<LLExpr>,
         value: Box<LLExpr>,
         index: u8,
     },
@@ -113,7 +112,7 @@ impl fmt::Display for LLExpr {
                 write!(f, "{}", *right)
             }
             LLExpr::Call { .. } => write!(f, "Function call expression."),
-            LLExpr::Assign { name, .. } => write!(f, "{name}"),
+            LLExpr::Assign { value, .. } => write!(f, "{value}"),
         }
     }
 }

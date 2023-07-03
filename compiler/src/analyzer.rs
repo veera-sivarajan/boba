@@ -177,24 +177,26 @@ impl Analyzer {
         name: &Expr,
         value: &Expr,
     ) -> Result<LLExpr, BobaError> {
-        let lhs = self.expression(name)?;
-        if let LLExpr::Variable {
-            is_mutable,
-            kind: Kind::Parameter(index) | Kind::LocalVariable(index),
-            ..
-        } = lhs
-        {
-            if is_mutable {
-                Ok(LLExpr::Assign {
-                    name: Box::new(lhs),
-                    value: Box::new(self.expression(value)?),
-                    index,
-                })
-            } else {
-                Err(BobaError::AssignToImmutable(name.into()))
+        match self.expression(name)? {
+            LLExpr::Variable {
+                is_mutable,
+                kind: Kind::Parameter(index) | Kind::LocalVariable(index),
+                ..
+            } => {
+                if is_mutable {
+                    Ok(LLExpr::Assign {
+                        value: Box::new(self.expression(value)?),
+                        index,
+                    })
+                } else {
+                    Err(BobaError::AssignToImmutable(name.into()))
+                }
             }
-        } else {
-            Err(BobaError::AssignToNonVariable(name.into()))
+            LLExpr::Variable {
+                kind: Kind::GlobalVariable,
+                ..
+            } => Err(BobaError::AssignToGlobalVariable(name.into())),
+            _ => Err(BobaError::AssignToNonVariable(name.into())),
         }
     }
 
