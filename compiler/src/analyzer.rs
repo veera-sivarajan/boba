@@ -41,9 +41,20 @@ impl Info {
     }
 }
 
+struct FunctionData {
+    name: Token,
+    params_count: usize,
+}
+
+impl FunctionData {
+    fn new(name: Token, params_count: usize) -> Self {
+        FunctionData { name, params_count }
+    }
+}
+
 pub struct Analyzer {
     symbol_table: Vec<HashMap<String, Info>>,
-    functions: Vec<Token>,
+    functions: Vec<FunctionData>,
     variable_index: u8,
 }
 
@@ -70,24 +81,26 @@ impl Analyzer {
         Ok(result)
     }
 
-    fn add_function(&mut self, name: &Token) {
-        self.functions.push(name.clone());
+    fn add_function(&mut self, name: Token, params_count: usize) {
+        self.functions.push(FunctionData::new(name, params_count));
     }
 
-    fn function_is_defined(&self, name: &Token) -> bool {
-        self.functions.contains(name)
+    fn function_is_defined(&self, name: &Token) -> Option<&FunctionData> {
+        self.functions
+            .iter()
+            .find(|function| &function.name == name)
     }
 
     fn declare_all_globals(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
         for stmt in ast {
             match stmt {
-                Stmt::Function { name, .. } => {
-                    if self.function_is_defined(name) {
+                Stmt::Function { name, params, .. } => {
+                    if self.function_is_defined(name).is_some() {
                         return Err(BobaError::FunctionRedeclaration(
                             name.clone(),
                         ));
                     } else {
-                        self.add_function(name);
+                        self.add_function(name.clone(), params.len());
                     }
                 }
                 Stmt::GlobalVariable { name, .. } => {
@@ -110,7 +123,7 @@ impl Analyzer {
         if !self
             .functions
             .iter()
-            .any(|decl| &decl.to_string() == "main")
+            .any(|decl| &decl.name.to_string() == "main")
         {
             Err(BobaError::MainNotFound)
         } else {
@@ -220,17 +233,27 @@ impl Analyzer {
         callee: &Token,
         args: &[Expr],
     ) -> Result<LLExpr, BobaError> {
-        if !self.function_is_defined(callee) {
-            Err(BobaError::UndeclaredFunction(callee.clone()))
-        } else {
-            let mut ll_args = vec![];
-            for arg in args {
-                ll_args.push(self.expression(arg)?);
+        if let Some(FunctionData { params_count, .. }) =
+            self.function_is_defined(callee)
+        {
+            if *params_count != args.len() {
+                Err(BobaError::ArgumentCountNotEqual(
+                    callee.clone(),
+                    *params_count,
+                    args.len(),
+                ))
+            } else {
+                let mut ll_args = vec![];
+                for arg in args {
+                    ll_args.push(self.expression(arg)?);
+                }
+                Ok(LLExpr::Call {
+                    callee: callee.to_string(),
+                    args: ll_args,
+                })
             }
-            Ok(LLExpr::Call {
-                callee: callee.to_string(),
-                args: ll_args,
-            })
+        } else {
+            Err(BobaError::UndeclaredFunction(callee.clone()))
         }
     }
 

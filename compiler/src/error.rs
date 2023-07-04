@@ -42,6 +42,7 @@ pub enum BobaError {
     AssignToImmutable(Token),
     AssignToNonVariable(Token),
     AssignToGlobalVariable(Token),
+    ArgumentCountNotEqual(Token, usize, usize),
 }
 
 impl fmt::Display for BobaError {
@@ -138,6 +139,16 @@ impl fmt::Display for BobaError {
                     "Error: Global variable '{}' cannot be mutated at {}.",
                     token, token.span
                 )
+            }
+            ArgumentCountNotEqual(
+                function_name,
+                expected_count,
+                found_count,
+            ) => {
+                write!(
+                    f,
+                    "Error: Function '{function_name}' expects {expected_count} parameters but found {found_count} arguments at {}.",
+                    function_name.span)
             }
         }
     }
