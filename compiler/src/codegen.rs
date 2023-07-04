@@ -264,7 +264,8 @@ impl CodeGen {
                 operator @ (TokenType::Less
                 | TokenType::LessEqual
                 | TokenType::Greater
-                | TokenType::GreaterEqual),
+                | TokenType::GreaterEqual
+                | TokenType::EqualEqual),
             right,
         } = condition
         {
@@ -279,6 +280,9 @@ impl CodeGen {
                 TokenType::Greater => self.emit_code("jng", false_label, "")?,
                 TokenType::GreaterEqual => {
                     self.emit_code("jnge", false_label, "")?
+                }
+                TokenType::EqualEqual => {
+                    self.emit_code("jne", false_label, "")?;
                 }
                 _ => unreachable!(),
             }
@@ -497,26 +501,29 @@ impl CodeGen {
             }
             comparison_token => {
                 let result = self.registers.allocate();
-                let true_label = self.labels.create();
+                let false_label = self.labels.create();
                 let done_label = self.labels.create();
                 self.emit_code("cmp", &right_register, &left_register)?;
                 match comparison_token {
-                    TokenType::Less => self.emit_code("jl", &true_label, "")?,
+                    TokenType::Less => self.emit_code("jnl", &false_label, "")?,
                     TokenType::LessEqual => {
-                        self.emit_code("jle", &true_label, "")?
+                        self.emit_code("jnle", &false_label, "")?
                     }
                     TokenType::Greater => {
-                        self.emit_code("jg", &true_label, "")?
+                        self.emit_code("jng", &false_label, "")?
                     }
                     TokenType::GreaterEqual => {
-                        self.emit_code("jge", &true_label, "")?
+                        self.emit_code("jnge", &false_label, "")?
+                    }
+                    TokenType::EqualEqual => {
+                        self.emit_code("jne", &false_label, "")?;
                     }
                     _ => unreachable!(),
                 };
-                self.emit_code("mov", "$0", &result)?;
-                self.emit_code("jmp", &done_label, "")?;
-                self.emit_label(true_label)?;
                 self.emit_code("mov", "$1", &result)?;
+                self.emit_code("jmp", &done_label, "")?;
+                self.emit_label(false_label)?;
+                self.emit_code("mov", "$0", &result)?;
                 self.emit_label(done_label)?;
                 Ok(result)
             }
