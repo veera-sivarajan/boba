@@ -1,5 +1,5 @@
 use crate::analyzer::{Kind, Type};
-use crate::lexer::Token;
+use crate::lexer::{Token, TokenType};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -71,7 +71,7 @@ impl From<&Expr> for String {
 pub enum LLExpr {
     Binary {
         left: Box<LLExpr>,
-        oper: Token,
+        oper: TokenType,
         right: Box<LLExpr>,
     },
     Number(i64),
@@ -108,7 +108,7 @@ impl fmt::Display for LLExpr {
             LLExpr::Variable { name, .. } => write!(f, "{name}"),
             LLExpr::Binary { left, oper, right } => {
                 write!(f, "{}", *left)?;
-                write!(f, "{}", oper.kind)?;
+                write!(f, "{}", oper)?;
                 write!(f, "{}", *right)
             }
             LLExpr::Call { .. } => write!(f, "Function call expression."),

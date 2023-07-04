@@ -258,23 +258,24 @@ impl CodeGen {
         condition: &LLExpr,
         false_label: &str,
     ) -> Result<(), BobaError> {
-        let LLExpr::Binary { left, oper, right } = condition else {
-            panic!("Expect a boolean expression but found {condition}");
-        };
-        let left = self.expression(left)?;
-        let right = self.expression(right)?;
-        self.emit_code("cmp", &right, &left)?;
-        match oper.kind {
-            TokenType::Less => self.emit_code("jnl", false_label, "")?,
-            TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
-            TokenType::Greater => self.emit_code("jng", false_label, "")?,
-            TokenType::GreaterEqual => {
-                self.emit_code("jnge", false_label, "")?
+        if let LLExpr::Binary { left, oper, right } = condition {
+            let left = self.expression(left)?;
+            let right = self.expression(right)?;
+            self.emit_code("cmp", &right, &left)?;
+            match oper {
+                TokenType::Less => self.emit_code("jnl", false_label, "")?,
+                TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
+                TokenType::Greater => self.emit_code("jng", false_label, "")?,
+                TokenType::GreaterEqual => {
+                    self.emit_code("jnge", false_label, "")?
+                }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
+            self.registers.deallocate(left);
+            self.registers.deallocate(right);
+        } else {
+            todo!()
         }
-        self.registers.deallocate(left);
-        self.registers.deallocate(right);
         Ok(())
     }
 
@@ -445,12 +446,12 @@ impl CodeGen {
     fn binary(
         &mut self,
         left: &LLExpr,
-        oper: &Token,
+        oper: &TokenType,
         right: &LLExpr,
     ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;
-        match &oper.kind {
+        match &oper {
             TokenType::Plus => {
                 self.emit_code("addq", &left_register, &right_register)?;
                 self.registers.deallocate(left_register);
