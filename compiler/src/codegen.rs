@@ -272,20 +272,7 @@ impl CodeGen {
             let left = self.expression(left)?;
             let right = self.expression(right)?;
             self.emit_code("cmp", &right, &left)?;
-            match operator {
-                TokenType::Less => self.emit_code("jnl", false_label, "")?,
-                TokenType::LessEqual => {
-                    self.emit_code("jnle", false_label, "")?
-                }
-                TokenType::Greater => self.emit_code("jng", false_label, "")?,
-                TokenType::GreaterEqual => {
-                    self.emit_code("jnge", false_label, "")?
-                }
-                TokenType::EqualEqual => {
-                    self.emit_code("jne", false_label, "")?;
-                }
-                _ => unreachable!(),
-            }
+            self.comparison_operation(operator, false_label)?;
             self.registers.deallocate(left);
             self.registers.deallocate(right);
         } else {
@@ -294,6 +281,26 @@ impl CodeGen {
             self.emit_code("js", false_label, "")?;
             self.registers.deallocate(result);
         }
+        Ok(())
+    }
+
+    fn comparison_operation(
+        &mut self,
+        operation: &TokenType,
+        false_label: &str,
+    ) -> Result<(), BobaError> {
+        match operation {
+            TokenType::Less => self.emit_code("jnl", false_label, "")?,
+            TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
+            TokenType::Greater => self.emit_code("jng", false_label, "")?,
+            TokenType::GreaterEqual => {
+                self.emit_code("jnge", false_label, "")?
+            }
+            TokenType::EqualEqual => {
+                self.emit_code("jne", false_label, "")?;
+            }
+            _ => unreachable!(),
+        };
         Ok(())
     }
 
@@ -504,22 +511,7 @@ impl CodeGen {
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
                 self.emit_code("cmp", &right_register, &left_register)?;
-                match comparison_token {
-                    TokenType::Less => self.emit_code("jnl", &false_label, "")?,
-                    TokenType::LessEqual => {
-                        self.emit_code("jnle", &false_label, "")?
-                    }
-                    TokenType::Greater => {
-                        self.emit_code("jng", &false_label, "")?
-                    }
-                    TokenType::GreaterEqual => {
-                        self.emit_code("jnge", &false_label, "")?
-                    }
-                    TokenType::EqualEqual => {
-                        self.emit_code("jne", &false_label, "")?;
-                    }
-                    _ => unreachable!(),
-                };
+                self.comparison_operation(comparison_token, &false_label)?;
                 self.emit_code("mov", "$1", &result)?;
                 self.emit_code("jmp", &done_label, "")?;
                 self.emit_label(false_label)?;
