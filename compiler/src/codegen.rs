@@ -285,7 +285,10 @@ impl CodeGen {
             self.registers.deallocate(left);
             self.registers.deallocate(right);
         } else {
-            todo!()
+            let result = self.expression(condition)?;
+            self.emit_code("cmp", "$1", &result)?; // condition code = result - 1
+            self.emit_code("js", false_label, "")?;
+            self.registers.deallocate(result);
         }
         Ok(())
     }
