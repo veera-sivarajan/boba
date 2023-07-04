@@ -258,13 +258,24 @@ impl CodeGen {
         condition: &LLExpr,
         false_label: &str,
     ) -> Result<(), BobaError> {
-        if let LLExpr::Binary { left, oper, right } = condition {
+        if let LLExpr::Binary {
+            left,
+            oper:
+                operator @ (TokenType::Less
+                | TokenType::LessEqual
+                | TokenType::Greater
+                | TokenType::GreaterEqual),
+            right,
+        } = condition
+        {
             let left = self.expression(left)?;
             let right = self.expression(right)?;
             self.emit_code("cmp", &right, &left)?;
-            match oper {
+            match operator {
                 TokenType::Less => self.emit_code("jnl", false_label, "")?,
-                TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
+                TokenType::LessEqual => {
+                    self.emit_code("jnle", false_label, "")?
+                }
                 TokenType::Greater => self.emit_code("jng", false_label, "")?,
                 TokenType::GreaterEqual => {
                     self.emit_code("jnge", false_label, "")?

@@ -478,7 +478,7 @@ impl<'src> Lexer<'src> {
             "let" => TokenType::Let,
             "mut" => TokenType::Mutable,
             "while" => TokenType::While,
-            "String" | "i64" | "Bool" | "Char" => TokenType::Type(lexeme),
+            "String" | "i64" | "bool" | "Char" => TokenType::Type(lexeme),
             _ => TokenType::Identifier(lexeme),
         };
         let span = self.make_span(start_pos, len);
