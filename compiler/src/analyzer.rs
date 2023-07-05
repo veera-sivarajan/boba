@@ -158,7 +158,17 @@ impl Analyzer {
             }
             Stmt::Print(expr) => Ok(LLStmt::Print(self.expression(expr)?)),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
+            Stmt::While { condition, body } => self.while_stmt(condition, body),
         }
+    }
+
+    fn while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<LLStmt, BobaError> {
+        let condition = self.expression(condition)?;
+        let body = Box::new(self.statement(body)?);
+        Ok(LLStmt::While {
+            condition,
+            body,
+        })
     }
 
     fn return_stmt(

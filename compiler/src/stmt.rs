@@ -79,4 +79,8 @@ pub enum LLStmt {
         name: String,
         expr: LLExpr,
     },
+    While {
+        condition: LLExpr,
+        body: Box<LLStmt>,
+    },
 }
