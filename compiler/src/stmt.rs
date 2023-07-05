@@ -22,6 +22,10 @@ pub enum Stmt {
         then: Box<Stmt>,
         elze: Option<Box<Stmt>>,
     },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
+    },
     Block(Vec<Stmt>),
     Function {
         name: Token,

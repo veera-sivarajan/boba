@@ -114,6 +114,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             Ok(Stmt::Block(self.block_stmt(function_name)?))
         } else if self.next_eq(TokenType::Let) {
             self.local_variable_decl()
+        } else if self.next_eq(TokenType::While) {
+            self.while_stmt(function_name)
         } else if self.peek_check(TokenType::Fn) {
             Err(self
                 .error("Functions cannot be declared within a local scope."))
@@ -122,6 +124,19 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else {
             self.expression_stmt()
         }
+    }
+
+    fn while_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+        let condition = self.expression()?;
+        self.consume(
+            TokenType::LeftBrace,
+            "Condition should be followed by a block.",
+        )?;
+        let body = Box::new(self.statement(function_name)?);
+        Ok(Stmt::While {
+            condition,
+            body,
+        })
     }
 
     fn return_stmt(&mut self, name: &Token) -> Result<Stmt, BobaError> {
