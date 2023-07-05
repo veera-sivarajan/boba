@@ -20,6 +20,10 @@ pub enum Expr {
         name: Box<Expr>,
         value: Box<Expr>,
     },
+    Unary {
+        oper: Token,
+        right: Box<Expr>,
+    },
 }
 
 impl From<&Expr> for Token {
@@ -56,6 +60,9 @@ impl fmt::Display for Expr {
             Expr::Call { .. } => write!(f, "Function call expression."),
             Expr::Assign { name, .. } => {
                 write!(f, "{name}")
+            }
+            Expr::Unary { oper, right } => {
+                write!(f, "{}{}", oper.kind, *right)
             }
         }
     }
