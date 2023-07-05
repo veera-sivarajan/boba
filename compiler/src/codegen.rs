@@ -416,7 +416,22 @@ impl CodeGen {
             LLExpr::Boolean(value) => self.boolean(value),
             LLExpr::Call { callee, args } => self.function_call(callee, args),
             LLExpr::Assign { value, index } => self.assignment(value, *index),
+            LLExpr::Unary { oper, right } => self.unary(oper, right),
         }
+    }
+
+    fn unary(&mut self, oper: &TokenType, right: &LLExpr) -> Result<RegisterIndex, BobaError> {
+        let operand = self.expression(right)?;
+        match oper {
+            TokenType::Bang => {
+                self.emit_code("not", &operand, "")?;
+                self.emit_code("inc", &operand, "")?;
+                self.emit_code("inc", &operand, "")?;
+            }
+            TokenType::Minus => self.emit_code("neg", &operand, "")?,
+            _ => unreachable!(),
+        }
+        Ok(operand)
     }
 
     fn assignment(
