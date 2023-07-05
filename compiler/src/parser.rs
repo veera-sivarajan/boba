@@ -412,6 +412,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
                 TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
                 TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
+                TokenType::LeftParen => {
+                    let expr = self.expression()?;
+                    self.consume(
+                        TokenType::RightParen,
+                        "Expect ')' after expression.",
+                    )?;
+                    Ok(Expr::Group(Box::new(expr)))
+                }
                 _ => todo!("{}", expr.kind),
             }
         } else {

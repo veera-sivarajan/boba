@@ -24,6 +24,7 @@ pub enum Expr {
         oper: Token,
         right: Box<Expr>,
     },
+    Group(Box<Expr>),
 }
 
 impl From<&Expr> for Token {

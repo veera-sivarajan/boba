@@ -161,11 +161,17 @@ impl CodeGen {
                 body,
             } => self.function_decl(name, *params_count, locals_count, body),
             LLStmt::Return { name, expr } => self.return_stmt(name, expr),
-            LLStmt::While { condition, body } => self.while_stmt(condition, body),
+            LLStmt::While { condition, body } => {
+                self.while_stmt(condition, body)
+            }
         }
     }
 
-    fn while_stmt(&mut self, condition: &LLExpr, body: &LLStmt) -> Result<(), BobaError> {
+    fn while_stmt(
+        &mut self,
+        condition: &LLExpr,
+        body: &LLStmt,
+    ) -> Result<(), BobaError> {
         let loop_begin = self.labels.create();
         let loop_end = self.labels.create();
         self.emit_label(loop_begin.clone())?;
@@ -420,10 +426,16 @@ impl CodeGen {
         }
     }
 
-    fn unary(&mut self, oper: &TokenType, right: &LLExpr) -> Result<RegisterIndex, BobaError> {
+    fn unary(
+        &mut self,
+        oper: &TokenType,
+        right: &LLExpr,
+    ) -> Result<RegisterIndex, BobaError> {
         let operand = self.expression(right)?;
         match oper {
             TokenType::Bang => {
+                // FIXME: Find a better way to implement logical not
+                // using test and sete
                 self.emit_code("not", &operand, "")?;
                 self.emit_code("inc", &operand, "")?;
                 self.emit_code("inc", &operand, "")?;
