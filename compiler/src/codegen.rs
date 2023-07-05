@@ -161,7 +161,19 @@ impl CodeGen {
                 body,
             } => self.function_decl(name, *params_count, locals_count, body),
             LLStmt::Return { name, expr } => self.return_stmt(name, expr),
+            LLStmt::While { condition, body } => self.while_stmt(condition, body),
         }
+    }
+
+    fn while_stmt(&mut self, condition: &LLExpr, body: &LLStmt) -> Result<(), BobaError> {
+        let loop_begin = self.labels.create();
+        let loop_end = self.labels.create();
+        self.emit_label(loop_begin.clone())?;
+        self.boolean_expression(condition, &loop_end)?;
+        self.codegen(body)?;
+        self.emit_code("jmp", &loop_begin, "")?;
+        self.emit_label(loop_end)?;
+        Ok(())
     }
 
     fn return_stmt(
