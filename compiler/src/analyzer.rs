@@ -194,7 +194,12 @@ impl Analyzer {
             }
             Expr::Assign { name, value } => self.assignment(name, value),
             Expr::Unary { oper, right } => self.unary(oper, right),
+            Expr::Group(expr) => self.group(expr),
         }
+    }
+
+    fn group(&mut self, expr: &Expr) -> Result<LLExpr, BobaError> {
+        Ok(LLExpr::Group(Box::new(self.expression(expr)?)))
     }
 
     fn unary(&mut self, oper: &Token, right: &Expr) -> Result<LLExpr, BobaError> {

@@ -65,6 +65,9 @@ impl fmt::Display for Expr {
             Expr::Unary { oper, right } => {
                 write!(f, "{}{}", oper.kind, *right)
             }
+            Expr::Group(expr) => {
+                write!(f, "{}", *expr)
+            }
         }
     }
 }
@@ -103,6 +106,7 @@ pub enum LLExpr {
         oper: TokenType,
         right: Box<LLExpr>,
     },
+    Group(Box<LLExpr>),
 }
 
 impl fmt::Display for LLExpr {
@@ -126,6 +130,9 @@ impl fmt::Display for LLExpr {
             LLExpr::Call { .. } => write!(f, "Function call expression."),
             LLExpr::Assign { value, .. } => write!(f, "{value}"),
             LLExpr::Unary { oper, right} => write!(f, "{oper}{}", *right),
+            LLExpr::Group(expr) => {
+                write!(f, "{}", *expr)
+            }
         }
     }
 }
