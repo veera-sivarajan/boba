@@ -423,6 +423,7 @@ impl CodeGen {
             LLExpr::Call { callee, args } => self.function_call(callee, args),
             LLExpr::Assign { value, index } => self.assignment(value, *index),
             LLExpr::Unary { oper, right } => self.unary(oper, right),
+            LLExpr::Group(expr) => self.expression(expr),
         }
     }
 
