@@ -150,7 +150,7 @@ impl fmt::Display for BobaError {
                 } else {
                     format!("{expected_count} parameters")
                 };
-                let found_message  = if *found_count == 1 {
+                let found_message = if *found_count == 1 {
                     String::from("1 argument")
                 } else {
                     format!("{found_count} arguments")

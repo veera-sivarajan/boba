@@ -72,7 +72,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if self.peek_check(TokenType::Mutable) {
             return Err(self.error("Global variables cannot be mutable."));
         }
-            
+
         let name = self.consume_identifier("Expect global variable name.")?;
         self.consume(
             TokenType::Equal,

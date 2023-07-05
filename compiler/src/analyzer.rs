@@ -202,7 +202,11 @@ impl Analyzer {
         Ok(LLExpr::Group(Box::new(self.expression(expr)?)))
     }
 
-    fn unary(&mut self, oper: &Token, right: &Expr) -> Result<LLExpr, BobaError> {
+    fn unary(
+        &mut self,
+        oper: &Token,
+        right: &Expr,
+    ) -> Result<LLExpr, BobaError> {
         let right = Box::new(self.expression(right)?);
         Ok(LLExpr::Unary {
             oper: oper.kind.clone(),
