@@ -121,9 +121,48 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 .error("Functions cannot be declared within a local scope."))
         } else if self.next_eq(TokenType::Return) {
             self.return_stmt(function_name)
+        } else if self.next_eq(TokenType::For) {
+            self.for_stmt(function_name)
         } else {
             self.expression_stmt()
         }
+    }
+
+    fn for_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+        let init = if self.next_eq(TokenType::Semicolon) {
+            None
+        } else if self.next_eq(TokenType::Let) {
+            Some(self.local_variable_decl()?)
+        } else {
+            Some(self.expression_stmt()?)
+        };
+
+        let condition = if self.peek_check(TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let increment = if self.peek_check(TokenType::RightParen) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after 'for' clauses.")?;
+        let mut body = self.statement(function_name)?;
+        if let Some(expression) = increment {
+            body = Stmt::Block(vec![body, Stmt::Expression(expression)]);
+        }
+        body = Stmt::While {
+            condition: condition.unwrap_or(Expr::Boolean(true)),
+            body: Box::new(body),
+        };
+        if let Some(init) = init {
+            body = Stmt::Block(vec![init, body]);
+        }
+        Ok(body)
     }
 
     fn while_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
@@ -133,10 +172,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             "Condition should be followed by a block.",
         )?;
         let body = Box::new(Stmt::Block(self.block_stmt(function_name)?));
-        Ok(Stmt::While {
-            condition,
-            body,
-        })
+        Ok(Stmt::While { condition, body })
     }
 
     fn return_stmt(&mut self, name: &Token) -> Result<Stmt, BobaError> {
