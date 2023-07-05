@@ -284,7 +284,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn assignment(&mut self) -> Result<Expr, BobaError> {
         let expr = self.equality()?;
-        if let Some(equals) = next_eq!(self, TokenType::Equal) {
+        if let Some(_equals) = next_eq!(self, TokenType::Equal) {
             let value = self.assignment()?;
             match expr {
                 Expr::Variable(_) => Ok(Expr::Assign {

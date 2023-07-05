@@ -1,7 +1,7 @@
 use crate::analyzer::{Kind, Type};
 use crate::error::BobaError;
 use crate::expr::LLExpr;
-use crate::lexer::{Token, TokenType};
+use crate::lexer::TokenType;
 use crate::stmt::LLStmt;
 use std::fmt::Write;
 

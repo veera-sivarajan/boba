@@ -162,13 +162,14 @@ impl Analyzer {
         }
     }
 
-    fn while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<LLStmt, BobaError> {
+    fn while_stmt(
+        &mut self,
+        condition: &Expr,
+        body: &Stmt,
+    ) -> Result<LLStmt, BobaError> {
         let condition = self.expression(condition)?;
         let body = Box::new(self.statement(body)?);
-        Ok(LLStmt::While {
-            condition,
-            body,
-        })
+        Ok(LLStmt::While { condition, body })
     }
 
     fn return_stmt(
@@ -185,7 +186,7 @@ impl Analyzer {
         match expr {
             Expr::Number(value) => Ok(LLExpr::Number(*value)),
             Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
-            Expr::String(value) => todo!(),
+            Expr::String(_value) => todo!(),
             Expr::Variable(name) => self.variable(name),
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {
