@@ -457,8 +457,9 @@ impl<'src> Lexer<'src> {
 
     fn scan_identifier(&mut self, start_pos: usize) {
         let mut lexeme = String::from("");
-        while let Some((_, ch)) =
-            self.cursor.next_if(|x| x.1.is_ascii_alphanumeric())
+        while let Some((_, ch)) = self
+            .cursor
+            .next_if(|x| x.1.is_ascii_alphanumeric() || x.1 == '_')
         {
             lexeme.push(ch);
         }
