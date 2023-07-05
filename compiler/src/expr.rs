@@ -98,6 +98,10 @@ pub enum LLExpr {
         value: Box<LLExpr>,
         index: u8,
     },
+    Unary {
+        oper: TokenType,
+        right: Box<LLExpr>,
+    },
 }
 
 impl fmt::Display for LLExpr {
@@ -120,6 +124,7 @@ impl fmt::Display for LLExpr {
             }
             LLExpr::Call { .. } => write!(f, "Function call expression."),
             LLExpr::Assign { value, .. } => write!(f, "{value}"),
+            LLExpr::Unary { oper, right} => write!(f, "{oper}{}", *right),
         }
     }
 }

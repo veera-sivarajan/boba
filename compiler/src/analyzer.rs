@@ -193,7 +193,16 @@ impl Analyzer {
                 self.binary(left, oper, right)
             }
             Expr::Assign { name, value } => self.assignment(name, value),
+            Expr::Unary { oper, right } => self.unary(oper, right),
         }
+    }
+
+    fn unary(&mut self, oper: &Token, right: &Expr) -> Result<LLExpr, BobaError> {
+        let right = Box::new(self.expression(right)?);
+        Ok(LLExpr::Unary {
+            oper: oper.kind.clone(),
+            right,
+        })
     }
 
     fn assignment(
