@@ -132,7 +132,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenType::LeftBrace,
             "Condition should be followed by a block.",
         )?;
-        let body = Box::new(self.statement(function_name)?);
+        let body = Box::new(Stmt::Block(self.block_stmt(function_name)?));
         Ok(Stmt::While {
             condition,
             body,
