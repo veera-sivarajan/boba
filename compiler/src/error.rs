@@ -145,9 +145,19 @@ impl fmt::Display for BobaError {
                 expected_count,
                 found_count,
             ) => {
+                let expected_message = if *expected_count == 1 {
+                    String::from("1 parameter")
+                } else {
+                    format!("{expected_count} parameters")
+                };
+                let found_message  = if *found_count == 1 {
+                    String::from("1 argument")
+                } else {
+                    format!("{found_count} arguments")
+                };
                 write!(
                     f,
-                    "Error: Function '{function_name}' expects {expected_count} parameters but found {found_count} arguments at {}.",
+                    "Error: Function '{function_name}' expects {expected_message} but found {found_message} at {}.",
                     function_name.span)
             }
         }
