@@ -1,6 +1,6 @@
 use crate::analyzer::{Kind, Type};
 use crate::error::BobaError;
-use crate::expr::LLExpr;
+use crate::expr::{LLExpr, BinaryOperand, Comparison};
 use crate::lexer::TokenType;
 use crate::stmt::LLStmt;
 use std::fmt::Write;
@@ -278,12 +278,7 @@ impl CodeGen {
     ) -> Result<(), BobaError> {
         if let LLExpr::Binary {
             left,
-            oper:
-                operator @ (TokenType::Less
-                | TokenType::LessEqual
-                | TokenType::Greater
-                | TokenType::GreaterEqual
-                | TokenType::EqualEqual),
+            oper: BinaryOperand::Compare(operator),
             right,
         } = condition
         {
@@ -304,20 +299,19 @@ impl CodeGen {
 
     fn comparison_operation(
         &mut self,
-        operation: &TokenType,
+        operation: &Comparison,
         false_label: &str,
     ) -> Result<(), BobaError> {
         match operation {
-            TokenType::Less => self.emit_code("jnl", false_label, "")?,
-            TokenType::LessEqual => self.emit_code("jnle", false_label, "")?,
-            TokenType::Greater => self.emit_code("jng", false_label, "")?,
-            TokenType::GreaterEqual => {
+            Comparison::Less => self.emit_code("jnl", false_label, "")?,
+            Comparison::LessEqual => self.emit_code("jnle", false_label, "")?,
+            Comparison::Greater => self.emit_code("jng", false_label, "")?,
+            Comparison::GreaterEqual => {
                 self.emit_code("jnge", false_label, "")?
             }
-            TokenType::EqualEqual => {
+            Comparison::EqualEqual => {
                 self.emit_code("jne", false_label, "")?;
             }
-            _ => unreachable!(),
         };
         Ok(())
     }
@@ -511,23 +505,23 @@ impl CodeGen {
     fn binary(
         &mut self,
         left: &LLExpr,
-        oper: &TokenType,
+        oper: &BinaryOperand,
         right: &LLExpr,
     ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;
         match &oper {
-            TokenType::Plus => {
+            BinaryOperand::Add => {
                 self.emit_code("addq", &left_register, &right_register)?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
-            TokenType::Minus => {
+            BinaryOperand::Subtract => {
                 self.emit_code("subq", &right_register, &left_register)?;
                 self.registers.deallocate(right_register);
                 Ok(left_register)
             }
-            TokenType::Star => {
+            BinaryOperand::Multiply => {
                 let result_register = self.registers.allocate();
                 self.emit_code("movq", &right_register, "%rax")?;
                 self.emit_code("imul", &left_register, "")?;
@@ -536,7 +530,7 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
-            TokenType::Slash => {
+            BinaryOperand::Divide => {
                 let result_register = self.registers.allocate();
                 self.emit_code("movq", &left_register, "%rax")?;
                 self.emit_code("cqo", "", "")?;
@@ -546,7 +540,7 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
-            TokenType::Percent => {
+            BinaryOperand::Modulus => {
                 let result_register = self.registers.allocate();
                 self.emit_code("movq", &left_register, "%rax")?;
                 self.emit_code("cqo", "", "")?;
@@ -556,12 +550,12 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
-            comparison_token => {
+            BinaryOperand::Compare(comparison_operand) => {
                 let result = self.registers.allocate();
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
                 self.emit_code("cmp", &right_register, &left_register)?;
-                self.comparison_operation(comparison_token, &false_label)?;
+                self.comparison_operation(comparison_operand, &false_label)?;
                 self.emit_code("mov", "$1", &result)?;
                 self.emit_code("jmp", &done_label, "")?;
                 self.emit_label(false_label)?;

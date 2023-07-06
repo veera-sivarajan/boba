@@ -46,16 +46,43 @@ pub enum BinaryOperand {
     Multiply,
     Divide,
     Modulus,
-    Comparison(ComparisonOperand),
+    Compare(Comparison),
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub enum ComparisonOperand {
+pub enum Comparison {
     Less,
     LessEqual,
     Greater,
     GreaterEqual,
     EqualEqual,
+}
+
+impl std::fmt::Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use Comparison::*;
+        match self {
+            Less => write!(f, "<"),
+            LessEqual => write!(f, "<="),
+            Greater => write!(f, ">"),
+            GreaterEqual => write!(f, ">="),
+            EqualEqual => write!(f, "=="),
+        }
+    }
+}
+
+impl std::fmt::Display for BinaryOperand {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use BinaryOperand::*;
+        match self {
+            Add => write!(f, "+"),
+            Subtract => write!(f, "-"),
+            Multiply => write!(f, "*"),
+            Divide => write!(f, "/"),
+            Modulus => write!(f, "%"),
+            Compare(oper) => write!(f, "{oper}"),
+        }
+    }
 }
 
 impl From<&Token> for BinaryOperand {
@@ -67,19 +94,19 @@ impl From<&Token> for BinaryOperand {
             TokenType::Slash => BinaryOperand::Divide,
             TokenType::Percent => BinaryOperand::Modulus,
             TokenType::Less => {
-                BinaryOperand::Comparison(ComparisonOperand::Less)
+                BinaryOperand::Compare(Comparison::Less)
             }
             TokenType::LessEqual => {
-                BinaryOperand::Comparison(ComparisonOperand::LessEqual)
+                BinaryOperand::Compare(Comparison::LessEqual)
             }
             TokenType::Greater => {
-                BinaryOperand::Comparison(ComparisonOperand::Greater)
+                BinaryOperand::Compare(Comparison::Greater)
             }
             TokenType::GreaterEqual => {
-                BinaryOperand::Comparison(ComparisonOperand::GreaterEqual)
+                BinaryOperand::Compare(Comparison::GreaterEqual)
             }
             TokenType::EqualEqual => {
-                BinaryOperand::Comparison(ComparisonOperand::EqualEqual)
+                BinaryOperand::Compare(Comparison::EqualEqual)
             }
             _ => panic!("Cannot turn {token} into binary operand."),
         }
