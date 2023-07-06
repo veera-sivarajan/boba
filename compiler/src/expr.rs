@@ -39,6 +39,53 @@ impl From<&Expr> for Token {
     }
 }
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum BinaryOperand {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulus,
+    Comparison(ComparisonOperand),
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum ComparisonOperand {
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    EqualEqual,
+}
+
+impl From<&Token> for BinaryOperand {
+    fn from(token: &Token) -> BinaryOperand {
+        match token.kind {
+            TokenType::Plus => BinaryOperand::Add,
+            TokenType::Minus => BinaryOperand::Subtract,
+            TokenType::Star => BinaryOperand::Multiply,
+            TokenType::Slash => BinaryOperand::Divide,
+            TokenType::Percent => BinaryOperand::Modulus,
+            TokenType::Less => {
+                BinaryOperand::Comparison(ComparisonOperand::Less)
+            }
+            TokenType::LessEqual => {
+                BinaryOperand::Comparison(ComparisonOperand::LessEqual)
+            }
+            TokenType::Greater => {
+                BinaryOperand::Comparison(ComparisonOperand::Greater)
+            }
+            TokenType::GreaterEqual => {
+                BinaryOperand::Comparison(ComparisonOperand::GreaterEqual)
+            }
+            TokenType::EqualEqual => {
+                BinaryOperand::Comparison(ComparisonOperand::EqualEqual)
+            }
+            _ => panic!("Cannot turn {token} into binary operand."),
+        }
+    }
+}
+
 use std::fmt;
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -82,7 +129,7 @@ impl From<&Expr> for String {
 pub enum LLExpr {
     Binary {
         left: Box<LLExpr>,
-        oper: TokenType,
+        oper: BinaryOperand,
         right: Box<LLExpr>,
     },
     Number(i64),

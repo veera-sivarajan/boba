@@ -248,7 +248,7 @@ impl Analyzer {
         let right = Box::new(self.expression(right)?);
         Ok(LLExpr::Binary {
             left,
-            oper: oper.kind.clone(),
+            oper: oper.into(),
             right,
         })
     }
