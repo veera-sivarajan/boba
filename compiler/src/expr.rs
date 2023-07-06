@@ -194,7 +194,7 @@ pub enum LLExpr {
         is_mutable: bool,
     },
     Boolean(bool),
-    // String(String),
+    String(String),
     Call {
         callee: String,
         args: Vec<LLExpr>,
@@ -214,7 +214,7 @@ impl fmt::Display for LLExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LLExpr::Number(value) => write!(f, "{value}"),
-            // LLExpr::String(value) => write!(f, "{value}"),
+            LLExpr::String(value) => write!(f, "{value}"),
             LLExpr::Boolean(value) => {
                 if *value {
                     write!(f, "1")
