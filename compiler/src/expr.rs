@@ -58,6 +58,33 @@ pub enum Comparison {
     EqualEqual,
 }
 
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum UnaryOperand {
+    Negate,
+    LogicalNot,
+}
+
+impl From<&Token> for UnaryOperand {
+    fn from(token: &Token) -> UnaryOperand {
+        match token.kind {
+            TokenType::Bang => UnaryOperand::LogicalNot,
+            TokenType::Minus => UnaryOperand::Negate,
+            _ => panic!("Cannot turn {token} into UnaryOperand."),
+        }
+    }
+}
+
+
+impl std::fmt::Display for UnaryOperand {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            UnaryOperand::Negate => write!(f, "-"),
+            UnaryOperand::LogicalNot => write!(f, "!"),
+        }
+    }
+}
+
 impl std::fmt::Display for Comparison {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use Comparison::*;
@@ -177,7 +204,7 @@ pub enum LLExpr {
         index: u8,
     },
     Unary {
-        oper: TokenType,
+        oper: UnaryOperand,
         right: Box<LLExpr>,
     },
     Group(Box<LLExpr>),

@@ -205,7 +205,7 @@ impl Analyzer {
     ) -> Result<LLExpr, BobaError> {
         let right = Box::new(self.expression(right)?);
         Ok(LLExpr::Unary {
-            oper: oper.kind.clone(),
+            oper: oper.into(),
             right,
         })
     }

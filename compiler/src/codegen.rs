@@ -1,7 +1,6 @@
 use crate::analyzer::{Kind, Type};
 use crate::error::BobaError;
-use crate::expr::{LLExpr, BinaryOperand, Comparison};
-use crate::lexer::TokenType;
+use crate::expr::{LLExpr, BinaryOperand, Comparison, UnaryOperand};
 use crate::stmt::LLStmt;
 use std::fmt::Write;
 
@@ -423,20 +422,19 @@ impl CodeGen {
 
     fn unary(
         &mut self,
-        oper: &TokenType,
+        oper: &UnaryOperand,
         right: &LLExpr,
     ) -> Result<RegisterIndex, BobaError> {
         let operand = self.expression(right)?;
         match oper {
-            TokenType::Bang => {
+            UnaryOperand::LogicalNot => {
                 // FIXME: Find a better way to implement logical not
                 // using test and sete
                 self.emit_code("not", &operand, "")?;
                 self.emit_code("inc", &operand, "")?;
                 self.emit_code("inc", &operand, "")?;
             }
-            TokenType::Minus => self.emit_code("neg", &operand, "")?,
-            _ => unreachable!(),
+            UnaryOperand::Negate => self.emit_code("neg", &operand, "")?,
         }
         Ok(operand)
     }
