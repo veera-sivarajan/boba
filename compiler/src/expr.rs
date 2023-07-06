@@ -58,7 +58,6 @@ pub enum Comparison {
     EqualEqual,
 }
 
-
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum UnaryOperand {
     Negate,
@@ -74,7 +73,6 @@ impl From<&Token> for UnaryOperand {
         }
     }
 }
-
 
 impl std::fmt::Display for UnaryOperand {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -120,15 +118,11 @@ impl From<&Token> for BinaryOperand {
             TokenType::Star => BinaryOperand::Multiply,
             TokenType::Slash => BinaryOperand::Divide,
             TokenType::Percent => BinaryOperand::Modulus,
-            TokenType::Less => {
-                BinaryOperand::Compare(Comparison::Less)
-            }
+            TokenType::Less => BinaryOperand::Compare(Comparison::Less),
             TokenType::LessEqual => {
                 BinaryOperand::Compare(Comparison::LessEqual)
             }
-            TokenType::Greater => {
-                BinaryOperand::Compare(Comparison::Greater)
-            }
+            TokenType::Greater => BinaryOperand::Compare(Comparison::Greater),
             TokenType::GreaterEqual => {
                 BinaryOperand::Compare(Comparison::GreaterEqual)
             }
