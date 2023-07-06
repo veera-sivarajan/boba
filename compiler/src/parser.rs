@@ -350,8 +350,12 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn factor(&mut self) -> Result<Expr, BobaError> {
         let mut expr = self.unary()?;
-        while let Some(oper) = next_eq!(self, TokenType::Slash, TokenType::Star)
-        {
+        while let Some(oper) = next_eq!(
+            self,
+            TokenType::Slash,
+            TokenType::Star,
+            TokenType::Percent
+        ) {
             let right = self.unary()?;
             expr = Expr::Binary {
                 left: Box::new(expr),

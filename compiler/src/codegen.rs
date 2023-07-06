@@ -546,6 +546,16 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
+            TokenType::Percent => {
+                let result_register = self.registers.allocate();
+                self.emit_code("movq", &left_register, "%rax")?;
+                self.emit_code("cqo", "", "")?;
+                self.emit_code("idiv", &right_register, "")?;
+                self.emit_code("movq", "%rdx", &result_register)?;
+                self.registers.deallocate(left_register);
+                self.registers.deallocate(right_register);
+                Ok(result_register)
+            }
             comparison_token => {
                 let result = self.registers.allocate();
                 let false_label = self.labels.create();
