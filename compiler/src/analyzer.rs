@@ -182,7 +182,7 @@ impl Analyzer {
         match expr {
             Expr::Number(value) => Ok(LLExpr::Number(*value)),
             Expr::Boolean(value) => Ok(LLExpr::Boolean(*value)),
-            Expr::String(_value) => todo!(),
+            Expr::String(value) => Ok(LLExpr::String(value.clone())),
             Expr::Variable(name) => self.variable(name),
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Binary { left, oper, right } => {

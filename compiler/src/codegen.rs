@@ -1,6 +1,6 @@
 use crate::analyzer::{Kind, Type};
 use crate::error::BobaError;
-use crate::expr::{LLExpr, BinaryOperand, Comparison, UnaryOperand};
+use crate::expr::{BinaryOperand, Comparison, LLExpr, UnaryOperand};
 use crate::stmt::LLStmt;
 use std::fmt::Write;
 
@@ -97,7 +97,7 @@ impl CodeGen {
             assembly: Assembly {
                 global: String::new(),
                 header: r#".LC0:
-        .string "%d\n"
+        .string "%s\n"
 "#
                 .to_string(),
                 code: String::new(),
@@ -417,7 +417,27 @@ impl CodeGen {
             LLExpr::Assign { value, index } => self.assignment(value, *index),
             LLExpr::Unary { oper, right } => self.unary(oper, right),
             LLExpr::Group(expr) => self.expression(expr),
+            LLExpr::String(literal) => self.string(literal),
         }
+    }
+
+    fn emit_string(
+        &mut self,
+        label: &str,
+        literal: &str,
+    ) -> Result<(), BobaError> {
+        writeln!(&mut self.assembly.header, "{label}:")?;
+        writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")?;
+        writeln!(&mut self.assembly.header, "{:8}.text", " ")?;
+        Ok(())
+    }
+
+    fn string(&mut self, literal: &str) -> Result<RegisterIndex, BobaError> {
+        let label = self.labels.create();
+        self.emit_string(&label, literal)?;
+        let register = self.registers.allocate();
+        self.emit_code("leaq", format!("{label}(%rip)"), &register)?;
+        Ok(register)
     }
 
     fn unary(
