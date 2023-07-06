@@ -465,10 +465,10 @@ impl CodeGen {
         args: &[LLExpr],
     ) -> Result<RegisterIndex, BobaError> {
         self.emit_code("andq", "$-16", "%rsp")?;
-        let mut arguments = vec![];
-        for arg in args {
-            arguments.push(self.expression(arg)?);
-        }
+        let arguments = args
+            .iter()
+            .map(|arg| self.expression(arg))
+            .collect::<Result<Vec<RegisterIndex>, BobaError>>()?;
         let registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
         for (value, register) in arguments.iter().zip(registers.iter()) {
             self.emit_code("movq", value, register)?;

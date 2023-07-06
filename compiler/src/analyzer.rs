@@ -74,11 +74,7 @@ impl Analyzer {
     }
 
     fn resolve(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
-        let mut result = vec![];
-        for stmt in ast {
-            result.push(self.statement(stmt)?);
-        }
-        Ok(result)
+        ast.iter().map(|stmt| self.statement(stmt)).collect()
     }
 
     fn add_function(&mut self, name: Token, params_count: usize) {
@@ -272,10 +268,10 @@ impl Analyzer {
                     args.len(),
                 ))
             } else {
-                let mut ll_args = vec![];
-                for arg in args {
-                    ll_args.push(self.expression(arg)?);
-                }
+                let ll_args = args
+                    .iter()
+                    .map(|arg| self.expression(arg))
+                    .collect::<Result<Vec<LLExpr>, BobaError>>()?;
                 Ok(LLExpr::Call {
                     callee: callee.to_string(),
                     args: ll_args,
