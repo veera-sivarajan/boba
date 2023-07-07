@@ -97,7 +97,7 @@ impl CodeGen {
             assembly: Assembly {
                 global: String::new(),
                 header: r#".LC0:
-        .string "%s\n"
+        .string "%d\n"
 "#
                 .to_string(),
                 code: String::new(),
@@ -334,24 +334,24 @@ impl CodeGen {
         Ok(())
     }
 
-    fn emit_data<S: Into<String>>(
+    fn emit_data(
         &mut self,
         symbol_name: &str,
         size: &str,
-        value: S,
+        value: impl std::fmt::Debug,
     ) -> Result<(), BobaError> {
         self.data_writer(symbol_name, size, value)
             .map_err(|e| e.into())
     }
 
-    fn data_writer<S: Into<String>>(
+    fn data_writer(
         &mut self,
         symbol_name: &str,
         size: &str,
-        value: S,
+        value: impl std::fmt::Debug,
     ) -> fmt::Result {
         writeln!(&mut self.assembly.data, "{symbol_name}:")?;
-        writeln!(&mut self.assembly.data, "{:8}.{size} {}", " ", value.into())
+        writeln!(&mut self.assembly.data, "{:8}.{size} {value:?}", " ")
     }
 
     fn code_writer(
@@ -498,7 +498,7 @@ impl CodeGen {
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
         let number = u8::from(*value);
         let register = self.registers.allocate();
-        self.emit_code("movq", format!("${number}").as_str(), &register)?;
+        self.emit_code("movq", format!("${number}"), &register)?;
         Ok(register)
     }
 

@@ -134,46 +134,7 @@ impl From<&Token> for BinaryOperand {
     }
 }
 
-use std::fmt;
-impl fmt::Display for Expr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Expr::Number(value) => write!(f, "{value}"),
-            Expr::String(value) => write!(f, "{value}"),
-            Expr::Boolean(value) => {
-                if *value {
-                    write!(f, "1")
-                } else {
-                    write!(f, "0")
-                }
-            }
-            Expr::Variable(name) => write!(f, "{name}"),
-            Expr::Binary { left, oper, right } => {
-                write!(f, "{}", *left)?;
-                write!(f, "{}", oper.kind)?;
-                write!(f, "{}", *right)
-            }
-            Expr::Call { .. } => write!(f, "Function call expression."),
-            Expr::Assign { name, .. } => {
-                write!(f, "{name}")
-            }
-            Expr::Unary { oper, right } => {
-                write!(f, "{}{}", oper.kind, *right)
-            }
-            Expr::Group(expr) => {
-                write!(f, "{}", *expr)
-            }
-        }
-    }
-}
-
-impl From<&Expr> for String {
-    fn from(value: &Expr) -> Self {
-        value.to_string()
-    }
-}
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub enum LLExpr {
     Binary {
         left: Box<LLExpr>,
@@ -204,8 +165,8 @@ pub enum LLExpr {
     Group(Box<LLExpr>),
 }
 
-impl fmt::Display for LLExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Debug for LLExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LLExpr::Number(value) => write!(f, "{value}"),
             LLExpr::String(value) => write!(f, "{value}"),
@@ -218,22 +179,16 @@ impl fmt::Display for LLExpr {
             }
             LLExpr::Variable { name, .. } => write!(f, "{name}"),
             LLExpr::Binary { left, oper, right } => {
-                write!(f, "{}", *left)?;
-                write!(f, "{}", oper)?;
-                write!(f, "{}", *right)
+                write!(f, "{:?}", *left)?;
+                write!(f, "{:?}", oper)?;
+                write!(f, "{:?}", *right)
             }
             LLExpr::Call { .. } => write!(f, "Function call expression."),
-            LLExpr::Assign { value, .. } => write!(f, "{value}"),
-            LLExpr::Unary { oper, right } => write!(f, "{oper}{}", *right),
+            LLExpr::Assign { value, .. } => write!(f, "{value:?}"),
+            LLExpr::Unary { oper, right } => write!(f, "{oper}{:?}", *right),
             LLExpr::Group(expr) => {
-                write!(f, "{}", *expr)
+                write!(f, "{:?}", *expr)
             }
         }
-    }
-}
-
-impl From<&LLExpr> for String {
-    fn from(value: &LLExpr) -> Self {
-        value.to_string()
     }
 }
