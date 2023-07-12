@@ -37,6 +37,12 @@ pub enum Expr {
     Group(Box<Expr>),
 }
 
+impl Expr {
+    pub fn is_constant(&self) -> bool {
+        matches!(self, Expr::Number { .. } | Expr::Boolean { .. } | Expr::String { .. })
+    }
+}
+
 impl From<&Expr> for Token {
     fn from(value: &Expr) -> Token {
         match value {

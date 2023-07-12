@@ -97,7 +97,11 @@ impl TypeChecker {
     }
 
     fn global_variable(&mut self, name: &Token, init: &Expr) {
-        self.local_variable(name, init, false);
+        if init.is_constant() {
+            self.local_variable(name, init, false);
+        } else {
+            self.error(BobaError::GlobalVariableNotConst(name.clone()));
+        }
     }
 
     fn new_scope(&mut self) {
@@ -117,7 +121,11 @@ impl TypeChecker {
     }
 
     fn error_if_ne(&mut self, expected: Type, found: Type, span: Span) {
-        if found != Type::Unknown && expected != found {
+        if found == Type::Unknown || expected == Type::Unknown {
+            return;
+        }
+        
+        if expected != found {
             self.errors.push(BobaError::TypeCheck(TypeError::Mismatched {
                 expected,
                 found,

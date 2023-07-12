@@ -78,6 +78,7 @@ pub enum BobaError {
     AssignToImmutable(Token),
     AssignToNonVariable(Token),
     AssignToGlobalVariable(Token),
+    GlobalVariableNotConst(Token),
     ArgumentCountNotEqual(Token, usize, usize),
 }
 
@@ -85,6 +86,9 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            GlobalVariableNotConst(token) => {
+                writeln!(f, "Error: Expected global variable '{token}' to be initalized with a constant value at {}.", token.span)
+            }
             TypeCheck(error) => write!(f, "{error}"),
             Analyzer(errors) => {
                 for err in errors {
