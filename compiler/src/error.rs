@@ -23,7 +23,7 @@ impl fmt::Display for Span {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BobaError {
     UnterminatedString(Span),
     UnterminatedCharacter(Span),
