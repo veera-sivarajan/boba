@@ -228,7 +228,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         };
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
         let body = self.block_stmt(&name)?;
-        let body = Box::new(Stmt::Block(body));
         Ok(Stmt::Function {
             name,
             params,

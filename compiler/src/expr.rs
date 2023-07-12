@@ -1,6 +1,4 @@
-// use crate::analyzer::{Kind, Type};
-use crate::lexer::{Token, TokenType};
-use crate::typecheck::Type;
+use crate::lexer::Token;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {

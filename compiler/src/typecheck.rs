@@ -150,8 +150,8 @@ impl TypeChecker {
         }
     }
 
-    fn function_decl(&mut self, body: &Stmt, params: &[Parameter]) {
-        self.statement(body);
+    fn function_decl(&mut self, body: &[Stmt], params: &[Parameter]) {
+        self.block(body, Some(params));
     }
 
     fn return_stmt(&mut self, function_name: &Token, expr: &Expr) {
@@ -193,14 +193,6 @@ impl TypeChecker {
         }
     }
 
-    fn global_variable(&mut self, name: &Token, init: &Expr) {
-        if init.is_constant() {
-            self.local_variable(name, init, false);
-        } else {
-            self.error(BobaError::GlobalVariableNotConst(name.clone()));
-        }
-    }
-
     fn new_scope(&mut self) {
         self.type_table.push(HashMap::new());
     }
@@ -209,8 +201,21 @@ impl TypeChecker {
         self.type_table.pop();
     }
 
+    fn init_parameters(&mut self, params: &[Parameter]) {
+        for (param, param_type) in params {
+            if self.variable_is_declared_in_current_scope(&param.into()) {
+                self.error(BobaError::VariableRedeclaration(param.into()));
+            } else {
+                self.add_variable(param.into(), Info::new(*param_type, false));
+            }
+        }
+    }
+
     fn block(&mut self, stmts: &[Stmt], params: Option<&[Parameter]>) {
         self.new_scope();
+        if let Some(params) = params {
+            self.init_parameters(params);
+        };
         for stmt in stmts {
             self.statement(stmt);
         }
@@ -273,7 +278,11 @@ impl TypeChecker {
             }
             return_type
         } else {
-            self.error(BobaError::ArgumentCountNotEqual(function_name.clone(), params.len(), args.len()))
+            self.error(BobaError::ArgumentCountNotEqual(
+                function_name.clone(),
+                params.len(),
+                args.len(),
+            ))
         }
     }
 

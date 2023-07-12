@@ -32,7 +32,7 @@ pub enum Stmt {
         name: Token,
         params: Vec<Parameter>,
         return_type: Type,
-        body: Box<Stmt>,
+        body: Vec<Stmt>,
     },
     Return {
         name: Token,
