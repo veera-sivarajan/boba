@@ -66,6 +66,10 @@ impl TypeChecker {
                 init,
                 is_mutable,
             } => self.local_variable(name, init, *is_mutable),
+            Stmt::GlobalVariable { name, init } => self.global_variable(name, init),
+            Stmt::Expression(expr) => {
+                let _ = self.expression(expr);
+            },
             _ => todo!(),
         }
     }
@@ -75,9 +79,25 @@ impl TypeChecker {
         scope.insert(name, info);
     }
 
+    fn variable_is_declared_in_current_scope(&self, name: &Token) -> bool {
+        let current_scope = self
+            .type_table
+            .last()
+            .expect("No Symbol table for current scope.");
+        current_scope.contains_key(name)
+    }
+
     fn local_variable(&mut self, name: &Token, init: &Expr, is_mutable: bool) {
-        let init = self.expression(init);
-        self.add_variable(name.clone(), Info::new(init, is_mutable));
+        if self.variable_is_declared_in_current_scope(name) {
+            self.error(BobaError::VariableRedeclaration(name.clone()));
+        } else {
+            let init = self.expression(init);
+            self.add_variable(name.clone(), Info::new(init, is_mutable));
+        }
+    }
+
+    fn global_variable(&mut self, name: &Token, init: &Expr) {
+        self.local_variable(name, init, false);
     }
 
     fn block(&mut self, stmts: &[Stmt]) {
@@ -120,15 +140,45 @@ impl TypeChecker {
             }
             Expr::Assign { name, value } => self.assign(name, value),
             Expr::Variable(token) => self.variable(token),
+            Expr::Group(expr) => self.expression(expr),
+            Expr::Unary { oper, right } => self.unary(oper, right),
             _ => todo!(),
         }
     }
 
+    fn unary(&mut self, oper: &Token, right: &Expr) -> Type {
+        let right = self.expression(right);
+        match oper.kind {
+            TokenType::Bang => {
+                self.error_if_ne(Type::Bool, right, oper.span);
+                Type::Bool
+            }
+            TokenType::Minus => {
+                self.error_if_ne(Type::Number, right, oper.span);
+                Type::Number
+            }
+            _ => unreachable!()
+        }
+    }
+
     fn assign(&mut self, name: &Expr, value: &Expr) -> Type {
-        let name = self.expression(name);
-        let value_ty = self.expression(value);
-        self.error_if_ne(name, value_ty.clone(), Token::from(value).span);
-        value_ty
+        match name {
+            Expr::Variable(token) => {
+                if let Some(info) = self.get_info(token) {
+                    if info.is_mutable {
+                        let name_ty = self.expression(name);
+                        let value_ty = self.expression(value);
+                        self.error_if_ne(name_ty, value_ty.clone(), token.span);
+                        value_ty
+                    } else {
+                        self.error(BobaError::AssignToImmutable(name.into()))
+                    }
+                } else {
+                    self.error(BobaError::UndeclaredVariable(token.clone()))
+                }
+            }
+            _ => self.error(BobaError::AssignToNonVariable(name.into())),
+        }
     }
 
     fn get_info(&self, name: &Token) -> Option<&Info> {
@@ -142,16 +192,16 @@ impl TypeChecker {
         None
     }
 
-    fn error(&mut self, error: BobaError) {
+    fn error(&mut self, error: BobaError) -> Type {
         self.errors.push(error);
+        Type::Unknown
     }
 
     fn variable(&mut self, token: &Token) -> Type {
         if let Some(ty) = self.get_info(token).map(|info| info.ty_pe.clone()) {
             ty
         } else {
-            self.error(BobaError::UndeclaredVariable(token.clone()));
-            Type::Unknown
+            self.error(BobaError::UndeclaredVariable(token.clone()))
         }
     }
 
