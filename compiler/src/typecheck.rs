@@ -70,8 +70,20 @@ impl TypeChecker {
             Stmt::Expression(expr) => {
                 let _ = self.expression(expr);
             },
+            Stmt::While { condition, body } => self.while_stmt(condition, body),
+            Stmt::Print(expr) => self.print_stmt(expr),
             _ => todo!(),
         }
+    }
+
+    fn print_stmt(&mut self, expr: &Expr) {
+        let _ty = self.expression(expr);
+    }
+
+    fn while_stmt(&mut self, condition: &Expr, body: &Stmt) {
+        let cond_type = self.expression(condition);
+        self.error_if_ne(Type::Bool, cond_type, Token::from(condition).span);
+        self.statement(body);
     }
 
     fn add_variable(&mut self, name: Token, info: Info) {
