@@ -143,14 +143,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         };
 
         let condition = if self.peek_check(TokenType::Semicolon) {
-            let meta = self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
-            Expr::Boolean {
-                value: true,
-                meta,
-            }
+            let meta = self.consume(
+                TokenType::Semicolon,
+                "Expect ';' after loop condition.",
+            )?;
+            Expr::Boolean { value: true, meta }
         } else {
             let expr = self.expression()?;
-            self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+            self.consume(
+                TokenType::Semicolon,
+                "Expect ';' after loop condition.",
+            )?;
             expr
         };
 

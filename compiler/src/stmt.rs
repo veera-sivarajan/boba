@@ -1,5 +1,5 @@
 // use crate::analyzer::Type;
-use crate::expr::{Expr};
+use crate::expr::Expr;
 use crate::lexer::Token;
 
 pub type Parameter = (Expr, Token);

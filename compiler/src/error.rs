@@ -33,13 +33,13 @@ pub enum TypeError {
     },
 }
 
-
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Type::Number => write!(f, "i64"),
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "bool"),
+            Type::Unknown => write!(f, "unknown type"),
         }
     }
 }
@@ -52,12 +52,11 @@ impl fmt::Display for TypeError {
                 found,
                 span,
             } => {
-                write!(f, "Expected '{expected}', found '{found}' at {span}.")
+                writeln!(f, "Type Error: Expected '{expected}', found '{found}' at {span}.")
             }
         }
     }
 }
-        
 
 #[derive(Debug, Clone)]
 pub enum BobaError {
@@ -68,7 +67,8 @@ pub enum BobaError {
     General(Box<str>),
     Compiler { msg: Box<str>, span: Span },
     Formatting,
-    TypeCheck(Vec<TypeError>),
+    TypeCheck(TypeError),
+    Analyzer(Vec<BobaError>),
     VariableRedeclaration(Token),
     FunctionRedeclaration(Token),
     UndeclaredVariable(Token),
@@ -85,9 +85,10 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
-            TypeCheck(errors) => {
+            TypeCheck(error) => write!(f, "{error}"),
+            Analyzer(errors) => {
                 for err in errors {
-                    writeln!(f, "{err}")?;
+                    write!(f, "{err}")?;
                 }
                 Ok(())
             }
