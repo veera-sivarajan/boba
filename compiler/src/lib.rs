@@ -5,6 +5,7 @@ mod expr;
 mod lexer;
 mod parser;
 mod stmt;
+mod typecheck;
 
 use crate::error::BobaError;
 use crate::parser::Parser;
