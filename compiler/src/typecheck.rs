@@ -58,10 +58,11 @@ impl TypeChecker {
         }
     }
 
-    fn error(&mut self, msg: &str, span: Span) {
-        self.errors.push(BobaError::TypeError {
-            msg: msg.into(),
-            span
+    fn error(&mut self, expected: Type, found: Type, span: Span) {
+        self.errors.push(TypeError::Mismatched {
+            expected,
+            found,
+            span,
         });
     }
 
@@ -71,8 +72,10 @@ impl TypeChecker {
         _then: &Stmt,
         _elze: &Option<Box<Stmt>>,
     ) {
-        if Type::Bool != self.expression(condition) {
-            self.error("Expected boolean expression as condition", Span::default());
+
+        let cond_type = self.expression(condition);
+        if Type::Bool != cond_type {
+            self.error(Type::Bool, cond_type, Span::default());
         }
     }
 

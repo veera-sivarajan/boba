@@ -52,7 +52,7 @@ impl fmt::Display for TypeError {
                 found,
                 span,
             } => {
-                writeln!(f, "Expected {expected}, found {found} at {span}.")
+                write!(f, "Expected '{expected}', found '{found}' at {span}.")
             }
         }
     }
@@ -92,91 +92,90 @@ impl fmt::Display for BobaError {
                 Ok(())
             }
             UnterminatedString(span) => {
-                write!(
+                writeln!(
                     f,
                     "Syntax Error: Unterminated string literal at {span}."
                 )
             }
             EmptyCharacter(span) => {
-                write!(
+                writeln!(
                     f,
                     "Syntax Error: Reached end of file but expected character literal at {span}."
                 )
             }
             UnterminatedCharacter(span) => {
-                write!(
+                writeln!(
                     f,
                     "Syntax Error: Unterminated character literal at {span}."
                 )
             }
             Unexpected { msg, span } => {
                 if let Some(span) = span {
-                    write!(f, "Parse error: {msg} at {span}.")
+                    writeln!(f, "Parse error: {msg} at {span}.")
                 } else {
-                    write!(f, "Parse error: {msg} at end of file.")
+                    writeln!(f, "Parse error: {msg} at end of file.")
                 }
             }
             General(msg) => {
-                write!(f, "Error: {msg}")
+                writeln!(f, "Error: {msg}")
             }
             Compiler { msg, span } => {
-                write!(f, "Compiler Error: {msg} at {span}")
+                writeln!(f, "Compiler Error: {msg} at {span}")
             }
-            Formatting => write!(
+            Formatting => writeln!(
                 f,
                 "Compiler Internal Error: Cannot write to assembly file."
             ),
-            TypeError { msg, span } => write!(f, "TypeError: {msg} at {span}."),
             VariableRedeclaration(token) => {
-                write!(f, "Cannot re-declare multiple variable with same name '{}' at {}", token, token.span)
+                writeln!(f, "Cannot re-declare multiple variable with same name '{}' at {}", token, token.span)
             }
             FunctionRedeclaration(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Cannot re-declare function '{}' at {}.",
                     token, token.span
                 )
             }
             UndeclaredVariable(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Cannot use undeclared variable '{}' at {}",
                     token, token.span
                 )
             }
             UndeclaredFunction(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Cannot call undeclared function '{}' at {}",
                     token, token.span
                 )
             }
             LocalFunction(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Function '{}' should be declared globally at {}",
                     token, token.span
                 )
             }
             MainNotFound => {
-                write!(f, "Error: Consider adding a main function.")
+                writeln!(f, "Error: Consider adding a main function.")
             }
             AssignToImmutable(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Cannot assign to immutable variable '{}' at '{}'",
                     token, token.span
                 )
             }
             AssignToNonVariable(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Attempting to assign to a non variable '{}' at {}.",
                     token, token.span
                 )
             }
             AssignToGlobalVariable(token) => {
-                write!(
+                writeln!(
                     f,
                     "Error: Global variable '{}' cannot be mutated at {}.",
                     token, token.span
@@ -197,7 +196,7 @@ impl fmt::Display for BobaError {
                 } else {
                     format!("{found_count} arguments")
                 };
-                write!(
+                writeln!(
                     f,
                     "Error: Function '{function_name}' expects {expected_message} but found {found_message} at {}.",
                     function_name.span)

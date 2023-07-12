@@ -31,7 +31,7 @@ fn main() -> std::io::Result<()> {
     match compiler::compile(source.trim_end()) {
         Ok(assembly) => assemble(assembly),
         Err(err) => {
-            eprintln!("{err}");
+            eprint!("{err}");
             Ok(())
         }
     }
