@@ -12,8 +12,25 @@ pub enum Type {
     Unknown,
 }
 
+struct FunctionData {
+    name: Token,
+    params: Vec<Parameter>,
+    return_type: Type,
+}
+
+impl FunctionData {
+    fn new(name: Token, params: Vec<Parameter>, return_type: Type) -> Self {
+        FunctionData {
+            name,
+            params,
+            return_type,
+        }
+    }
+}
+
 pub struct TypeChecker {
     type_table: Vec<HashMap<Token, Info>>,
+    functions: Vec<FunctionData>,
     errors: Vec<BobaError>,
 }
 
@@ -34,6 +51,7 @@ impl TypeChecker {
         TypeChecker {
             type_table: vec![HashMap::new()],
             errors: vec![],
+            functions: vec![],
         }
     }
 
@@ -46,10 +64,61 @@ impl TypeChecker {
     }
 
     pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+        self.check_all_globals(ast);
         for stmt in ast {
             self.statement(stmt);
         }
         self.exit()
+    }
+
+    fn add_function(
+        &mut self,
+        name: &Token,
+        params: &[Parameter],
+        return_type: Type,
+    ) {
+        self.functions.push(FunctionData::new(
+            name.clone(),
+            params.to_vec(),
+            return_type,
+        ));
+    }
+
+    fn function_is_defined(&self, name: &Token) -> Option<&FunctionData> {
+        self.functions
+            .iter()
+            .find(|function| &function.name == name)
+    }
+
+    fn check_all_globals(&mut self, ast: &[Stmt]) {
+        for stmt in ast {
+            match stmt {
+                Stmt::GlobalVariable { name, init } => {
+                    if init.is_constant() {
+                        self.local_variable(name, init, false);
+                    } else {
+                        self.error(BobaError::GlobalVariableNotConst(
+                            name.clone(),
+                        ));
+                    }
+                }
+                Stmt::Function {
+                    name,
+                    params,
+                    return_type,
+                    ..
+                } => {
+                    if self.function_is_defined(name).is_some() {
+                        self.error(BobaError::FunctionRedeclaration(
+                            name.clone(),
+                        ));
+                    } else {
+                        self.add_function(name, params, *return_type);
+                    }
+                }
+                _ => continue,
+            }
+        }
     }
 
     fn statement(&mut self, stmt: &Stmt) {
@@ -59,21 +128,29 @@ impl TypeChecker {
                 then,
                 elze,
             } => self.if_stmt(condition, then, elze),
-            Stmt::Function { body, .. } => self.statement(body),
+            Stmt::Function { body, return_type, .. } => self.statement(body),
             Stmt::Block(stmts) => self.block(stmts),
             Stmt::LocalVariable {
                 name,
                 init,
                 is_mutable,
             } => self.local_variable(name, init, *is_mutable),
-            Stmt::GlobalVariable { name, init } => self.global_variable(name, init),
+            Stmt::GlobalVariable { .. } => {}
             Stmt::Expression(expr) => {
                 let _ = self.expression(expr);
-            },
+            }
             Stmt::While { condition, body } => self.while_stmt(condition, body),
             Stmt::Print(expr) => self.print_stmt(expr),
+            Stmt::Return { name, expr } => self.return_stmt(name, expr),
             _ => todo!(),
         }
+    }
+
+    fn return_stmt(&mut self, function_name: &Token, expr: &Expr) {
+        let found = self.expression(expr);
+        if let Some(data) = self.function_is_defined(function_name) {
+            self.error_if_ne(data.return_type, found, Token::from(expr).span);
+        };
     }
 
     fn print_stmt(&mut self, expr: &Expr) {
@@ -136,13 +213,14 @@ impl TypeChecker {
         if found == Type::Unknown || expected == Type::Unknown {
             return;
         }
-        
+
         if expected != found {
-            self.errors.push(BobaError::TypeCheck(TypeError::Mismatched {
-                expected,
-                found,
-                span,
-            }));
+            self.errors
+                .push(BobaError::TypeCheck(TypeError::Mismatched {
+                    expected,
+                    found,
+                    span,
+                }));
         }
     }
 
@@ -187,7 +265,7 @@ impl TypeChecker {
                 self.error_if_ne(Type::Number, right, oper.span);
                 Type::Number
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
