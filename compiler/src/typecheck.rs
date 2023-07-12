@@ -13,6 +13,7 @@ pub enum Type {
     Unit,
 }
 
+#[derive(Clone)]
 struct FunctionData {
     name: Token,
     params: Vec<Parameter>,
@@ -85,10 +86,11 @@ impl TypeChecker {
         ));
     }
 
-    fn function_is_defined(&self, name: &Token) -> Option<&FunctionData> {
+    fn function_is_defined(&self, name: &Token) -> Option<FunctionData> {
         self.functions
             .iter()
             .find(|function| &function.name == name)
+            .cloned()
     }
 
     fn check_all_globals(&mut self, ast: &[Stmt]) {
@@ -129,8 +131,10 @@ impl TypeChecker {
                 then,
                 elze,
             } => self.if_stmt(condition, then, elze),
-            Stmt::Function { body, .. } => self.statement(body),
-            Stmt::Block(stmts) => self.block(stmts),
+            Stmt::Function { body, params, .. } => {
+                self.function_decl(body, params)
+            }
+            Stmt::Block(stmts) => self.block(stmts, None),
             Stmt::LocalVariable {
                 name,
                 init,
@@ -144,6 +148,10 @@ impl TypeChecker {
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
         }
+    }
+
+    fn function_decl(&mut self, body: &Stmt, params: &[Parameter]) {
+        self.statement(body);
     }
 
     fn return_stmt(&mut self, function_name: &Token, expr: &Expr) {
@@ -201,7 +209,7 @@ impl TypeChecker {
         self.type_table.pop();
     }
 
-    fn block(&mut self, stmts: &[Stmt]) {
+    fn block(&mut self, stmts: &[Stmt], params: Option<&[Parameter]>) {
         self.new_scope();
         for stmt in stmts {
             self.statement(stmt);
@@ -250,7 +258,22 @@ impl TypeChecker {
             Expr::Variable(token) => self.variable(token),
             Expr::Group(expr) => self.expression(expr),
             Expr::Unary { oper, right } => self.unary(oper, right),
-            _ => todo!(),
+            Expr::Call { callee, args } => self.function_call(callee, args),
+        }
+    }
+
+    fn function_call(&mut self, function_name: &Token, args: &[Expr]) -> Type {
+        let Some(FunctionData { params, return_type, .. }) = self.function_is_defined(function_name) else {
+            return self.error(BobaError::UndeclaredFunction(function_name.clone()));
+        };
+        if params.len() == args.len() {
+            for ((_, param_type), arg) in params.iter().zip(args.iter()) {
+                let arg_type = self.expression(arg);
+                self.error_if_ne(*param_type, arg_type, Token::from(arg).span);
+            }
+            return_type
+        } else {
+            self.error(BobaError::ArgumentCountNotEqual(function_name.clone(), params.len(), args.len()))
         }
     }
 
