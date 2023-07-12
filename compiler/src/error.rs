@@ -40,6 +40,7 @@ impl fmt::Display for Type {
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "bool"),
             Type::Unknown => write!(f, "unknown type"),
+            Type::Unit => write!(f, "()"),
         }
     }
 }

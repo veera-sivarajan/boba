@@ -10,6 +10,7 @@ pub enum Type {
     String,
     Bool,
     Unknown,
+    Unit,
 }
 
 struct FunctionData {
@@ -128,7 +129,7 @@ impl TypeChecker {
                 then,
                 elze,
             } => self.if_stmt(condition, then, elze),
-            Stmt::Function { body, return_type, .. } => self.statement(body),
+            Stmt::Function { body, .. } => self.statement(body),
             Stmt::Block(stmts) => self.block(stmts),
             Stmt::LocalVariable {
                 name,
@@ -142,7 +143,6 @@ impl TypeChecker {
             Stmt::While { condition, body } => self.while_stmt(condition, body),
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
-            _ => todo!(),
         }
     }
 

@@ -220,8 +220,12 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
-        self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
-        let return_type = self.consume_type("Expect correct return type.")?;
+        let return_type = if self.peek_check(TokenType::Arrow) {
+            self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
+            self.consume_type("Expect correct return type.")?
+        } else {
+            Type::Unit
+        };
         self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
         let body = self.block_stmt(&name)?;
         let body = Box::new(Stmt::Block(body));
