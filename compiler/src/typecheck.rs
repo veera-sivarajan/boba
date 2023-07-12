@@ -1,10 +1,10 @@
 use crate::error::{BobaError, TypeError};
-use crate::expr::{Expr, LLExpr};
+use crate::expr::{Expr};
 use crate::lexer::{Token, Span};
-use crate::stmt::{LLStmt, Parameter, Stmt};
+use crate::stmt::{Parameter, Stmt};
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum Type {
     Number,
     String,
@@ -75,15 +75,16 @@ impl TypeChecker {
 
         let cond_type = self.expression(condition);
         if Type::Bool != cond_type {
-            self.error(Type::Bool, cond_type, Span::default());
+            let token = Token::from(condition);
+            self.error(Type::Bool, cond_type, token.span);
         }
     }
 
     fn expression(&mut self, expr: &Expr) -> Type {
         match expr {
-            Expr::Number(_) => Type::Number,
-            Expr::Boolean(_) => Type::Bool,
-            Expr::String(_) => Type::String,
+            Expr::Number { .. } => Type::Number,
+            Expr::Boolean { .. } => Type::Bool,
+            Expr::String { .. } => Type::String,
             _ => todo!(),
         }
     }

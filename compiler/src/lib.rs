@@ -1,5 +1,5 @@
-mod analyzer;
-mod codegen;
+// mod analyzer;
+// mod codegen;
 mod error;
 mod expr;
 mod lexer;

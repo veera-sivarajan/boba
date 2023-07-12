@@ -143,11 +143,16 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         };
 
         let condition = if self.peek_check(TokenType::Semicolon) {
-            None
+            let meta = self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+            Expr::Boolean {
+                value: true,
+                meta,
+            }
         } else {
-            Some(self.expression()?)
+            let expr = self.expression()?;
+            self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+            expr
         };
-        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
 
         let increment = if self.peek_check(TokenType::RightParen) {
             None
@@ -160,7 +165,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             body = Stmt::Block(vec![body, Stmt::Expression(expression)]);
         }
         body = Stmt::While {
-            condition: condition.unwrap_or(Expr::Boolean(true)),
+            condition,
             body: Box::new(body),
         };
         if let Some(init) = init {
@@ -410,12 +415,21 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn primary_expression(&mut self) -> Result<Expr, BobaError> {
-        if let Some(expr) = self.cursor.next() {
-            match expr.kind {
-                TokenType::Number(num) => Ok(Expr::Number(num)),
-                TokenType::Identifier(_) => Ok(Expr::Variable(expr)),
-                TokenType::Boolean(value) => Ok(Expr::Boolean(value)),
-                TokenType::StringLiteral(lexeme) => Ok(Expr::String(lexeme)),
+        if let Some(meta) = self.cursor.next() {
+            match &meta.kind {
+                TokenType::Number(value) => Ok(Expr::Number {
+                    value: *value,
+                    meta,
+                }),
+                TokenType::Identifier(_) => Ok(Expr::Variable(meta)),
+                TokenType::Boolean(value) => Ok(Expr::Boolean {
+                    value: *value,
+                    meta,
+                }),
+                TokenType::StringLiteral(value) => Ok(Expr::String {
+                    value: value.to_string(),
+                    meta,
+                }),
                 TokenType::LeftParen => {
                     let expr = self.expression()?;
                     self.consume(
@@ -424,7 +438,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     )?;
                     Ok(Expr::Group(Box::new(expr)))
                 }
-                _ => todo!("{}", expr.kind),
+                _ => todo!("{}", meta.kind),
             }
         } else {
             Err(self.error("Expected a primary expression"))
