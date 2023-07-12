@@ -4,7 +4,7 @@ use crate::lexer::{Span, Token, TokenType};
 use crate::stmt::{Parameter, Stmt};
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
 pub enum Type {
     Number,
     String,
@@ -100,10 +100,20 @@ impl TypeChecker {
         self.local_variable(name, init, false);
     }
 
+    fn new_scope(&mut self) {
+        self.type_table.push(HashMap::new());
+    }
+
+    fn exit_scope(&mut self) {
+        self.type_table.pop();
+    }
+
     fn block(&mut self, stmts: &[Stmt]) {
+        self.new_scope();
         for stmt in stmts {
             self.statement(stmt);
         }
+        self.exit_scope();
     }
 
     fn error_if_ne(&mut self, expected: Type, found: Type, span: Span) {
@@ -165,10 +175,10 @@ impl TypeChecker {
         match name {
             Expr::Variable(token) => {
                 if let Some(info) = self.get_info(token) {
+                    let expected = info.ty_pe;
                     if info.is_mutable {
-                        let name_ty = self.expression(name);
                         let value_ty = self.expression(value);
-                        self.error_if_ne(name_ty, value_ty.clone(), token.span);
+                        self.error_if_ne(expected, value_ty, token.span);
                         value_ty
                     } else {
                         self.error(BobaError::AssignToImmutable(name.into()))
@@ -198,7 +208,7 @@ impl TypeChecker {
     }
 
     fn variable(&mut self, token: &Token) -> Type {
-        if let Some(ty) = self.get_info(token).map(|info| info.ty_pe.clone()) {
+        if let Some(ty) = self.get_info(token).map(|info| info.ty_pe) {
             ty
         } else {
             self.error(BobaError::UndeclaredVariable(token.clone()))
