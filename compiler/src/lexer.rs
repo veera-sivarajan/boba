@@ -2,6 +2,7 @@ use crate::error::BobaError;
 use std::hash::{Hash, Hasher};
 use std::iter::Peekable;
 use std::str::CharIndices;
+use crate::typecheck;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
@@ -52,7 +53,7 @@ pub enum TokenType {
     Return,
     And,
     Or,
-    Type(String),
+    Type(typecheck::Type),
 }
 
 impl std::fmt::Display for TokenType {
@@ -158,6 +159,14 @@ impl Token {
 
     pub const fn is_type(&self) -> bool {
         matches!(self.kind, TokenType::Type(_))
+    }
+
+    pub fn to_type(&self) -> Option<typecheck::Type> {
+        if let TokenType::Type(ty) = self.kind {
+            Some(ty)
+        } else {
+            None
+        }
     }
 
     pub fn identifier_name(&self) -> String {
@@ -478,7 +487,9 @@ impl<'src> Lexer<'src> {
             "let" => TokenType::Let,
             "mut" => TokenType::Mutable,
             "while" => TokenType::While,
-            "str" | "i64" | "bool" | "Char" => TokenType::Type(lexeme),
+            "str" => TokenType::Type(typecheck::Type::String),
+            "i64" => TokenType::Type(typecheck::Type::Number),
+            "bool" => TokenType::Type(typecheck::Type::Bool),
             _ => TokenType::Identifier(lexeme),
         };
         let span = self.make_span(start_pos, len);
@@ -583,10 +594,10 @@ fn factorial(num: i64) -> i64 {
                 TokenType::LeftParen,
                 TokenType::Identifier("num".into()),
                 TokenType::Colon,
-                TokenType::Type("i64".into()),
+                TokenType::Type(typecheck::Type::Number),
                 TokenType::RightParen,
                 TokenType::Arrow,
-                TokenType::Type("i64".into()),
+                TokenType::Type(typecheck::Type::Number),
                 TokenType::LeftBrace,
                 TokenType::Let,
                 TokenType::Identifier("a".into()),

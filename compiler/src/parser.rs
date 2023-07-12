@@ -2,6 +2,7 @@ use crate::error::BobaError;
 use crate::expr::Expr;
 use crate::lexer::{Token, TokenType};
 use crate::stmt::{Parameter, Stmt};
+use crate::typecheck::Type;
 use std::iter::Peekable;
 
 macro_rules! next_eq {
@@ -62,9 +63,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    fn consume_type(&mut self, error_msg: &str) -> Result<Token, BobaError> {
+    fn consume_type(&mut self, error_msg: &str) -> Result<Type, BobaError> {
         self.cursor
             .next_if(|token| token.is_type())
+            .map(|token| token.to_type())
+            .flatten()
             .ok_or(self.error(error_msg))
     }
 

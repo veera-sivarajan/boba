@@ -1,8 +1,9 @@
 // use crate::analyzer::Type;
 use crate::expr::Expr;
 use crate::lexer::Token;
+use crate::typecheck::Type;
 
-pub type Parameter = (Expr, Token);
+pub type Parameter = (Expr, Type);
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
@@ -30,7 +31,7 @@ pub enum Stmt {
     Function {
         name: Token,
         params: Vec<Parameter>,
-        return_type: Token,
+        return_type: Type,
         body: Box<Stmt>,
     },
     Return {
