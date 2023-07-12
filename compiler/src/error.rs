@@ -1,4 +1,5 @@
 use crate::lexer::{Position, Span, Token};
+use crate::typecheck::Type;
 use std::fmt;
 
 impl fmt::Display for Position {
@@ -24,6 +25,41 @@ impl fmt::Display for Span {
 }
 
 #[derive(Debug, Clone)]
+pub enum TypeError {
+    Mismatched {
+        expected: Type,
+        found: Type,
+        span: Span,
+    },
+}
+
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Type::Number => write!(f, "i64"),
+            Type::String => write!(f, "String"),
+            Type::Bool => write!(f, "bool"),
+        }
+    }
+}
+
+impl fmt::Display for TypeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TypeError::Mismatched {
+                expected,
+                found,
+                span,
+            } => {
+                writeln!(f, "Expected {expected}, found {found} at {span}.")
+            }
+        }
+    }
+}
+        
+
+#[derive(Debug, Clone)]
 pub enum BobaError {
     UnterminatedString(Span),
     UnterminatedCharacter(Span),
@@ -32,8 +68,7 @@ pub enum BobaError {
     General(Box<str>),
     Compiler { msg: Box<str>, span: Span },
     Formatting,
-    TypeCheck(Vec<BobaError>),
-    TypeError { msg: Box<str>, span: Span },
+    TypeCheck(Vec<TypeError>),
     VariableRedeclaration(Token),
     FunctionRedeclaration(Token),
     UndeclaredVariable(Token),

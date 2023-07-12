@@ -1,11 +1,11 @@
-use crate::error::BobaError;
+use crate::error::{BobaError, TypeError};
 use crate::expr::{Expr, LLExpr};
 use crate::lexer::{Token, Span};
 use crate::stmt::{LLStmt, Parameter, Stmt};
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq)]
-enum Type {
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum Type {
     Number,
     String,
     Bool,
@@ -13,7 +13,7 @@ enum Type {
 
 pub struct TypeChecker {
     env: Vec<HashMap<Token, Type>>,
-    errors: Vec<BobaError>,
+    errors: Vec<TypeError>,
 }
 
 impl TypeChecker {
