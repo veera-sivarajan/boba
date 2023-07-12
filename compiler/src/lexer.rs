@@ -1,8 +1,8 @@
 use crate::error::BobaError;
+use crate::typecheck;
 use std::hash::{Hash, Hasher};
 use std::iter::Peekable;
 use std::str::CharIndices;
-use crate::typecheck;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {

@@ -203,10 +203,11 @@ impl TypeChecker {
 
     fn init_parameters(&mut self, params: &[Parameter]) {
         for (param, param_type) in params {
-            if self.variable_is_declared_in_current_scope(&param.into()) {
-                self.error(BobaError::VariableRedeclaration(param.into()));
+            let param = param.into();
+            if self.variable_is_declared_in_current_scope(&param) {
+                self.error(BobaError::VariableRedeclaration(param));
             } else {
-                self.add_variable(param.into(), Info::new(*param_type, false));
+                self.add_variable(param, Info::new(*param_type, false));
             }
         }
     }

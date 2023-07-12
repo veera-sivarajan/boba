@@ -37,7 +37,10 @@ pub enum Expr {
 
 impl Expr {
     pub fn is_constant(&self) -> bool {
-        matches!(self, Expr::Number { .. } | Expr::Boolean { .. } | Expr::String { .. })
+        matches!(
+            self,
+            Expr::Number { .. } | Expr::Boolean { .. } | Expr::String { .. }
+        )
     }
 }
 
