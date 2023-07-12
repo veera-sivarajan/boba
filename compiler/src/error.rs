@@ -32,6 +32,7 @@ pub enum BobaError {
     General(Box<str>),
     Compiler { msg: Box<str>, span: Span },
     Formatting,
+    TypeCheck(Vec<BobaError>),
     TypeError { msg: Box<str>, span: Span },
     VariableRedeclaration(Token),
     FunctionRedeclaration(Token),
@@ -49,6 +50,12 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            TypeCheck(errors) => {
+                for err in errors {
+                    writeln!(f, "{err}")?;
+                }
+                Ok(())
+            }
             UnterminatedString(span) => {
                 write!(
                     f,

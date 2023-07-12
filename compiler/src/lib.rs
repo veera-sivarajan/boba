@@ -16,11 +16,7 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
     if !tokens.is_empty() {
         let mut parser = Parser::new(tokens.into_iter());
         let ast = parser.parse()?;
-        if let Err(errors) = typecheck::TypeChecker::new().check(&ast) {
-            for err in errors {
-                eprintln!("{err}");
-            }
-        }
+        typecheck::TypeChecker::new().check(&ast)?;
         Ok(String::new())
         // let ll_ast = analyzer::Analyzer::new().check(&ast)?;
         // codegen::CodeGen::new().compile(&ll_ast)

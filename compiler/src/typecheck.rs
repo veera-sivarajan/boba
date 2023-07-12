@@ -1,6 +1,6 @@
 use crate::error::BobaError;
 use crate::expr::{Expr, LLExpr};
-use crate::lexer::Token;
+use crate::lexer::{Token, Span};
 use crate::stmt::{LLStmt, Parameter, Stmt};
 use std::collections::HashMap;
 
@@ -24,15 +24,15 @@ impl TypeChecker {
         }
     }
 
-    fn exit_typechecker(&self) -> Result<(), Vec<BobaError>> {
+    fn exit_typechecker(&self) -> Result<(), BobaError> {
         if self.errors.is_empty() {
             Ok(())
         } else {
-            Err(self.errors.clone())
+            Err(BobaError::TypeCheck(self.errors.clone()))
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<(), Vec<BobaError>> {
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
         for stmt in ast {
             self.statement(stmt);
         }
@@ -41,10 +41,14 @@ impl TypeChecker {
 
     fn statement(&mut self, stmt: &Stmt) {
         match stmt {
-            Stmt::If { condition, then, elze } => self.if_stmt(condition, then, elze),
+            Stmt::If {
+                condition,
+                then,
+                elze,
+            } => self.if_stmt(condition, then, elze),
             Stmt::Function { body, .. } => self.statement(body),
             Stmt::Block(stmts) => self.block(stmts),
-            _ => todo!()
+            _ => todo!(),
         }
     }
 
@@ -54,13 +58,21 @@ impl TypeChecker {
         }
     }
 
-    fn error(&mut self, value: &str) {
-        self.errors.push(BobaError::General(value.into()))
+    fn error(&mut self, msg: &str, span: Span) {
+        self.errors.push(BobaError::TypeError {
+            msg: msg.into(),
+            span
+        });
     }
 
-    fn if_stmt(&mut self, condition: &Expr, _then: &Stmt, _elze: &Option<Box<Stmt>>) {
+    fn if_stmt(
+        &mut self,
+        condition: &Expr,
+        _then: &Stmt,
+        _elze: &Option<Box<Stmt>>,
+    ) {
         if Type::Bool != self.expression(condition) {
-            self.error("Expected boolean expression as condition.");
+            self.error("Expected boolean expression as condition", Span::default());
         }
     }
 
