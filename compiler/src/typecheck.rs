@@ -1,7 +1,7 @@
 use crate::error::{BobaError, TypeError};
-use crate::expr::Expr;
+use crate::expr::{Expr, LLExpr};
 use crate::lexer::{Span, Token, TokenType};
-use crate::stmt::{Parameter, Stmt};
+use crate::stmt::{Parameter, Stmt, LLStmt};
 use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
@@ -253,7 +253,7 @@ impl TypeChecker {
         };
     }
 
-    fn expression(&mut self, expr: &Expr) -> Type {
+    fn expression(&mut self, expr: &Expr) -> LLExpr {
         match expr {
             Expr::Number { .. } => Type::Number,
             Expr::Boolean { .. } => Type::Bool,

@@ -1,4 +1,6 @@
 use crate::lexer::{Token, TokenType};
+// use crate::analyzer::{Type, Kind};
+use crate::typecheck::Type;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -161,10 +163,12 @@ pub enum LLExpr {
         left: Box<LLExpr>,
         oper: BinaryOperand,
         right: Box<LLExpr>,
+        ty_pe: Type,
     },
     Number(i64),
     Variable {
         name: String,
+        ty_pe: Type,
         is_mutable: bool,
     },
     Boolean(bool),
@@ -172,39 +176,48 @@ pub enum LLExpr {
     Call {
         callee: String,
         args: Vec<LLExpr>,
+        ty_pe: Type,
     },
     Assign {
         value: Box<LLExpr>,
         index: u8,
+        ty_pe: Type,
     },
     Unary {
         oper: UnaryOperand,
         right: Box<LLExpr>,
+        ty_pe: Type,
     },
-    Group(Box<LLExpr>),
+    Group {
+        value: Box<Expr>,
+        ty_pe: Type,
+    },
 }
 
-// impl std::fmt::Debug for LLExpr {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             LLExpr::Number(value) => write!(f, "{value}"),
-//             LLExpr::String(value) => write!(f, "{value}"),
-//             LLExpr::Boolean(value) => {
-//                 if *value {
-//                     write!(f, "1")
-//                 } else {
-//                     write!(f, "0")
-//                 }
-//             }
-//             LLExpr::Variable { name, .. } => write!(f, "{name}"),
-//             LLExpr::Binary { left, oper, right } => {
-//                 write!(f, "{:?}", *left)?;
-//                 write!(f, "{:?}", oper)?;
-//                 write!(f, "{:?}", *right)
-//             }
-//             LLExpr::Call { .. } => write!(f, "Function call expression."),
-
-//         }
-//     }
-// }
+// FIXME: Implementing is incorrect for non-primitive types
+impl std::fmt::Debug for LLExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LLExpr::Number(value) => write!(f, "{value}"),
+            LLExpr::String(value) => write!(f, "{value}"),
+            LLExpr::Boolean(value) => {
+                if *value {
+                    write!(f, "1")
+                } else {
+                    write!(f, "0")
+                }
+            }
+            LLExpr::Variable { name, .. } => write!(f, "{name}"),
+            LLExpr::Binary { left, oper, right, .. } => {
+                write!(f, "{:?}", *left)?;
+                write!(f, "{:?}", oper)?;
+                write!(f, "{:?}", *right)
+            }
+            LLExpr::Call { .. } => write!(f, "Function call expression."),
+            LLExpr::Assign { value, .. } => write!(f, "{value:?}"),
+            LLExpr::Group { value, .. } => write!(f, "{value:?}"),
+            LLExpr::Unary { right, .. } => write!(f, "{right:?}"),
+        }
+    }
+}
 
