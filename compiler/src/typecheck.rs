@@ -255,9 +255,9 @@ impl TypeChecker {
 
     fn expression(&mut self, expr: &Expr) -> LLExpr {
         match expr {
-            Expr::Number { .. } => Type::Number,
-            Expr::Boolean { .. } => Type::Bool,
-            Expr::String { .. } => Type::String,
+            Expr::Number { value, .. } => LLExpr::Number(*value),
+            Expr::Boolean { value,.. } => LLExpr::Boolean(*value),
+            Expr::String { value, .. } => LLExpr::String(value.to_owned()),
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
             }
@@ -269,20 +269,25 @@ impl TypeChecker {
         }
     }
 
-    fn function_call(&mut self, function_name: &Token, args: &[Expr]) -> Type {
+    fn function_call(&mut self, function_name: &Token, args: &[Expr]) -> LLExpr {
         let Some(FunctionData {
             params,
             return_type,
             ..
         }) = self.function_is_defined(function_name)
         else {
-            return self
+            let ty_pe = self
                 .error(BobaError::UndeclaredFunction(function_name.clone()));
+            return LLExpr::Call {
+                ty_pe,
+                callee: String::from(""),
+                args: vec![],
+            };
         };
-        if params.len() == args.len() {
+        let ty_pe = if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
                 let arg_type = self.expression(arg);
-                self.error_if_ne(*param_type, arg_type, Token::from(arg).span);
+                self.error_if_ne(*param_type, arg_type.to_type(), Token::from(arg).span);
             }
             return_type
         } else {
@@ -291,21 +296,32 @@ impl TypeChecker {
                 params.len(),
                 args.len(),
             ))
+        };
+        LLExpr::Call {
+            callee: function_name.to_string(),
+            args: args.iter().map(|arg| self.expression(arg)).collect(),
+            ty_pe,
         }
     }
 
-    fn unary(&mut self, oper: &Token, right: &Expr) -> Type {
+    fn unary(&mut self, oper: &Token, right: &Expr) -> LLExpr {
         let right = self.expression(right);
-        match oper.kind {
+        let right_type = right.to_type();
+        let ty_pe = match oper.kind {
             TokenType::Bang => {
-                self.error_if_ne(Type::Bool, right, oper.span);
+                self.error_if_ne(Type::Bool, right_type, oper.span);
                 Type::Bool
             }
             TokenType::Minus => {
-                self.error_if_ne(Type::Number, right, oper.span);
+                self.error_if_ne(Type::Number, right_type, oper.span);
                 Type::Number
             }
             _ => unreachable!(),
+        };
+        LLExpr::Unary {
+            oper: oper.into(),
+            right: Box::new(right),
+            ty_pe,
         }
     }
 
@@ -345,20 +361,29 @@ impl TypeChecker {
         Type::Unknown
     }
 
-    fn variable(&mut self, token: &Token) -> Type {
-        if let Some(ty) = self.get_info(token).map(|info| info.ty_pe) {
-            ty
+    fn variable(&mut self, token: &Token) -> LLExpr {
+        if let Some(Info { ty_pe, is_mutable }) = self.get_info(token) {
+            LLExpr::Variable {
+                name: token.to_string(),
+                ty_pe: *ty_pe,
+                is_mutable: *is_mutable,
+            }
         } else {
-            self.error(BobaError::UndeclaredVariable(token.clone()))
+            let ty_pe = self.error(BobaError::UndeclaredVariable(token.clone()));
+            LLExpr::Variable {
+                name: String::from(""),
+                ty_pe,
+                is_mutable: false,
+            }
         }
     }
 
-    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) -> Type {
+    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) -> LLExpr {
         let left = self.expression(left);
         let right = self.expression(right);
-        self.error_if_ne(Type::Number, left, oper.span);
-        self.error_if_ne(Type::Number, right, oper.span);
-        match oper.kind {
+        self.error_if_ne(Type::Number, left.to_type(), oper.span);
+        self.error_if_ne(Type::Number, right.to_type(), oper.span);
+        let ty_pe = match oper.kind {
             TokenType::Plus
             | TokenType::Minus
             | TokenType::Star
@@ -370,6 +395,12 @@ impl TypeChecker {
             | TokenType::GreaterEqual
             | TokenType::EqualEqual => Type::Bool,
             _ => unreachable!(),
+        };
+        LLExpr::Binary {
+            left: Box::new(left),
+            oper: oper.into(),
+            right: Box::new(right),
+            ty_pe,
         }
     }
 }

@@ -194,6 +194,22 @@ pub enum LLExpr {
     },
 }
 
+impl LLExpr {
+    pub fn to_type(&self) -> Type {
+        match self {
+            LLExpr::Number(_) => Type::Number,
+            LLExpr::String(_) => Type::String,
+            LLExpr::Boolean(_) => Type::Bool,
+            LLExpr::Variable { ty_pe, .. } => *ty_pe,
+            LLExpr::Call { ty_pe, .. } => *ty_pe,
+            LLExpr::Assign { ty_pe, .. } => *ty_pe,
+            LLExpr::Unary { ty_pe, .. } => *ty_pe,
+            LLExpr::Group { ty_pe, .. } => *ty_pe,
+            LLExpr::Binary { ty_pe, .. } => *ty_pe,
+        }
+    }
+}
+
 // FIXME: Implementing is incorrect for non-primitive types
 impl std::fmt::Debug for LLExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
