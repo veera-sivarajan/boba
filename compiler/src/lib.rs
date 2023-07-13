@@ -1,5 +1,5 @@
-mod analyzer;
-mod codegen;
+// mod analyzer;
+// mod codegen;
 mod error;
 mod expr;
 mod lexer;
@@ -16,9 +16,10 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
     if !tokens.is_empty() {
         let mut parser = Parser::new(tokens.into_iter());
         let ast = parser.parse()?;
-        typecheck::TypeChecker::new().check(&ast)?;
-        let ll_ast = analyzer::Analyzer::new().check(&ast)?;
-        codegen::CodeGen::new().compile(&ll_ast)
+        let ll_ast = typecheck::TypeChecker::new().check(&ast)?;
+        // let ll_ast = analyzer::Analyzer::new().check(&ast)?;
+        // codegen::CodeGen::new().compile(&ll_ast)
+        Ok(String::from(""))
     } else {
         Err(BobaError::General(
             "Consider adding a 'main' function.".into(),

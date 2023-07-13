@@ -55,7 +55,7 @@ pub enum LLStmt {
     LocalVariable {
         init: LLExpr,
         ty_pe: Type,
-        variable_index: u8,
+        variable_index: u16,
     },
     GlobalVariable {
         name: String,
@@ -74,8 +74,8 @@ pub enum LLStmt {
     },
     Function {
         name: String,
-        params_count: u8,
-        locals_count: u8,
+        param_sizes: Vec<u16>,
+        space_for_locals: u16,
         body: Box<LLStmt>,
     },
     Return {

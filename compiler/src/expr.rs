@@ -1,6 +1,5 @@
 use crate::lexer::{Token, TokenType};
-// use crate::analyzer::{Type, Kind};
-use crate::typecheck::Type;
+use crate::typecheck::{Type, Kind};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -170,6 +169,7 @@ pub enum LLExpr {
         name: String,
         ty_pe: Type,
         is_mutable: bool,
+        kind: Kind,
     },
     Boolean(bool),
     String(String),
@@ -180,7 +180,7 @@ pub enum LLExpr {
     },
     Assign {
         value: Box<LLExpr>,
-        index: u8,
+        index: u16,
         ty_pe: Type,
     },
     Unary {
@@ -189,7 +189,7 @@ pub enum LLExpr {
         ty_pe: Type,
     },
     Group {
-        value: Box<Expr>,
+        value: Box<LLExpr>,
         ty_pe: Type,
     },
 }

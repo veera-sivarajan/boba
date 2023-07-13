@@ -13,6 +13,18 @@ pub enum Type {
     Unit,
 }
 
+impl Type {
+    fn as_size(&self) -> u16 {
+        match self {
+            Type::Number => 8,
+            Type::String => 8,
+            Type::Bool => 1,
+            Type::Unknown => 0,
+            Type::Unit => 0,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct FunctionData {
     name: Token,
@@ -34,17 +46,31 @@ pub struct TypeChecker {
     type_table: Vec<HashMap<Token, Info>>,
     functions: Vec<FunctionData>,
     errors: Vec<BobaError>,
+    space_for_locals: u16,
+    statements: Vec<LLStmt>,
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum Kind {
+    GlobalVariable,
+    LocalVariable(u16),
+    Parameter(u16),
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 struct Info {
     ty_pe: Type,
     is_mutable: bool,
+    kind: Kind,
 }
 
 impl Info {
-    fn new(ty_pe: Type, is_mutable: bool) -> Self {
-        Info { ty_pe, is_mutable }
+    fn new(ty_pe: Type, is_mutable: bool, kind: Kind) -> Self {
+        Info {
+            ty_pe,
+            is_mutable,
+            kind,
+        }
     }
 }
 
@@ -54,21 +80,24 @@ impl TypeChecker {
             type_table: vec![HashMap::new()],
             errors: vec![],
             functions: vec![],
+            space_for_locals: 0,
+            statements: vec![],
         }
     }
 
-    fn exit(&self) -> Result<(), BobaError> {
+    fn exit(&self) -> Result<Vec<LLStmt>, BobaError> {
         if self.errors.is_empty() {
-            Ok(())
+            Ok(self.statements.clone())
         } else {
             Err(BobaError::Analyzer(self.errors.clone()))
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<(), BobaError> {
+    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
         self.check_all_globals(ast);
         for stmt in ast {
-            self.statement(stmt);
+            let ll_stmt = self.statement(stmt);
+            self.statements.push(ll_stmt);
         }
         self.exit()
     }
@@ -97,12 +126,24 @@ impl TypeChecker {
         for stmt in ast {
             match stmt {
                 Stmt::GlobalVariable { name, init } => {
-                    if init.is_constant() {
-                        self.local_variable(name, init, false);
-                    } else {
+                    if !init.is_constant() {
                         self.error(BobaError::GlobalVariableNotConst(
                             name.clone(),
                         ));
+                    } else if self.variable_is_declared_in_current_scope(name) {
+                        self.error(BobaError::VariableRedeclaration(
+                            name.clone(),
+                        ));
+                    } else {
+                        let expr = self.expression(init);
+                        self.add_variable(
+                            name.clone(),
+                            Info::new(
+                                expr.to_type(),
+                                false,
+                                Kind::GlobalVariable,
+                            ),
+                        );
                     }
                 }
                 Stmt::Function {
@@ -131,16 +172,18 @@ impl TypeChecker {
                 then,
                 elze,
             } => self.if_stmt(condition, then, elze),
-            Stmt::Function { body, params, .. } => {
-                self.function_decl(body, params)
-            }
+            Stmt::Function {
+                name, body, params, ..
+            } => self.function_decl(name, body, params),
             Stmt::Block(stmts) => self.block(stmts, None),
             Stmt::LocalVariable {
                 name,
                 init,
                 is_mutable,
             } => self.local_variable(name, init, *is_mutable),
-            Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
+            Stmt::GlobalVariable { name, init } => {
+                self.global_variable_decl(name, init)
+            }
             Stmt::Expression(expr) => LLStmt::Expression(self.expression(expr)),
             Stmt::While { condition, body } => self.while_stmt(condition, body),
             Stmt::Print(expr) => self.print_stmt(expr),
@@ -155,14 +198,33 @@ impl TypeChecker {
         }
     }
 
-    fn function_decl(&mut self, body: &[Stmt], params: &[Parameter]) {
-        self.block(body, Some(params));
+    fn function_decl(
+        &mut self,
+        name: &Token,
+        body: &[Stmt],
+        params: &[Parameter],
+    ) -> LLStmt {
+        self.space_for_locals = 0;
+        let body = Box::new(self.block(body, Some(params)));
+        let param_sizes: Vec<u16> =
+            params.iter().map(|p| p.1.as_size()).collect();
+        let param_space: u16 = param_sizes.iter().sum();
+        LLStmt::Function {
+            name: name.to_string(),
+            param_sizes,
+            space_for_locals: self.space_for_locals - param_space,
+            body,
+        }
     }
 
     fn return_stmt(&mut self, function_name: &Token, expr: &Expr) -> LLStmt {
-        let value= self.expression(expr);
+        let value = self.expression(expr);
         if let Some(data) = self.function_is_defined(function_name) {
-            self.error_if_ne(data.return_type, value.to_type(), Token::from(expr).span);
+            self.error_if_ne(
+                data.return_type,
+                value.to_type(),
+                Token::from(expr).span,
+            );
         };
         LLStmt::Return {
             name: function_name.to_string(),
@@ -173,19 +235,20 @@ impl TypeChecker {
     fn print_stmt(&mut self, expr: &Expr) -> LLStmt {
         let value = self.expression(expr);
         LLStmt::Print {
-            value,
             ty_pe: value.to_type(),
+            value,
         }
     }
 
     fn while_stmt(&mut self, cond: &Expr, body: &Stmt) -> LLStmt {
         let condition = self.expression(cond);
-        self.error_if_ne(Type::Bool, condition.to_type(), Token::from(cond).span);
+        self.error_if_ne(
+            Type::Bool,
+            condition.to_type(),
+            Token::from(cond).span,
+        );
         let body = Box::new(self.statement(body));
-        LLStmt::While {
-            condition,
-            body,
-        }
+        LLStmt::While { condition, body }
     }
 
     fn add_variable(&mut self, name: Token, info: Info) {
@@ -202,12 +265,42 @@ impl TypeChecker {
             .contains_key(name)
     }
 
-    fn local_variable(&mut self, name: &Token, init: &Expr, is_mutable: bool) -> LLStmt {
+    fn update_space_for_locals(&mut self, ty_pe: Type) -> u16 {
+        let value = self.space_for_locals;
+        self.space_for_locals += ty_pe.as_size();
+        value
+    }
+
+    fn local_variable(
+        &mut self,
+        name: &Token,
+        init: &Expr,
+        is_mutable: bool,
+    ) -> LLStmt {
         if self.variable_is_declared_in_current_scope(name) {
-            let ty_pe = self.error(BobaError::VariableRedeclaration(name.clone()));
+            let ty_pe =
+                self.error(BobaError::VariableRedeclaration(name.clone()));
+            LLStmt::LocalVariable {
+                init: LLExpr::Number(0),
+                ty_pe,
+                variable_index: 0,
+            }
         } else {
             let init = self.expression(init);
-            self.add_variable(name.clone(), Info::new(init.to_type(), is_mutable));
+            let variable_index = self.update_space_for_locals(init.to_type());
+            self.add_variable(
+                name.clone(),
+                Info::new(
+                    init.to_type(),
+                    is_mutable,
+                    Kind::LocalVariable(variable_index),
+                ),
+            );
+            LLStmt::LocalVariable {
+                ty_pe: init.to_type(),
+                init,
+                variable_index,
+            }
         }
     }
 
@@ -221,11 +314,19 @@ impl TypeChecker {
 
     fn init_parameters(&mut self, params: &[Parameter]) {
         for (param, param_type) in params {
-            let param = param.into();
-            if self.variable_is_declared_in_current_scope(&param) {
-                self.error(BobaError::VariableRedeclaration(param));
+            let param_token = param.into();
+            if self.variable_is_declared_in_current_scope(&param_token) {
+                self.error(BobaError::VariableRedeclaration(param_token));
             } else {
-                self.add_variable(param, Info::new(*param_type, false));
+                let parameter_index = self.update_space_for_locals(*param_type);
+                self.add_variable(
+                    param_token,
+                    Info::new(
+                        *param_type,
+                        false,
+                        Kind::Parameter(parameter_index),
+                    ),
+                );
             }
         }
     }
@@ -273,7 +374,7 @@ impl TypeChecker {
             Token::from(cond).span,
         );
         let then = Box::new(self.statement(then));
-        let elze = elze.map(|stmt| Box::new(self.statement(stmt.as_ref())));
+        let elze = elze.as_ref().map(|stmt| Box::new(self.statement(stmt)));
         LLStmt::If {
             condition,
             then,
@@ -291,7 +392,13 @@ impl TypeChecker {
             }
             Expr::Assign { name, value } => self.assign(name, value),
             Expr::Variable(token) => self.variable(token),
-            Expr::Group(expr) => self.expression(expr),
+            Expr::Group(expr) => {
+                let expr = self.expression(expr);
+                LLExpr::Group {
+                    ty_pe: expr.to_type(),
+                    value: Box::new(expr),
+                }
+            }
             Expr::Unary { oper, right } => self.unary(oper, right),
             Expr::Call { callee, args } => self.function_call(callee, args),
         }
@@ -361,30 +468,49 @@ impl TypeChecker {
         }
     }
 
-    fn assign(&mut self, name: &Expr, value: &Expr) -> Type {
-        match name {
+    fn assign(&mut self, name: &Expr, value: &Expr) -> LLExpr {
+        let (ty_pe, index) = match name {
             Expr::Variable(token) => {
-                if let Some(info) = self.get_info(token) {
-                    let expected = info.ty_pe;
-                    if info.is_mutable {
-                        let value_ty = self.expression(value);
-                        self.error_if_ne(expected, value_ty, token.span);
-                        value_ty
+                if let Some(Info {
+                    ty_pe,
+                    is_mutable,
+                    kind: Kind::Parameter(index) | Kind::LocalVariable(index),
+                }) = self.get_info(token)
+                {
+                    if is_mutable {
+                        let value_ty = self.expression(value).to_type();
+                        self.error_if_ne(ty_pe, value_ty, token.span);
+                        (value_ty, index)
                     } else {
-                        self.error(BobaError::AssignToImmutable(name.into()))
+                        (
+                            self.error(BobaError::AssignToImmutable(
+                                name.into(),
+                            )),
+                            0,
+                        )
                     }
                 } else {
-                    self.error(BobaError::UndeclaredVariable(token.clone()))
+                    (
+                        self.error(BobaError::UndeclaredVariable(
+                            token.clone(),
+                        )),
+                        0,
+                    )
                 }
             }
-            _ => self.error(BobaError::AssignToNonVariable(name.into())),
+            _ => (self.error(BobaError::AssignToNonVariable(name.into())), 0),
+        };
+        LLExpr::Assign {
+            value: Box::new(self.expression(value)),
+            index,
+            ty_pe,
         }
     }
 
-    fn get_info(&self, name: &Token) -> Option<&Info> {
+    fn get_info(&self, name: &Token) -> Option<Info> {
         for scope in self.type_table.iter().rev() {
             if scope.contains_key(name) {
-                return scope.get(name);
+                return scope.get(name).cloned();
             } else {
                 continue;
             }
@@ -398,11 +524,17 @@ impl TypeChecker {
     }
 
     fn variable(&mut self, token: &Token) -> LLExpr {
-        if let Some(Info { ty_pe, is_mutable }) = self.get_info(token) {
+        if let Some(Info {
+            ty_pe,
+            is_mutable,
+            kind,
+        }) = self.get_info(token)
+        {
             LLExpr::Variable {
                 name: token.to_string(),
-                ty_pe: *ty_pe,
-                is_mutable: *is_mutable,
+                ty_pe,
+                is_mutable,
+                kind: kind.clone(),
             }
         } else {
             let ty_pe =
@@ -411,6 +543,7 @@ impl TypeChecker {
                 name: String::from(""),
                 ty_pe,
                 is_mutable: false,
+                kind: Kind::GlobalVariable,
             }
         }
     }
