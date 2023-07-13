@@ -66,8 +66,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn consume_type(&mut self, error_msg: &str) -> Result<Type, BobaError> {
         self.cursor
             .next_if(|token| token.is_type())
-            .map(|token| token.to_type())
-            .flatten()
+            .and_then(|token| token.to_type())
             .ok_or(self.error(error_msg))
     }
 

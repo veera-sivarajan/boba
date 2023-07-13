@@ -172,16 +172,17 @@ impl TypeChecker {
     }
 
     fn add_variable(&mut self, name: Token, info: Info) {
-        let scope = self.type_table.last_mut().expect("Type table is empty.");
-        scope.insert(name, info);
+        self.type_table
+            .last_mut()
+            .expect("Type table is empty.")
+            .insert(name, info);
     }
 
     fn variable_is_declared_in_current_scope(&self, name: &Token) -> bool {
-        let current_scope = self
-            .type_table
+        self.type_table
             .last()
-            .expect("No Symbol table for current scope.");
-        current_scope.contains_key(name)
+            .expect("No symbol table for current scope.")
+            .contains_key(name)
     }
 
     fn local_variable(&mut self, name: &Token, init: &Expr, is_mutable: bool) {
@@ -269,8 +270,14 @@ impl TypeChecker {
     }
 
     fn function_call(&mut self, function_name: &Token, args: &[Expr]) -> Type {
-        let Some(FunctionData { params, return_type, .. }) = self.function_is_defined(function_name) else {
-            return self.error(BobaError::UndeclaredFunction(function_name.clone()));
+        let Some(FunctionData {
+            params,
+            return_type,
+            ..
+        }) = self.function_is_defined(function_name)
+        else {
+            return self
+                .error(BobaError::UndeclaredFunction(function_name.clone()));
         };
         if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
