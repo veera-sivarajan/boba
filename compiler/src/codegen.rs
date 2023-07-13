@@ -1,7 +1,7 @@
-use crate::typecheck::{Kind, Type};
 use crate::error::BobaError;
 use crate::expr::{BinaryOperand, Comparison, LLExpr, UnaryOperand};
 use crate::stmt::LLStmt;
+use crate::typecheck::{Kind, Type};
 use std::fmt::Write;
 
 #[derive(Default)]
@@ -146,7 +146,7 @@ impl CodeGen {
                 self.registers.deallocate(register);
                 Ok(())
             }
-            LLStmt::Print{ value, ty_pe} => self.print_stmt(value, ty_pe),
+            LLStmt::Print { value, ty_pe } => self.print_stmt(value, ty_pe),
             LLStmt::If {
                 condition,
                 then,
@@ -155,11 +155,11 @@ impl CodeGen {
             LLStmt::Block(stmts) => self.block_stmt(stmts),
             LLStmt::Function {
                 name,
-                params_count,
-                locals_count,
+                param_sizes,
+                space_for_locals,
                 body,
-            } => self.function_decl(name, *params_count, locals_count, body),
-            LLStmt::Return { name, expr } => self.return_stmt(name, expr),
+            } => self.function_decl(name, param_sizes, space_for_locals, body),
+            LLStmt::Return { name, value } => self.return_stmt(name, value),
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
             }
@@ -214,8 +214,8 @@ impl CodeGen {
     fn function_decl(
         &mut self,
         name: &str,
-        params_count: u8,
-        locals_count: &u8,
+        params_sizes: &[u16],
+        space_for_locals: &u16,
         body: &LLStmt,
     ) -> Result<(), BobaError> {
         self.add_global_name(name);
@@ -234,7 +234,6 @@ impl CodeGen {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        let space_for_locals = locals_count * 8;
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
@@ -279,6 +278,7 @@ impl CodeGen {
             left,
             oper: BinaryOperand::Compare(operator),
             right,
+            ..
         } = condition
         {
             let left = self.expression(left)?;
@@ -322,8 +322,12 @@ impl CodeGen {
         Ok(())
     }
 
-    fn print_stmt(&mut self, expr: &LLExpr) -> Result<(), BobaError> {
-        let register = self.expression(expr)?;
+    fn print_stmt(
+        &mut self,
+        value: &LLExpr,
+        _ty_pe: &Type,
+    ) -> Result<(), BobaError> {
+        let register = self.expression(value)?;
         self.emit_code("andq", "$-16", "%rsp")?;
         self.emit_code("movq", &register, "%rsi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
@@ -405,18 +409,22 @@ impl CodeGen {
         expr: &LLExpr,
     ) -> Result<RegisterIndex, BobaError> {
         match expr {
-            LLExpr::Binary { left, oper, right } => {
-                self.binary(left, oper, right)
-            }
+            LLExpr::Binary {
+                left, oper, right, ..
+            } => self.binary(left, oper, right),
             LLExpr::Number(num) => self.number(*num),
             LLExpr::Variable {
                 name, ty_pe, kind, ..
             } => self.variable(name, ty_pe, kind),
             LLExpr::Boolean(value) => self.boolean(value),
-            LLExpr::Call { callee, args } => self.function_call(callee, args),
-            LLExpr::Assign { value, index } => self.assignment(value, *index),
-            LLExpr::Unary { oper, right } => self.unary(oper, right),
-            LLExpr::Group(expr) => self.expression(expr),
+            LLExpr::Call { callee, args, .. } => {
+                self.function_call(callee, args)
+            }
+            LLExpr::Assign { value, index, .. } => {
+                self.assignment(value, *index)
+            }
+            LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
+            LLExpr::Group { value, .. } => self.expression(expr),
             LLExpr::String(literal) => self.string(literal),
         }
     }
@@ -462,7 +470,7 @@ impl CodeGen {
     fn assignment(
         &mut self,
         value: &LLExpr,
-        index: u8,
+        index: u16,
     ) -> Result<RegisterIndex, BobaError> {
         let value = self.expression(value)?;
         // TODO: Fix size of variable
