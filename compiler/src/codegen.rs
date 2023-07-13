@@ -1,4 +1,4 @@
-use crate::analyzer::{Kind, Type};
+use crate::typecheck::{Kind, Type};
 use crate::error::BobaError;
 use crate::expr::{BinaryOperand, Comparison, LLExpr, UnaryOperand};
 use crate::stmt::LLStmt;
@@ -146,7 +146,7 @@ impl CodeGen {
                 self.registers.deallocate(register);
                 Ok(())
             }
-            LLStmt::Print(expr) => self.print_stmt(expr),
+            LLStmt::Print{ value, ty_pe} => self.print_stmt(value, ty_pe),
             LLStmt::If {
                 condition,
                 then,
@@ -197,7 +197,7 @@ impl CodeGen {
         &mut self,
         init: &LLExpr,
         ty_pe: &Type,
-        index: &u8,
+        index: &u16,
     ) -> Result<(), BobaError> {
         let register = self.expression(init)?;
         let size: u8 = ty_pe.into();
