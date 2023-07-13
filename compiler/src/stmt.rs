@@ -1,5 +1,4 @@
-// use crate::analyzer::Type;
-use crate::expr::Expr;
+use crate::expr::{Expr, LLExpr};
 use crate::lexer::Token;
 use crate::typecheck::Type;
 
@@ -40,48 +39,48 @@ pub enum Stmt {
     },
 }
 
-impl From<&Stmt> for Token {
-    fn from(stmt: &Stmt) -> Token {
-        match stmt {
-            Stmt::LocalVariable { name, .. } => name.clone(),
-            Stmt::GlobalVariable { name, .. } => name.clone(),
-            Stmt::Function { name, .. } => name.clone(),
-            _ => panic!("Cannot turn stmt into token."),
-        }
-    }
-}
-
-// #[derive(Clone, Debug)]
-// pub enum LLStmt {
-//     LocalVariable {
-//         init: LLExpr,
-//         ty_pe: Type,
-//         variable_index: u8,
-//     },
-//     GlobalVariable {
-//         name: String,
-//         init: LLExpr,
-//     },
-//     Expression(LLExpr),
-//     Print(LLExpr),
-//     Block(Vec<LLStmt>),
-//     If {
-//         condition: LLExpr,
-//         then: Box<LLStmt>,
-//         elze: Option<Box<LLStmt>>,
-//     },
-//     Function {
-//         name: String,
-//         params_count: u8,
-//         locals_count: u8,
-//         body: Box<LLStmt>,
-//     },
-//     Return {
-//         name: String,
-//         expr: LLExpr,
-//     },
-//     While {
-//         condition: LLExpr,
-//         body: Box<LLStmt>,
-//     },
+// impl From<&Stmt> for Token {
+//     fn from(stmt: &Stmt) -> Token {
+//         match stmt {
+//             Stmt::LocalVariable { name, .. } => name.clone(),
+//             Stmt::GlobalVariable { name, .. } => name.clone(),
+//             Stmt::Function { name, .. } => name.clone(),
+//             _ => panic!("Cannot turn stmt into token."),
+//         }
+//     }
 // }
+
+#[derive(Clone)]
+pub enum LLStmt {
+    LocalVariable {
+        init: LLExpr,
+        ty_pe: Type,
+        variable_index: u8,
+    },
+    GlobalVariable {
+        name: String,
+        init: LLExpr,
+    },
+    Expression(LLExpr),
+    Print(LLExpr), // needs a type
+    Block(Vec<LLStmt>),
+    If {
+        condition: LLExpr,
+        then: Box<LLStmt>,
+        elze: Option<Box<LLStmt>>,
+    },
+    Function {
+        name: String,
+        params_count: u8,
+        locals_count: u8,
+        body: Box<LLStmt>,
+    },
+    Return {
+        name: String,
+        expr: LLExpr,
+    },
+    While {
+        condition: LLExpr,
+        body: Box<LLStmt>,
+    },
+}
