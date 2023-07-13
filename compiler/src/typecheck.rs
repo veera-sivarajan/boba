@@ -1,7 +1,7 @@
 use crate::error::{BobaError, TypeError};
 use crate::expr::{Expr, LLExpr};
 use crate::lexer::{Span, Token, TokenType};
-use crate::stmt::{Parameter, Stmt, LLStmt};
+use crate::stmt::{LLStmt, Parameter, Stmt};
 use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
@@ -124,7 +124,7 @@ impl TypeChecker {
         }
     }
 
-    fn statement(&mut self, stmt: &Stmt) {
+    fn statement(&mut self, stmt: &Stmt) -> LLStmt {
         match stmt {
             Stmt::If {
                 condition,
@@ -140,13 +140,18 @@ impl TypeChecker {
                 init,
                 is_mutable,
             } => self.local_variable(name, init, *is_mutable),
-            Stmt::GlobalVariable { .. } => {}
-            Stmt::Expression(expr) => {
-                let _ = self.expression(expr);
-            }
+            Stmt::GlobalVariable { name, init } => self.global_variable_decl(name, init),
+            Stmt::Expression(expr) => LLStmt::Expression(self.expression(expr)),
             Stmt::While { condition, body } => self.while_stmt(condition, body),
             Stmt::Print(expr) => self.print_stmt(expr),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
+        }
+    }
+
+    fn global_variable_decl(&mut self, name: &Token, init: &Expr) -> LLStmt {
+        LLStmt::GlobalVariable {
+            name: name.to_string(),
+            init: self.expression(init),
         }
     }
 
@@ -154,21 +159,33 @@ impl TypeChecker {
         self.block(body, Some(params));
     }
 
-    fn return_stmt(&mut self, function_name: &Token, expr: &Expr) {
-        let found = self.expression(expr);
+    fn return_stmt(&mut self, function_name: &Token, expr: &Expr) -> LLStmt {
+        let value= self.expression(expr);
         if let Some(data) = self.function_is_defined(function_name) {
-            self.error_if_ne(data.return_type, found, Token::from(expr).span);
+            self.error_if_ne(data.return_type, value.to_type(), Token::from(expr).span);
         };
+        LLStmt::Return {
+            name: function_name.to_string(),
+            value,
+        }
     }
 
-    fn print_stmt(&mut self, expr: &Expr) {
-        let _ty = self.expression(expr);
+    fn print_stmt(&mut self, expr: &Expr) -> LLStmt {
+        let value = self.expression(expr);
+        LLStmt::Print {
+            value,
+            ty_pe: value.to_type(),
+        }
     }
 
-    fn while_stmt(&mut self, condition: &Expr, body: &Stmt) {
-        let cond_type = self.expression(condition);
-        self.error_if_ne(Type::Bool, cond_type, Token::from(condition).span);
-        self.statement(body);
+    fn while_stmt(&mut self, cond: &Expr, body: &Stmt) -> LLStmt {
+        let condition = self.expression(cond);
+        self.error_if_ne(Type::Bool, condition.to_type(), Token::from(cond).span);
+        let body = Box::new(self.statement(body));
+        LLStmt::While {
+            condition,
+            body,
+        }
     }
 
     fn add_variable(&mut self, name: Token, info: Info) {
@@ -185,12 +202,12 @@ impl TypeChecker {
             .contains_key(name)
     }
 
-    fn local_variable(&mut self, name: &Token, init: &Expr, is_mutable: bool) {
+    fn local_variable(&mut self, name: &Token, init: &Expr, is_mutable: bool) -> LLStmt {
         if self.variable_is_declared_in_current_scope(name) {
-            self.error(BobaError::VariableRedeclaration(name.clone()));
+            let ty_pe = self.error(BobaError::VariableRedeclaration(name.clone()));
         } else {
             let init = self.expression(init);
-            self.add_variable(name.clone(), Info::new(init, is_mutable));
+            self.add_variable(name.clone(), Info::new(init.to_type(), is_mutable));
         }
     }
 
@@ -213,15 +230,19 @@ impl TypeChecker {
         }
     }
 
-    fn block(&mut self, stmts: &[Stmt], params: Option<&[Parameter]>) {
+    fn block(
+        &mut self,
+        stmts: &[Stmt],
+        params: Option<&[Parameter]>,
+    ) -> LLStmt {
         self.new_scope();
         if let Some(params) = params {
             self.init_parameters(params);
         };
-        for stmt in stmts {
-            self.statement(stmt);
-        }
+        let ll_stmts: Vec<LLStmt> =
+            stmts.iter().map(|stmt| self.statement(stmt)).collect();
         self.exit_scope();
+        LLStmt::Block(ll_stmts)
     }
 
     fn error_if_ne(&mut self, expected: Type, found: Type, span: Span) {
@@ -241,22 +262,29 @@ impl TypeChecker {
 
     fn if_stmt(
         &mut self,
-        condition: &Expr,
+        cond: &Expr,
         then: &Stmt,
         elze: &Option<Box<Stmt>>,
-    ) {
-        let cond_type = self.expression(condition);
-        self.error_if_ne(Type::Bool, cond_type, Token::from(condition).span);
-        self.statement(then);
-        if let Some(stmt) = elze {
-            self.statement(stmt);
-        };
+    ) -> LLStmt {
+        let condition = self.expression(cond);
+        self.error_if_ne(
+            Type::Bool,
+            condition.to_type(),
+            Token::from(cond).span,
+        );
+        let then = Box::new(self.statement(then));
+        let elze = elze.map(|stmt| Box::new(self.statement(stmt.as_ref())));
+        LLStmt::If {
+            condition,
+            then,
+            elze,
+        }
     }
 
     fn expression(&mut self, expr: &Expr) -> LLExpr {
         match expr {
             Expr::Number { value, .. } => LLExpr::Number(*value),
-            Expr::Boolean { value,.. } => LLExpr::Boolean(*value),
+            Expr::Boolean { value, .. } => LLExpr::Boolean(*value),
             Expr::String { value, .. } => LLExpr::String(value.to_owned()),
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
@@ -269,7 +297,11 @@ impl TypeChecker {
         }
     }
 
-    fn function_call(&mut self, function_name: &Token, args: &[Expr]) -> LLExpr {
+    fn function_call(
+        &mut self,
+        function_name: &Token,
+        args: &[Expr],
+    ) -> LLExpr {
         let Some(FunctionData {
             params,
             return_type,
@@ -287,7 +319,11 @@ impl TypeChecker {
         let ty_pe = if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
                 let arg_type = self.expression(arg);
-                self.error_if_ne(*param_type, arg_type.to_type(), Token::from(arg).span);
+                self.error_if_ne(
+                    *param_type,
+                    arg_type.to_type(),
+                    Token::from(arg).span,
+                );
             }
             return_type
         } else {
@@ -369,7 +405,8 @@ impl TypeChecker {
                 is_mutable: *is_mutable,
             }
         } else {
-            let ty_pe = self.error(BobaError::UndeclaredVariable(token.clone()));
+            let ty_pe =
+                self.error(BobaError::UndeclaredVariable(token.clone()));
             LLExpr::Variable {
                 name: String::from(""),
                 ty_pe,

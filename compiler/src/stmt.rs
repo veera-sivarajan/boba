@@ -62,7 +62,10 @@ pub enum LLStmt {
         init: LLExpr,
     },
     Expression(LLExpr),
-    Print(LLExpr), // needs a type
+    Print {
+        value: LLExpr,
+        ty_pe: Type,
+    },
     Block(Vec<LLStmt>),
     If {
         condition: LLExpr,
@@ -77,7 +80,7 @@ pub enum LLStmt {
     },
     Return {
         name: String,
-        expr: LLExpr,
+        value: LLExpr,
     },
     While {
         condition: LLExpr,
