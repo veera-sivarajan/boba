@@ -21,6 +21,7 @@ impl Labels {
     }
 }
 
+#[derive(Copy, Clone)]
 enum RegisterSize {
     Byte,
     DWord,
@@ -38,6 +39,7 @@ impl From<u16> for RegisterSize {
     }
 }
 
+#[derive(Copy, Clone)]
 struct RegisterIndex {
     value: u8,
     size: RegisterSize,
@@ -88,7 +90,7 @@ impl ScratchRegisters {
     }
 
     pub fn deallocate(&mut self, index: RegisterIndex) {
-        let register = self.table.get_mut(index.0 as usize).unwrap();
+        let register = self.table.get_mut(index.value as usize).unwrap();
         *register = false;
     }
 }
@@ -180,10 +182,10 @@ impl CodeGen {
             LLStmt::Block(stmts) => self.block_stmt(stmts),
             LLStmt::Function {
                 name,
-                param_sizes,
+                param_types,
                 space_for_locals,
                 body,
-            } => self.function_decl(name, param_sizes, space_for_locals, body),
+            } => self.function_decl(name, param_types, space_for_locals, body),
             LLStmt::Return { name, value } => self.return_stmt(name, value),
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
@@ -211,8 +213,11 @@ impl CodeGen {
         name: &str,
         expr: &LLExpr,
     ) -> Result<(), BobaError> {
+        let return_type = expr.to_type();
         let register = self.expression(expr)?;
-        self.emit_code("movq", &register, "%rax")?;
+        let mov = self.move_for(&return_type);
+        let rax = self.rax_for(&return_type).to_string();
+        self.emit_code(mov, &register, rax)?;
         self.emit_code("jmp", format!(".{name}_epilogue"), "")?;
         self.registers.deallocate(register);
         Ok(())
@@ -225,7 +230,8 @@ impl CodeGen {
         index: &u16,
     ) -> Result<(), BobaError> {
         let register = self.expression(init)?;
-        self.emit_code(self.move_for(ty_pe), &register, format!("-{index}(%rbp)"))?;
+        let mov= self.move_for(ty_pe);
+        self.emit_code(mov, &register, format!("-{index}(%rbp)"))?;
         self.registers.deallocate(register);
         Ok(())
     }
@@ -237,7 +243,7 @@ impl CodeGen {
     fn function_decl(
         &mut self,
         name: &str,
-        params_sizes: &[u16],
+        param_types: &[Type],
         space_for_locals: &u16,
         body: &LLStmt,
     ) -> Result<(), BobaError> {
@@ -245,12 +251,14 @@ impl CodeGen {
         self.emit_label(name)?;
         self.emit_code("pushq", "%rbp", "")?;
         self.emit_code("movq", "%rsp", "%rbp")?;
-        let argument_registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
-        for index in 0..params_count {
+        for index in 0..param_types.len() {
+            let param_type = param_types[index];
+            let register_size = RegisterSize::from(param_type.as_size());
             if index < 6 {
+                let push = self.push_for(&param_type);
                 self.emit_code(
-                    "pushq",
-                    argument_registers[index as usize],
+                    push,
+                    ARGUMENTS[register_size as usize][index],
                     "",
                 )?;
             } else {
@@ -383,7 +391,7 @@ impl CodeGen {
 
     fn code_writer(
         &mut self,
-        instruction: &str,
+        instruction: impl fmt::Display,
         first_operand: impl fmt::Display,
         second_operand: impl fmt::Display,
     ) -> Result<(), std::fmt::Error> {
@@ -403,7 +411,7 @@ impl CodeGen {
 
     fn emit_code(
         &mut self,
-        instruction: &str,
+        instruction: impl fmt::Display,
         first_operand: impl fmt::Display,
         second_operand: impl fmt::Display,
     ) -> Result<(), BobaError> {
@@ -450,7 +458,7 @@ impl CodeGen {
                 self.assignment(value, *index, ty_pe)
             }
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
-            LLExpr::Group { value, .. } => self.expression(expr),
+            LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
         }
     }
@@ -500,7 +508,8 @@ impl CodeGen {
         ty_pe: &Type,
     ) -> Result<RegisterIndex, BobaError> {
         let value = self.expression(value)?;
-        self.emit_code(self.move_for(ty_pe), &value, format!("-{index}(%rbp)"))?;
+        let mov = self.move_for(ty_pe);
+        self.emit_code(mov, &value, format!("-{index}(%rbp)"))?;
         Ok(value)
     }
 
@@ -519,7 +528,8 @@ impl CodeGen {
         for index in 0..6 {
             let ty = arg_types[index];
             let register_index = RegisterSize::from(ty.as_size()) as usize;
-            self.emit_code(self.move_for(&ty), arguments[index], ARGUMENTS[register_index][index]);
+            let mov = self.move_for(&ty);
+            self.emit_code(mov, arguments[index], ARGUMENTS[register_index][index])?;
         }
         self.emit_code("pushq", "%r10", "")?;
         self.emit_code("pushq", "%r11", "")?;
@@ -527,7 +537,9 @@ impl CodeGen {
         self.emit_code("popq", "%r11", "")?;
         self.emit_code("popq", "%r10", "")?;
         let result = self.registers.allocate(ty_pe);
-        self.emit_code(self.move_for(ty_pe), self.rax_for(ty_pe), &result)?;
+        let mov = self.move_for(ty_pe);
+        let rax = self.rax_for(ty_pe);
+        self.emit_code(mov, rax, result)?;
         Ok(result)
     }
 
@@ -538,22 +550,31 @@ impl CodeGen {
         Ok(register)
     }
 
-    fn move_for(&self, ty_pe: &Type) -> &str {
+    fn move_for(&self, ty_pe: &Type) -> String {
         match ty_pe.as_size() {
             1 => "movb",
             4 => "movl",
             8 => "movq",
             _ => unreachable!(),
-        }
+        }.to_string()
     }
 
-    fn rax_for(&self, ty_pe: &Type) -> &str {
+    fn push_for(&self, ty_pe: &Type) -> String {
+        match ty_pe.as_size() {
+            1 => "pushb",
+            4 => "pushl",
+            8 => "pushq",
+            _ => unreachable!(),
+        }.to_string()
+    }
+
+    fn rax_for(&self, ty_pe: &Type) -> String {
         match ty_pe.as_size() {
             1 => "al",
             4 => "eax",
             8 => "rax",
             _ => unreachable!(),
-        }
+        }.to_string()
     }
 
     fn variable(

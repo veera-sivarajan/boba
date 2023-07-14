@@ -74,7 +74,7 @@ pub enum LLStmt {
     },
     Function {
         name: String,
-        param_sizes: Vec<u16>,
+        param_types: Vec<Type>,
         space_for_locals: u16,
         body: Box<LLStmt>,
     },

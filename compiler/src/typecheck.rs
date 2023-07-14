@@ -206,12 +206,11 @@ impl TypeChecker {
     ) -> LLStmt {
         self.space_for_locals = 0;
         let body = Box::new(self.block(body, Some(params)));
-        let param_sizes: Vec<u16> =
-            params.iter().map(|p| p.1.as_size()).collect();
-        let param_space: u16 = param_sizes.iter().sum();
+        let param_types: Vec<Type> = params.iter().map(|param| param.1).collect();
+        let param_space: u16 = params.iter().map(|param| param.1.as_size()).sum();
         LLStmt::Function {
             name: name.to_string(),
-            param_sizes,
+            param_types,
             space_for_locals: self.space_for_locals - param_space,
             body,
         }
