@@ -52,6 +52,12 @@ const REGISTERS: [[&str; 7]; 3] = [
     ["%rbx", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"],
 ];
 
+const ARGUMENTS: [[&str; 6]; 3] = [
+    ["%di", "%sil", "%dl", "%cl", "%r8b", "%r9b"],
+    ["%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"],
+    ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"],
+];
+
 use std::fmt;
 impl fmt::Display for RegisterIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -219,9 +225,7 @@ impl CodeGen {
         index: &u16,
     ) -> Result<(), BobaError> {
         let register = self.expression(init)?;
-        let size: u8 = ty_pe.into();
-        let index = (index + 1) * size;
-        self.emit_code("movq", &register, format!("-{index}(%rbp)"))?;
+        self.emit_code(self.move_for(ty_pe), &register, format!("-{index}(%rbp)"))?;
         self.registers.deallocate(register);
         Ok(())
     }
@@ -429,18 +433,21 @@ impl CodeGen {
     ) -> Result<RegisterIndex, BobaError> {
         match expr {
             LLExpr::Binary {
-                left, oper, right, ty_pe 
+                left,
+                oper,
+                right,
+                ty_pe,
             } => self.binary(left, oper, right, ty_pe),
             LLExpr::Number(num) => self.number(*num),
             LLExpr::Variable {
                 name, ty_pe, kind, ..
             } => self.variable(name, ty_pe, kind),
             LLExpr::Boolean(value) => self.boolean(value),
-            LLExpr::Call { callee, args, .. } => {
-                self.function_call(callee, args)
+            LLExpr::Call { callee, args, ty_pe } => {
+                self.function_call(callee, args, ty_pe)
             }
-            LLExpr::Assign { value, index, .. } => {
-                self.assignment(value, *index)
+            LLExpr::Assign { value, index, ty_pe } => {
+                self.assignment(value, *index, ty_pe)
             }
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(expr),
@@ -462,7 +469,7 @@ impl CodeGen {
     fn string(&mut self, literal: &str) -> Result<RegisterIndex, BobaError> {
         let label = self.labels.create();
         self.emit_string(&label, literal)?;
-        let register = self.registers.allocate();
+        let register = self.registers.allocate(&Type::String);
         self.emit_code("leaq", format!("{label}(%rip)"), &register)?;
         Ok(register)
     }
@@ -490,11 +497,10 @@ impl CodeGen {
         &mut self,
         value: &LLExpr,
         index: u16,
+        ty_pe: &Type,
     ) -> Result<RegisterIndex, BobaError> {
         let value = self.expression(value)?;
-        // TODO: Fix size of variable
-        let index = (index + 1) * 8;
-        self.emit_code("movq", &value, format!("-{index}(%rbp)"))?;
+        self.emit_code(self.move_for(ty_pe), &value, format!("-{index}(%rbp)"))?;
         Ok(value)
     }
 
@@ -502,31 +508,52 @@ impl CodeGen {
         &mut self,
         callee: &str,
         args: &[LLExpr],
+        ty_pe: &Type,
     ) -> Result<RegisterIndex, BobaError> {
         self.emit_code("andq", "$-16", "%rsp")?;
         let arguments = args
             .iter()
             .map(|arg| self.expression(arg))
             .collect::<Result<Vec<RegisterIndex>, BobaError>>()?;
-        let registers = ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"];
-        for (value, register) in arguments.iter().zip(registers.iter()) {
-            self.emit_code("movq", value, register)?;
+        let arg_types: Vec<Type> = args.iter().map(|arg| arg.to_type()).collect();
+        for index in 0..6 {
+            let ty = arg_types[index];
+            let register_index = RegisterSize::from(ty.as_size()) as usize;
+            self.emit_code(self.move_for(&ty), arguments[index], ARGUMENTS[register_index][index]);
         }
         self.emit_code("pushq", "%r10", "")?;
         self.emit_code("pushq", "%r11", "")?;
         self.emit_code("call", callee, "")?;
         self.emit_code("popq", "%r11", "")?;
         self.emit_code("popq", "%r10", "")?;
-        let result = self.registers.allocate();
-        self.emit_code("movq", "%rax", &result)?;
+        let result = self.registers.allocate(ty_pe);
+        self.emit_code(self.move_for(ty_pe), self.rax_for(ty_pe), &result)?;
         Ok(result)
     }
 
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
         let number = u8::from(*value);
-        let register = self.registers.allocate();
-        self.emit_code("movq", format!("${number}"), &register)?;
+        let register = self.registers.allocate(&Type::Bool);
+        self.emit_code("movb", format!("${number}"), &register)?;
         Ok(register)
+    }
+
+    fn move_for(&self, ty_pe: &Type) -> &str {
+        match ty_pe.as_size() {
+            1 => "movb",
+            4 => "movl",
+            8 => "movq",
+            _ => unreachable!(),
+        }
+    }
+
+    fn rax_for(&self, ty_pe: &Type) -> &str {
+        match ty_pe.as_size() {
+            1 => "al",
+            4 => "eax",
+            8 => "rax",
+            _ => unreachable!(),
+        }
     }
 
     fn variable(
@@ -535,14 +562,16 @@ impl CodeGen {
         ty_pe: &Type,
         kind: &Kind,
     ) -> Result<RegisterIndex, BobaError> {
-        let register = self.registers.allocate();
+        let register = self.registers.allocate(ty_pe);
         if let Kind::Parameter(index) | Kind::LocalVariable(index) = kind {
-            let size: u8 = ty_pe.into();
-            let index = (index + 1) * size;
-            self.emit_code("movq", format!("-{index}(%rbp)"), &register)?;
+            self.emit_code(
+                self.move_for(ty_pe),
+                format!("-{index}(%rbp)"),
+                &register,
+            )?;
         } else {
             let symbol = format!("{name}(%rip)");
-            self.emit_code("movq", symbol, &register)?;
+            self.emit_code(self.move_for(ty_pe), symbol, &register)?;
         }
         Ok(register)
     }
