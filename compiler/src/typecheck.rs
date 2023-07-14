@@ -207,11 +207,11 @@ impl TypeChecker {
         self.space_for_locals = 0;
         let body = Box::new(self.block(body, Some(params)));
         let param_types: Vec<Type> = params.iter().map(|param| param.1).collect();
-        let param_space: u16 = params.iter().map(|param| param.1.as_size()).sum();
+        let _param_space: u16 = params.iter().map(|param| param.1.as_size()).sum();
         LLStmt::Function {
             name: name.to_string(),
             param_types,
-            space_for_locals: self.space_for_locals - param_space,
+            space_for_locals: self.space_for_locals,
             body,
         }
     }
@@ -265,9 +265,8 @@ impl TypeChecker {
     }
 
     fn update_space_for_locals(&mut self, ty_pe: Type) -> u16 {
-        let value = self.space_for_locals;
         self.space_for_locals += ty_pe.as_size();
-        value
+        self.space_for_locals
     }
 
     fn local_variable(

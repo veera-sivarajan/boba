@@ -355,11 +355,12 @@ impl CodeGen {
     fn print_stmt(
         &mut self,
         value: &LLExpr,
-        _ty_pe: &Type,
+        ty_pe: &Type,
     ) -> Result<(), BobaError> {
         let register = self.expression(value)?;
         self.emit_code("andq", "$-16", "%rsp")?;
-        self.emit_code("movq", &register, "%rsi")?;
+        // self.emit_code("movq", &register, "%rsi")?;
+        self.emit_code(self.move_for(ty_pe), &register, "%esi")?;
         self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
         self.emit_code("xor", "%eax", "%eax")?;
