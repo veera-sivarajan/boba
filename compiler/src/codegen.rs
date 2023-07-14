@@ -255,10 +255,9 @@ impl CodeGen {
             let param_type = param_types[index];
             let register_size = RegisterSize::from(param_type.as_size());
             if index < 6 {
-                let push = self.push_for(&param_type);
                 self.emit_code(
-                    push,
-                    ARGUMENTS[register_size as usize][index],
+                    "pushq",
+                    ARGUMENTS[2][index],
                     "",
                 )?;
             } else {
@@ -525,7 +524,7 @@ impl CodeGen {
             .map(|arg| self.expression(arg))
             .collect::<Result<Vec<RegisterIndex>, BobaError>>()?;
         let arg_types: Vec<Type> = args.iter().map(|arg| arg.to_type()).collect();
-        for index in 0..6 {
+        for index in 0..arg_types.len() {
             let ty = arg_types[index];
             let register_index = RegisterSize::from(ty.as_size()) as usize;
             let mov = self.move_for(&ty);
@@ -570,9 +569,9 @@ impl CodeGen {
 
     fn rax_for(&self, ty_pe: &Type) -> String {
         match ty_pe.as_size() {
-            1 => "al",
-            4 => "eax",
-            8 => "rax",
+            1 => "%al",
+            4 => "%eax",
+            8 => "%rax",
             _ => unreachable!(),
         }.to_string()
     }
