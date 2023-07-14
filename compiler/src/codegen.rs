@@ -429,8 +429,8 @@ impl CodeGen {
     ) -> Result<RegisterIndex, BobaError> {
         match expr {
             LLExpr::Binary {
-                left, oper, right, ..
-            } => self.binary(left, oper, right),
+                left, oper, right, ty_pe 
+            } => self.binary(left, oper, right, ty_pe),
             LLExpr::Number(num) => self.number(*num),
             LLExpr::Variable {
                 name, ty_pe, kind, ..
@@ -552,59 +552,60 @@ impl CodeGen {
         left: &LLExpr,
         oper: &BinaryOperand,
         right: &LLExpr,
+        ty_pe: &Type,
     ) -> Result<RegisterIndex, BobaError> {
         let left_register = self.expression(left)?;
         let right_register = self.expression(right)?;
         match &oper {
             BinaryOperand::Add => {
-                self.emit_code("addq", &left_register, &right_register)?;
+                self.emit_code("addl", &left_register, &right_register)?;
                 self.registers.deallocate(left_register);
                 Ok(right_register)
             }
             BinaryOperand::Subtract => {
-                self.emit_code("subq", &right_register, &left_register)?;
+                self.emit_code("subl", &right_register, &left_register)?;
                 self.registers.deallocate(right_register);
                 Ok(left_register)
             }
             BinaryOperand::Multiply => {
-                let result_register = self.registers.allocate();
-                self.emit_code("movq", &right_register, "%rax")?;
-                self.emit_code("imul", &left_register, "")?;
-                self.emit_code("movq", "%rax", &result_register)?;
+                let result_register = self.registers.allocate(ty_pe);
+                self.emit_code("movl", &right_register, "%eax")?;
+                self.emit_code("imull", &left_register, "")?;
+                self.emit_code("movl", "%eax", &result_register)?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
             BinaryOperand::Divide => {
-                let result_register = self.registers.allocate();
-                self.emit_code("movq", &left_register, "%rax")?;
+                let result_register = self.registers.allocate(ty_pe);
+                self.emit_code("movl", &left_register, "%eax")?;
                 self.emit_code("cqo", "", "")?;
-                self.emit_code("idiv", &right_register, "")?;
-                self.emit_code("movq", "%rax", &result_register)?;
+                self.emit_code("idivl", &right_register, "")?;
+                self.emit_code("movl", "%eax", &result_register)?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
             BinaryOperand::Modulus => {
-                let result_register = self.registers.allocate();
-                self.emit_code("movq", &left_register, "%rax")?;
+                let result_register = self.registers.allocate(ty_pe);
+                self.emit_code("movl", &left_register, "%eax")?;
                 self.emit_code("cqo", "", "")?;
-                self.emit_code("idiv", &right_register, "")?;
-                self.emit_code("movq", "%rdx", &result_register)?;
+                self.emit_code("idivl", &right_register, "")?;
+                self.emit_code("movl", "%edx", &result_register)?;
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
                 Ok(result_register)
             }
             BinaryOperand::Compare(comparison_operand) => {
-                let result = self.registers.allocate();
+                let result = self.registers.allocate(ty_pe);
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code("cmp", &right_register, &left_register)?;
+                self.emit_code("cmpl", &right_register, &left_register)?;
                 self.comparison_operation(comparison_operand, &false_label)?;
-                self.emit_code("mov", "$1", &result)?;
+                self.emit_code("movl", "$1", &result)?;
                 self.emit_code("jmp", &done_label, "")?;
                 self.emit_label(false_label)?;
-                self.emit_code("mov", "$0", &result)?;
+                self.emit_code("movl", "$0", &result)?;
                 self.emit_label(done_label)?;
                 Ok(result)
             }
@@ -612,9 +613,9 @@ impl CodeGen {
     }
 
     fn number(&mut self, value: i64) -> Result<RegisterIndex, BobaError> {
-        let register = self.registers.allocate();
+        let register = self.registers.allocate(&Type::Number);
         self.emit_code(
-            "movq",
+            "movl",
             format!("${}", value as u64).as_str(),
             &register,
         )?;
