@@ -21,25 +21,41 @@ impl Labels {
     }
 }
 
-struct RegisterIndex(u8);
+enum RegisterSize {
+    Byte,
+    DWord,
+    QWord,
+}
+
+impl From<u16> for RegisterSize {
+    fn from(value: u16) -> RegisterSize {
+        match value {
+            1 => RegisterSize::Byte,
+            4 => RegisterSize::DWord,
+            8 => RegisterSize::QWord,
+            _ => unreachable!(),
+        }
+    }
+}
+
+struct RegisterIndex {
+    value: u8,
+    size: RegisterSize,
+}
+
+// Byte:  [bl,  r10b, r11b, r12b, r13b, r14b, r15b]
+// DWord: [ebx, r10d, r11d, r12d, r13d, r14d, r15d]
+// QWord: [rbx, r10,  r11,  r12,  r13,  r14,  r15]
+const REGISTERS: [[&str; 7]; 3] = [
+    ["%bl", "%r10b", "%r11b", "%r12b", "%r13b", "%r14b", "%r15b"],
+    ["%ebx", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"],
+    ["%rbx", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"],
+];
 
 use std::fmt;
 impl fmt::Display for RegisterIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self.0 {
-                0 => "%rbx",
-                1 => "%r10",
-                2 => "%r11",
-                3 => "%r12",
-                4 => "%r13",
-                5 => "%r14",
-                6 => "%r15",
-                _ => unreachable!(),
-            }
-        )
+        write!(f, "{}", REGISTERS[self.size as usize][self.value as usize])
     }
 }
 
@@ -52,11 +68,14 @@ impl ScratchRegisters {
         Self { table: [false; 7] }
     }
 
-    pub fn allocate(&mut self) -> RegisterIndex {
+    pub fn allocate(&mut self, ty_pe: &Type) -> RegisterIndex {
         for (index, in_use) in self.table.iter_mut().enumerate() {
             if !*in_use {
                 *in_use = true;
-                return RegisterIndex(index as u8);
+                return RegisterIndex {
+                    value: index as u8,
+                    size: RegisterSize::from(ty_pe.as_size()),
+                };
             }
         }
         unreachable!()

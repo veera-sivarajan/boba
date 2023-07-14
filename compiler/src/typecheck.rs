@@ -14,9 +14,9 @@ pub enum Type {
 }
 
 impl Type {
-    fn as_size(&self) -> u16 {
+    pub fn as_size(&self) -> u16 {
         match self {
-            Type::Number => 8,
+            Type::Number => 4,
             Type::String => 8,
             Type::Bool => 1,
             Type::Unknown => 0,
