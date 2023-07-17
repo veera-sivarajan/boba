@@ -77,6 +77,7 @@ pub enum BobaError {
     LocalFunction(Token),
     MainNotFound,
     AssignToImmutable(Token),
+    AssigningUnitType(Token),
     AssignToNonVariable(Token),
     AssignToGlobalVariable(Token),
     GlobalVariableNotConst(Token),
@@ -169,7 +170,14 @@ impl fmt::Display for BobaError {
             AssignToImmutable(token) => {
                 writeln!(
                     f,
-                    "Error: Cannot assign to immutable variable '{}' at '{}'",
+                    "Error: Cannot assign to immutable variable '{}' at {}",
+                    token, token.span
+                )
+            }
+            AssigningUnitType(token) => {
+                writeln!(
+                    f,
+                    "Error: Cannot assign unit type value '{}' at {}",
                     token, token.span
                 )
             }

@@ -272,7 +272,7 @@ impl TypeChecker {
     fn local_variable(
         &mut self,
         name: &Token,
-        init: &Expr,
+        value: &Expr,
         is_mutable: bool,
     ) -> LLStmt {
         if self.variable_is_declared_in_current_scope(name) {
@@ -284,7 +284,10 @@ impl TypeChecker {
                 variable_index: 0,
             }
         } else {
-            let init = self.expression(init);
+            let init = self.expression(value);
+            if init.to_type() == Type::Unit {
+                self.error(BobaError::AssigningUnitType(value.into()));
+            };
             let variable_index = self.update_space_for_locals(init.to_type());
             self.add_variable(
                 name.clone(),
