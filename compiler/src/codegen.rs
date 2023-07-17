@@ -251,14 +251,17 @@ impl CodeGen {
         self.emit_label(name)?;
         self.emit_code("pushq", "%rbp", "")?;
         self.emit_code("movq", "%rsp", "%rbp")?;
+        let mut size_sum = 0;
         for index in 0..param_types.len() {
             let param_type = param_types[index];
             let register_size = RegisterSize::from(param_type.as_size());
             if index < 6 {
+                let mov = self.move_for(&param_type);
+                size_sum += param_type.as_size();
                 self.emit_code(
-                    "pushq",
-                    ARGUMENTS[2][index],
-                    "",
+                    mov,
+                    ARGUMENTS[register_size as usize][index],
+                    format!("-{}(%rbp)", size_sum),
                 )?;
             } else {
                 todo!("Can't handle functions with more than six parameters.");
