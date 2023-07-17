@@ -30,6 +30,7 @@ enum RegisterSize {
 
 impl From<u16> for RegisterSize {
     fn from(value: u16) -> RegisterSize {
+        dbg!(value);
         match value {
             1 => RegisterSize::Byte,
             4 => RegisterSize::DWord,
@@ -368,9 +369,8 @@ impl CodeGen {
     ) -> Result<(), BobaError> {
         let register = self.expression(value)?;
         self.emit_code("andq", "$-16", "%rsp")?;
-        // self.emit_code("movq", &register, "%rsi")?;
         self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe))?;
-        self.emit_code("leaq", self.format_string(ty_pe), "%rax")?;
+        self.format_string(ty_pe, &register)?;
         self.emit_code("movq", "%rax", "%rdi")?;
         self.emit_code("xor", "%eax", "%eax")?;
         self.emit_code("call", "printf@PLT", "")?;
@@ -587,13 +587,24 @@ impl CodeGen {
         lexeme.to_string()
     }
 
-    fn format_string(&self, ty_pe: &Type) -> String {
+    fn format_string(&mut self, ty_pe: &Type, register: &RegisterIndex) -> Result<(), BobaError> {
         match ty_pe {
-            Type::String => String::from(".format_string(%rip)"),
-            Type::Number => String::from(".format_number(%rip)"),
-            Type::Bool => todo!(),
+            Type::String => self.emit_code("leaq", ".format_string(%rip)", "%rax")?,
+            Type::Number => self.emit_code("leaq", ".format_number(%rip)", "%rax")?,
+            Type::Bool => {
+                let false_label = self.labels.create();
+                let done_label = self.labels.create();
+                self.emit_code("cmp", "$1", register)?;
+                self.emit_code("jne", &false_label, "")?;
+                self.emit_code("leaq", ".format_true(%rip)", "%rax")?;
+                self.emit_code("jmp", &done_label, "")?;
+                self.emit_label(false_label)?;
+                self.emit_code("leaq", ".format_false(%rip)", "%rax")?;
+                self.emit_label(done_label)?;
+            }
             _ => unreachable!(),
         }
+        Ok(())
     }
 
     fn variable(
@@ -671,10 +682,10 @@ impl CodeGen {
                 let done_label = self.labels.create();
                 self.emit_code("cmpl", &right_register, &left_register)?;
                 self.comparison_operation(comparison_operand, &false_label)?;
-                self.emit_code("movl", "$1", &result)?;
+                self.emit_code("movb", "$1", &result)?;
                 self.emit_code("jmp", &done_label, "")?;
                 self.emit_label(false_label)?;
-                self.emit_code("movl", "$0", &result)?;
+                self.emit_code("movb", "$0", &result)?;
                 self.emit_label(done_label)?;
                 Ok(result)
             }
