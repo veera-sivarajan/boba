@@ -123,8 +123,14 @@ impl CodeGen {
             registers: ScratchRegisters::new(),
             assembly: Assembly {
                 global: String::new(),
-                header: r#".LC0:
+                header: r#".format_string:
+        .string "%s\n"
+.format_number:
         .string "%d\n"
+.format_true:
+        .string "true\n"
+.format_false:
+        .string "false\n"
 "#
                 .to_string(),
                 code: String::new(),
@@ -363,8 +369,8 @@ impl CodeGen {
         let register = self.expression(value)?;
         self.emit_code("andq", "$-16", "%rsp")?;
         // self.emit_code("movq", &register, "%rsi")?;
-        self.emit_code(self.move_for(ty_pe), &register, "%esi")?;
-        self.emit_code("leaq", ".LC0(%rip)", "%rax")?;
+        self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe))?;
+        self.emit_code("leaq", self.format_string(ty_pe), "%rax")?;
         self.emit_code("movq", "%rax", "%rdi")?;
         self.emit_code("xor", "%eax", "%eax")?;
         self.emit_code("call", "printf@PLT", "")?;
@@ -555,29 +561,39 @@ impl CodeGen {
 
     fn move_for(&self, ty_pe: &Type) -> String {
         match ty_pe.as_size() {
-            1 => "movb",
-            4 => "movl",
-            8 => "movq",
+            1 => String::from("movb"),
+            4 => String::from("movl"),
+            8 => String::from("movq"),
             _ => unreachable!(),
-        }.to_string()
-    }
-
-    fn push_for(&self, ty_pe: &Type) -> String {
-        match ty_pe.as_size() {
-            1 => "pushb",
-            4 => "pushl",
-            8 => "pushq",
-            _ => unreachable!(),
-        }.to_string()
+        }
     }
 
     fn rax_for(&self, ty_pe: &Type) -> String {
         match ty_pe.as_size() {
-            1 => "%al",
-            4 => "%eax",
-            8 => "%rax",
+            1 => String::from("%al"),
+            4 => String::from("%eax"),
+            8 => String::from("%rax"),
             _ => unreachable!(),
-        }.to_string()
+        }
+    }
+
+    fn rsi_for(&self, ty_pe: &Type) -> String {
+        let lexeme = match ty_pe.as_size() {
+            1 => ARGUMENTS[RegisterSize::Byte as usize][1],
+            4 => ARGUMENTS[RegisterSize::DWord as usize][1],
+            8 => ARGUMENTS[RegisterSize::QWord as usize][1],
+            _ => unreachable!(),
+        };
+        lexeme.to_string()
+    }
+
+    fn format_string(&self, ty_pe: &Type) -> String {
+        match ty_pe {
+            Type::String => String::from(".format_string(%rip)"),
+            Type::Number => String::from(".format_number(%rip)"),
+            Type::Bool => todo!(),
+            _ => unreachable!(),
+        }
     }
 
     fn variable(
