@@ -58,6 +58,42 @@ const ARGUMENTS: [[&str; 6]; 3] = [
     ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"],
 ];
 
+fn move_for(ty_pe: Type) -> String {
+    match ty_pe.as_size() {
+        1 => String::from("movb"),
+        4 => String::from("movl"),
+        8 => String::from("movq"),
+        _ => unreachable!(),
+    }
+}
+
+fn rax_for(ty_pe: Type) -> String {
+    match ty_pe.as_size() {
+        1 => String::from("%al"),
+        4 => String::from("%eax"),
+        8 => String::from("%rax"),
+        _ => unreachable!(),
+    }
+}
+
+fn rsi_for(ty_pe: Type) -> String {
+    let lexeme = match ty_pe.as_size() {
+        1 => ARGUMENTS[RegisterSize::Byte as usize][1],
+        4 => ARGUMENTS[RegisterSize::DWord as usize][1],
+        8 => ARGUMENTS[RegisterSize::QWord as usize][1],
+        _ => unreachable!(),
+    };
+    lexeme.to_string()
+}
+
+fn cmp_for(ty_pe: Type) -> String {
+    match ty_pe.as_size() {
+        1 => String::from("cmpb"),
+        4 => String::from("cmpl"),
+        _ => unreachable!("Cannot compare these types. Typechecker should reject it."),
+    }
+}
+
 use std::fmt;
 impl fmt::Display for RegisterIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -211,8 +247,8 @@ impl CodeGen {
     fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
-        let mov = self.move_for(return_type);
-        let rax = self.rax_for(return_type).to_string();
+        let mov = move_for(return_type);
+        let rax = rax_for(return_type).to_string();
         self.emit_code(mov, &register, rax);
         self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
@@ -225,7 +261,7 @@ impl CodeGen {
         index: u16,
     ) {
         let register = self.expression(init);
-        let mov = self.move_for(ty_pe);
+        let mov = move_for(ty_pe);
         self.emit_code(mov, &register, format!("-{index}(%rbp)"));
         self.registers.deallocate(register);
     }
@@ -245,10 +281,11 @@ impl CodeGen {
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
+        self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(*param_type);
-            let mov = self.move_for(*param_type);
+            let mov = move_for(*param_type);
             size_sum += param_type.as_size();
             self.emit_code(
                 mov,
@@ -256,7 +293,6 @@ impl CodeGen {
                 format!("-{size_sum}(%rbp)"),
             );
         }
-        self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "");
@@ -297,15 +333,15 @@ impl CodeGen {
             ..
         } = condition
         {
-            let left = self.expression(left);
+            let lhs = self.expression(left);
             let right = self.expression(right);
-            self.emit_code("cmp", &right, &left);
+            self.emit_code(cmp_for(left.to_type()), &right, &lhs);
             self.comparison_operation(operator, false_label);
-            self.registers.deallocate(left);
+            self.registers.deallocate(lhs);
             self.registers.deallocate(right);
         } else {
             let result = self.expression(condition);
-            self.emit_code("cmp", "$1", &result); // condition code = result - 1
+            self.emit_code(cmp_for(condition.to_type()), "$1", &result); // condition code = result - 1
             self.emit_code("js", false_label, "");
             self.registers.deallocate(result);
         }
@@ -334,7 +370,7 @@ impl CodeGen {
     fn print_stmt(&mut self, value: &LLExpr, ty_pe: Type) {
         let register = self.expression(value);
         self.emit_code("andq", "$-16", "%rsp");
-        self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe));
+        self.emit_code(move_for(ty_pe), &register, rsi_for(ty_pe));
         self.format_string(ty_pe, &register);
         self.emit_code("movq", "%rax", "%rdi");
         self.emit_code("xor", "%eax", "%eax");
@@ -472,7 +508,7 @@ impl CodeGen {
         ty_pe: Type,
     ) -> RegisterIndex {
         let value = self.expression(value);
-        let mov = self.move_for(ty_pe);
+        let mov = move_for(ty_pe);
         self.emit_code(mov, &value, format!("-{index}(%rbp)"));
         value
     }
@@ -492,7 +528,7 @@ impl CodeGen {
             args.iter().map(|arg| arg.to_type()).collect();
         for (index, ty) in arg_types.iter().enumerate() {
             let register_index = RegisterSize::from(*ty) as usize;
-            let mov = self.move_for(*ty);
+            let mov = move_for(*ty);
             // SAFETY: Typechecker rejects functions with more than six
             // paramters
             let arg_value = unsafe { arguments.get_unchecked(index) };
@@ -505,8 +541,8 @@ impl CodeGen {
         self.emit_code("popq", "%r10", "");
         if ty_pe != Type::Unit {
             let result = self.registers.allocate(ty_pe);
-            let mov = self.move_for(ty_pe);
-            let rax = self.rax_for(ty_pe);
+            let mov = move_for(ty_pe);
+            let rax = rax_for(ty_pe);
             self.emit_code(mov, rax, &result);
             result
         } else {
@@ -523,33 +559,6 @@ impl CodeGen {
         register
     }
 
-    fn move_for(&self, ty_pe: Type) -> String {
-        match ty_pe.as_size() {
-            1 => String::from("movb"),
-            4 => String::from("movl"),
-            8 => String::from("movq"),
-            _ => unreachable!(),
-        }
-    }
-
-    fn rax_for(&self, ty_pe: Type) -> String {
-        match ty_pe.as_size() {
-            1 => String::from("%al"),
-            4 => String::from("%eax"),
-            8 => String::from("%rax"),
-            _ => unreachable!(),
-        }
-    }
-
-    fn rsi_for(&self, ty_pe: Type) -> String {
-        let lexeme = match ty_pe.as_size() {
-            1 => ARGUMENTS[RegisterSize::Byte as usize][1],
-            4 => ARGUMENTS[RegisterSize::DWord as usize][1],
-            8 => ARGUMENTS[RegisterSize::QWord as usize][1],
-            _ => unreachable!(),
-        };
-        lexeme.to_string()
-    }
 
     fn format_string(&mut self, ty_pe: Type, register: &RegisterIndex) {
         match ty_pe {
@@ -562,7 +571,7 @@ impl CodeGen {
             Type::Bool => {
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code("cmp", "$1", register);
+                self.emit_code("cmpb", "$1", register);
                 self.emit_code("jne", &false_label, "");
                 self.emit_code("leaq", ".format_true(%rip)", "%rax");
                 self.emit_code("jmp", &done_label, "");
@@ -583,13 +592,13 @@ impl CodeGen {
         let register = self.registers.allocate(ty_pe);
         if let Kind::Parameter(index) | Kind::LocalVariable(index) = kind {
             self.emit_code(
-                self.move_for(ty_pe),
+                move_for(ty_pe),
                 format!("-{index}(%rbp)"),
                 &register,
             );
         } else {
             let symbol = format!("{name}(%rip)");
-            self.emit_code(self.move_for(ty_pe), symbol, &register);
+            self.emit_code(move_for(ty_pe), symbol, &register);
         }
         register
     }
@@ -647,7 +656,7 @@ impl CodeGen {
                 let result = self.registers.allocate(ty_pe);
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code("cmpl", &right_register, &left_register);
+                self.emit_code(cmp_for(ty_pe), &right_register, &left_register);
                 self.comparison_operation(comparison_operand, &false_label);
                 self.emit_code("movb", "$1", &result);
                 self.emit_code("jmp", &done_label, "");
