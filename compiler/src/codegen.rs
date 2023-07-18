@@ -199,11 +199,7 @@ impl CodeGen {
         }
     }
 
-    fn while_stmt(
-        &mut self,
-        condition: &LLExpr,
-        body: &LLStmt,
-    ) {
+    fn while_stmt(&mut self, condition: &LLExpr, body: &LLStmt) {
         let loop_begin = self.labels.create();
         let loop_end = self.labels.create();
         self.emit_label(loop_begin.clone());
@@ -213,11 +209,7 @@ impl CodeGen {
         self.emit_label(loop_end);
     }
 
-    fn return_stmt(
-        &mut self,
-        name: &str,
-        expr: &LLExpr,
-    ) {
+    fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
         let mov = self.move_for(&return_type);
@@ -303,11 +295,7 @@ impl CodeGen {
         self.emit_label(done_label);
     }
 
-    fn boolean_expression(
-        &mut self,
-        condition: &LLExpr,
-        false_label: &str,
-    ) {
+    fn boolean_expression(&mut self, condition: &LLExpr, false_label: &str) {
         if let LLExpr::Binary {
             left,
             oper: BinaryOperand::Compare(operator),
@@ -338,12 +326,8 @@ impl CodeGen {
             Comparison::Less => self.emit_code("jnl", false_label, ""),
             Comparison::LessEqual => self.emit_code("jnle", false_label, ""),
             Comparison::Greater => self.emit_code("jng", false_label, ""),
-            Comparison::GreaterEqual => {
-                self.emit_code("jnge", false_label, "")
-            }
-            Comparison::EqualEqual => {
-                self.emit_code("jne", false_label, "")
-            }
+            Comparison::GreaterEqual => self.emit_code("jnge", false_label, ""),
+            Comparison::EqualEqual => self.emit_code("jne", false_label, ""),
         };
     }
 
@@ -353,11 +337,7 @@ impl CodeGen {
         }
     }
 
-    fn print_stmt(
-        &mut self,
-        value: &LLExpr,
-        ty_pe: &Type,
-    ) {
+    fn print_stmt(&mut self, value: &LLExpr, ty_pe: &Type) {
         let register = self.expression(value);
         self.emit_code("andq", "$-16", "%rsp");
         self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe));
@@ -403,13 +383,13 @@ impl CodeGen {
             write!(
                 &mut self.assembly.code,
                 "{first_operand}, {second_operand}"
-            ).expect("Unable to write code.");
+            )
+            .expect("Unable to write code.");
         } else if !first_operand.is_empty() {
             write!(&mut self.assembly.code, "{first_operand}")
                 .expect("Unable to write code.");
         }
-        writeln!(&mut self.assembly.code)
-            .expect("Unable to write code.");
+        writeln!(&mut self.assembly.code).expect("Unable to write code.");
     }
 
     fn emit_code(
@@ -421,26 +401,16 @@ impl CodeGen {
         self.code_writer(instruction, first_operand, second_operand);
     }
 
-    fn emit_label<S: Into<String>>(
-        &mut self,
-        label: S,
-    ) {
+    fn emit_label<S: Into<String>>(&mut self, label: S) {
         writeln!(&mut self.assembly.code, "{}:", label.into())
             .expect("Unable to write label.");
     }
 
-    fn global_variable_decl(
-        &mut self,
-        name: &str,
-        init: &LLExpr,
-    ) {
+    fn global_variable_decl(&mut self, name: &str, init: &LLExpr) {
         self.emit_data(name, "quad", init);
     }
 
-    fn expression(
-        &mut self,
-        expr: &LLExpr,
-    ) -> RegisterIndex {
+    fn expression(&mut self, expr: &LLExpr) -> RegisterIndex {
         match expr {
             LLExpr::Binary {
                 left,
@@ -469,11 +439,7 @@ impl CodeGen {
         }
     }
 
-    fn emit_string(
-        &mut self,
-        label: &str,
-        literal: &str,
-    ) {
+    fn emit_string(&mut self, label: &str, literal: &str) {
         writeln!(&mut self.assembly.header, "{label}:")
             .expect("Unable to emit string.");
         writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")
@@ -490,11 +456,7 @@ impl CodeGen {
         register
     }
 
-    fn unary(
-        &mut self,
-        oper: &UnaryOperand,
-        right: &LLExpr,
-    ) -> RegisterIndex {
+    fn unary(&mut self, oper: &UnaryOperand, right: &LLExpr) -> RegisterIndex {
         let operand = self.expression(right);
         match oper {
             UnaryOperand::LogicalNot => {
@@ -597,11 +559,7 @@ impl CodeGen {
         lexeme.to_string()
     }
 
-    fn format_string(
-        &mut self,
-        ty_pe: &Type,
-        register: &RegisterIndex,
-    ) {
+    fn format_string(&mut self, ty_pe: &Type, register: &RegisterIndex) {
         match ty_pe {
             Type::String => {
                 self.emit_code("leaq", ".format_string(%rip)", "%rax")

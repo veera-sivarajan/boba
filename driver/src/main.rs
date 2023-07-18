@@ -49,18 +49,18 @@ mod tests {
             .create(true)
             .truncate(true)
             .write(true)
-            .open("/home/veera/projects/boba/output/temp.s")
+            .open("/home/veera/projects/boba/test/output/temp.s")
             .unwrap();
         assembly_file.write_all(assembly.as_bytes()).unwrap();
         Command::new("gcc")
-            .arg("/home/veera/projects/boba/output/temp.s")
+            .arg("/home/veera/projects/boba/test/output/temp.s")
             .arg("-o")
-            .arg("/home/veera/projects/boba/output/temp")
+            .arg("/home/veera/projects/boba/test/output/temp")
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .output()
             .expect("Failed to invoke gcc.");
-        let output = Command::new("/home/veera/projects/boba/output/temp")
+        let output = Command::new("/home/veera/projects/boba/test/output/temp")
             .output()
             .expect("Failed to run the executable.");
         let output = std::str::from_utf8(&output.stdout).unwrap().trim();
@@ -79,9 +79,10 @@ mod tests {
 
     fn test_runner(file_name: &str) -> bool {
         let home_dir = "/home/veera/projects/boba/test/";
-        let home_out_dir = "/home/veera/projects/boba/output/";
+        let home_out_dir = "/home/veera/projects/boba/test/output/";
         let source_file = format!("{home_dir}{file_name}.rs");
         let output_file = format!("{home_out_dir}{file_name}.txt");
+        println!("{source_file}");
         let source = std::fs::read_to_string(source_file)
             .expect("Unable to read source file.");
         let output = std::fs::read_to_string(output_file)
@@ -96,14 +97,19 @@ mod tests {
         {
             for entry in entries {
                 if let Ok(dir_entry) = entry {
-                    let entry = dir_entry.path();
-                    let stem =
-                        entry.file_stem().map(|v| v.to_str().unwrap()).unwrap();
-                    if test_runner(stem) {
-                        continue;
-                    } else {
-                        println!("Failed: {stem:?}.rs");
-                        panic!();
+                    if dir_entry.file_type().is_ok_and(|value| value.is_file())
+                    {
+                        let entry = dir_entry.path();
+                        let stem = entry
+                            .file_stem()
+                            .map(|v| v.to_str().unwrap())
+                            .unwrap();
+                        if test_runner(stem) {
+                            continue;
+                        } else {
+                            println!("Failed: {stem:?}.rs");
+                            panic!();
+                        }
                     }
                 }
             }
