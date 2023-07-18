@@ -159,6 +159,11 @@ impl TypeChecker {
                             name.clone(),
                         ));
                     } else {
+                        if params.len() > 6 {
+                            self.error(BobaError::MoreThanSixParams(
+                                name.clone(),
+                            ));
+                        };
                         self.add_function(name, params, *return_type);
                     }
                 }

@@ -78,6 +78,7 @@ pub enum BobaError {
     ReturnTypeNotFound(Token),
     MainNotFound,
     AssignToImmutable(Token),
+    MoreThanSixParams(Token),
     AssigningUnitType(Token),
     AssignToNonVariable(Token),
     AssignToGlobalVariable(Token),
@@ -89,6 +90,13 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            MoreThanSixParams(token) => {
+                writeln!(
+                    f,
+                    "Error: Function '{token}' cannot have more than six parameters at {}.",
+                    token.span
+                )
+            }
             ReturnTypeNotFound(token) => {
                 writeln!(
                     f,

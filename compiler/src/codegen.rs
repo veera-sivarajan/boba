@@ -20,6 +20,7 @@ impl Labels {
     }
 }
 
+#[derive(Copy, Clone)]
 enum RegisterSize {
     Byte,
     DWord,
@@ -245,20 +246,15 @@ impl CodeGen {
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
         let mut size_sum = 0;
-        for index in 0..param_types.len() {
-            let param_type = param_types[index];
-            let register_size = RegisterSize::from(&param_type);
-            if index < 6 {
-                let mov = self.move_for(&param_type);
-                size_sum += param_type.as_size();
-                self.emit_code(
-                    mov,
-                    ARGUMENTS[register_size as usize][index],
-                    format!("-{}(%rbp)", size_sum),
-                );
-            } else {
-                todo!("Can't handle functions with more than six parameters.");
-            }
+        for (index, param_type) in param_types.iter().enumerate() {
+            let register_size = RegisterSize::from(param_type);
+            let mov = self.move_for(param_type);
+            size_sum += param_type.as_size();
+            self.emit_code(
+                mov,
+                ARGUMENTS[register_size as usize][index],
+                format!("-{}(%rbp)", size_sum),
+            );
         }
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
@@ -494,15 +490,13 @@ impl CodeGen {
             .collect::<Vec<RegisterIndex>>();
         let arg_types: Vec<Type> =
             args.iter().map(|arg| arg.to_type()).collect();
-        for index in 0..arg_types.len() {
-            let ty = arg_types[index];
-            let register_index = RegisterSize::from(&ty) as usize;
-            let mov = self.move_for(&ty);
-            self.emit_code(
-                mov,
-                arguments[index],
-                ARGUMENTS[register_index][index],
-            );
+        for (index, ty) in arg_types.iter().enumerate() {
+            let register_index = RegisterSize::from(ty) as usize;
+            let mov = self.move_for(ty);
+            // SAFETY: Typechecker rejects functions with more than six
+            // paramters
+            let arg_value = unsafe { arguments.get_unchecked(index) };
+            self.emit_code(mov, arg_value, ARGUMENTS[register_index][index]);
         }
         self.emit_code("pushq", "%r10", "");
         self.emit_code("pushq", "%r11", "");
