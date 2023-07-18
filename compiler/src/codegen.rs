@@ -237,7 +237,7 @@ impl CodeGen {
         index: &u16,
     ) -> Result<(), BobaError> {
         let register = self.expression(init)?;
-        let mov= self.move_for(ty_pe);
+        let mov = self.move_for(ty_pe);
         self.emit_code(mov, &register, format!("-{index}(%rbp)"))?;
         self.registers.deallocate(register);
         Ok(())
@@ -460,12 +460,16 @@ impl CodeGen {
                 name, ty_pe, kind, ..
             } => self.variable(name, ty_pe, kind),
             LLExpr::Boolean(value) => self.boolean(value),
-            LLExpr::Call { callee, args, ty_pe } => {
-                self.function_call(callee, args, ty_pe)
-            }
-            LLExpr::Assign { value, index, ty_pe } => {
-                self.assignment(value, *index, ty_pe)
-            }
+            LLExpr::Call {
+                callee,
+                args,
+                ty_pe,
+            } => self.function_call(callee, args, ty_pe),
+            LLExpr::Assign {
+                value,
+                index,
+                ty_pe,
+            } => self.assignment(value, *index, ty_pe),
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
@@ -533,12 +537,17 @@ impl CodeGen {
             .iter()
             .map(|arg| self.expression(arg))
             .collect::<Result<Vec<RegisterIndex>, BobaError>>()?;
-        let arg_types: Vec<Type> = args.iter().map(|arg| arg.to_type()).collect();
+        let arg_types: Vec<Type> =
+            args.iter().map(|arg| arg.to_type()).collect();
         for index in 0..arg_types.len() {
             let ty = arg_types[index];
             let register_index = RegisterSize::from(ty.as_size()) as usize;
             let mov = self.move_for(&ty);
-            self.emit_code(mov, arguments[index], ARGUMENTS[register_index][index])?;
+            self.emit_code(
+                mov,
+                arguments[index],
+                ARGUMENTS[register_index][index],
+            )?;
         }
         self.emit_code("pushq", "%r10", "")?;
         self.emit_code("pushq", "%r11", "")?;
@@ -587,10 +596,18 @@ impl CodeGen {
         lexeme.to_string()
     }
 
-    fn format_string(&mut self, ty_pe: &Type, register: &RegisterIndex) -> Result<(), BobaError> {
+    fn format_string(
+        &mut self,
+        ty_pe: &Type,
+        register: &RegisterIndex,
+    ) -> Result<(), BobaError> {
         match ty_pe {
-            Type::String => self.emit_code("leaq", ".format_string(%rip)", "%rax")?,
-            Type::Number => self.emit_code("leaq", ".format_number(%rip)", "%rax")?,
+            Type::String => {
+                self.emit_code("leaq", ".format_string(%rip)", "%rax")?
+            }
+            Type::Number => {
+                self.emit_code("leaq", ".format_number(%rip)", "%rax")?
+            }
             Type::Bool => {
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();

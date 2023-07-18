@@ -1,5 +1,5 @@
 use crate::lexer::{Token, TokenType};
-use crate::typecheck::{Type, Kind};
+use crate::typecheck::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
@@ -224,7 +224,9 @@ impl std::fmt::Debug for LLExpr {
                 }
             }
             LLExpr::Variable { name, .. } => write!(f, "{name}"),
-            LLExpr::Binary { left, oper, right, .. } => {
+            LLExpr::Binary {
+                left, oper, right, ..
+            } => {
                 write!(f, "{:?}", *left)?;
                 write!(f, "{:?}", oper)?;
                 write!(f, "{:?}", *right)
@@ -236,4 +238,3 @@ impl std::fmt::Debug for LLExpr {
         }
     }
 }
-
