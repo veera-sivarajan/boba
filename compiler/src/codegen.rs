@@ -624,13 +624,9 @@ impl CodeGen {
                 left_register
             }
             BinaryOperand::Multiply => {
-                let result_register = self.registers.allocate(ty_pe);
-                self.emit_code("movl", &right_register, "%eax");
-                self.emit_code("imull", &left_register, "");
-                self.emit_code("movl", "%eax", &result_register);
+                self.emit_code("imull", &left_register, &right_register);
                 self.registers.deallocate(left_register);
-                self.registers.deallocate(right_register);
-                result_register
+                right_register
             }
             BinaryOperand::Divide => {
                 let result_register = self.registers.allocate(ty_pe);
