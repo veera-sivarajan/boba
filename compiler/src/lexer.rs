@@ -425,7 +425,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn scan_string(&mut self) -> Result<Token, BobaError> {
-        let mut lexeme = String::from("");
+        let mut lexeme = String::new();
         let (start_pos, _) = self.cursor.next().unwrap(); // skip opening quotes
         let start = start_pos + 1;
         while let Some((_, ch)) = self.cursor.next_if(|x| x.1 != '"') {
@@ -444,7 +444,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn scan_number(&mut self, start_pos: usize) {
-        let mut lexeme = String::from("");
+        let mut lexeme = String::new();
         while let Some((_, num)) = self.cursor.next_if(|x| x.1.is_ascii_digit())
         {
             lexeme.push(num);

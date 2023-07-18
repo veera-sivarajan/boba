@@ -14,13 +14,12 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn as_size(&self) -> u16 {
+    pub fn as_size(self) -> u16 {
         match self {
             Type::Number => 4,
             Type::String => 8,
             Type::Bool => 1,
-            Type::Unknown => 0,
-            Type::Unit => 0,
+            Type::Unknown | Type::Unit => 0,
         }
     }
 }
@@ -184,7 +183,7 @@ impl TypeChecker {
                 body,
                 params,
                 return_type,
-            } => self.function_decl(name, body, params, return_type),
+            } => self.function_decl(name, body, params, *return_type),
             Stmt::Block(stmts) => self.block(stmts, None),
             Stmt::LocalVariable {
                 name,
@@ -218,11 +217,11 @@ impl TypeChecker {
         name: &Token,
         body: &[Stmt],
         params: &[Parameter],
-        return_type: &Type,
+        return_type: Type,
     ) -> LLStmt {
         self.init_function_checker();
         let body = Box::new(self.block(body, Some(params)));
-        if *return_type != Type::Unit && !self.return_stmt_verified {
+        if return_type != Type::Unit && !self.return_stmt_verified {
             self.error(BobaError::ReturnTypeNotFound(name.clone()));
         };
         let param_types: Vec<Type> =
@@ -407,7 +406,7 @@ impl TypeChecker {
         match expr {
             Expr::Number { value, .. } => LLExpr::Number(*value),
             Expr::Boolean { value, .. } => LLExpr::Boolean(*value),
-            Expr::String { value, .. } => LLExpr::String(value.to_owned()),
+            Expr::String { value, .. } => LLExpr::String(value.clone()),
             Expr::Binary { left, oper, right } => {
                 self.binary(left, oper, right)
             }
@@ -440,7 +439,7 @@ impl TypeChecker {
                 .error(BobaError::UndeclaredFunction(function_name.clone()));
             return LLExpr::Call {
                 ty_pe,
-                callee: String::from(""),
+                callee: String::new(),
                 args: vec![],
             };
         };
@@ -532,9 +531,7 @@ impl TypeChecker {
         for scope in self.type_table.iter().rev() {
             if scope.contains_key(name) {
                 return scope.get(name).cloned();
-            } else {
-                continue;
-            }
+            };
         }
         None
     }
@@ -561,7 +558,7 @@ impl TypeChecker {
             let ty_pe =
                 self.error(BobaError::UndeclaredVariable(token.clone()));
             LLExpr::Variable {
-                name: String::from(""),
+                name: String::new(),
                 ty_pe,
                 is_mutable: false,
                 kind: Kind::GlobalVariable,

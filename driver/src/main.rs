@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::process::{Command, Stdio};
 
-fn assemble(output: String) -> std::io::Result<()> {
+fn assemble(output: &str) -> std::io::Result<()> {
     let mut assembly_file = OpenOptions::new()
         .create(true)
         .truncate(true)
@@ -29,7 +29,7 @@ fn assemble(output: String) -> std::io::Result<()> {
 fn main() -> std::io::Result<()> {
     let source = include_str!("/home/veera/projects/boba/misc/input.rs");
     match compiler::compile(source.trim_end()) {
-        Ok(assembly) => assemble(assembly),
+        Ok(assembly) => assemble(&assembly),
         Err(err) => {
             eprint!("{err}");
             Ok(())

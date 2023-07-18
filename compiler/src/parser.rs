@@ -392,7 +392,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut expr = self.primary_expression()?;
         loop {
             if self.next_eq(TokenType::LeftParen) {
-                expr = self.finish_call(expr)?;
+                expr = self.finish_call(&expr)?;
             } else {
                 break;
             }
@@ -400,7 +400,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(expr)
     }
 
-    fn finish_call(&mut self, callee: Expr) -> Result<Expr, BobaError> {
+    fn finish_call(&mut self, callee: &Expr) -> Result<Expr, BobaError> {
         let mut args = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightParen) {
             args.push(self.expression()?);
@@ -409,7 +409,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
-        if let Expr::Variable(name) = &callee {
+        if let Expr::Variable(name) = callee {
             Ok(Expr::Call {
                 callee: name.clone(),
                 args,

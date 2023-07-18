@@ -27,8 +27,8 @@ enum RegisterSize {
     QWord,
 }
 
-impl From<&Type> for RegisterSize {
-    fn from(value: &Type) -> RegisterSize {
+impl From<Type> for RegisterSize {
+    fn from(value: Type) -> RegisterSize {
         match value {
             Type::Bool => RegisterSize::Byte,
             Type::Number => RegisterSize::DWord,
@@ -74,7 +74,7 @@ impl ScratchRegisters {
         Self { table: [false; 7] }
     }
 
-    pub fn allocate(&mut self, ty_pe: &Type) -> RegisterIndex {
+    pub fn allocate(&mut self, ty_pe: Type) -> RegisterIndex {
         for (index, in_use) in self.table.iter_mut().enumerate() {
             if !*in_use {
                 *in_use = true;
@@ -170,7 +170,7 @@ impl CodeGen {
                 init,
                 ty_pe,
                 variable_index,
-            } => self.local_variable_decl(init, ty_pe, variable_index),
+            } => self.local_variable_decl(init, *ty_pe, *variable_index),
             LLStmt::GlobalVariable { name, init } => {
                 self.global_variable_decl(name, init)
             }
@@ -178,7 +178,7 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print { value, ty_pe } => self.print_stmt(value, ty_pe),
+            LLStmt::Print { value, ty_pe } => self.print_stmt(value, *ty_pe),
             LLStmt::If {
                 condition,
                 then,
@@ -190,7 +190,7 @@ impl CodeGen {
                 param_types,
                 space_for_locals,
                 body,
-            } => self.function_decl(name, param_types, space_for_locals, body),
+            } => self.function_decl(name, param_types, *space_for_locals, body),
             LLStmt::Return { name, value } => self.return_stmt(name, value),
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
@@ -211,8 +211,8 @@ impl CodeGen {
     fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
-        let mov = self.move_for(&return_type);
-        let rax = self.rax_for(&return_type).to_string();
+        let mov = self.move_for(return_type);
+        let rax = self.rax_for(return_type).to_string();
         self.emit_code(mov, &register, rax);
         self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
@@ -221,8 +221,8 @@ impl CodeGen {
     fn local_variable_decl(
         &mut self,
         init: &LLExpr,
-        ty_pe: &Type,
-        index: &u16,
+        ty_pe: Type,
+        index: u16,
     ) {
         let register = self.expression(init);
         let mov = self.move_for(ty_pe);
@@ -238,7 +238,7 @@ impl CodeGen {
         &mut self,
         name: &str,
         param_types: &[Type],
-        space_for_locals: &u16,
+        space_for_locals: u16,
         body: &LLStmt,
     ) {
         self.add_global_name(name);
@@ -247,13 +247,13 @@ impl CodeGen {
         self.emit_code("movq", "%rsp", "%rbp");
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
-            let register_size = RegisterSize::from(param_type);
-            let mov = self.move_for(param_type);
+            let register_size = RegisterSize::from(*param_type);
+            let mov = self.move_for(*param_type);
             size_sum += param_type.as_size();
             self.emit_code(
                 mov,
                 ARGUMENTS[register_size as usize][index],
-                format!("-{}(%rbp)", size_sum),
+                format!("-{size_sum}(%rbp)"),
             );
         }
         self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
@@ -331,7 +331,7 @@ impl CodeGen {
         }
     }
 
-    fn print_stmt(&mut self, value: &LLExpr, ty_pe: &Type) {
+    fn print_stmt(&mut self, value: &LLExpr, ty_pe: Type) {
         let register = self.expression(value);
         self.emit_code("andq", "$-16", "%rsp");
         self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe));
@@ -411,22 +411,22 @@ impl CodeGen {
                 oper,
                 right,
                 ty_pe,
-            } => self.binary(left, oper, right, ty_pe),
+            } => self.binary(left, oper, right, *ty_pe),
             LLExpr::Number(num) => self.number(*num),
             LLExpr::Variable {
                 name, ty_pe, kind, ..
-            } => self.variable(name, ty_pe, kind),
-            LLExpr::Boolean(value) => self.boolean(value),
+            } => self.variable(name, *ty_pe, kind),
+            LLExpr::Boolean(value) => self.boolean(*value),
             LLExpr::Call {
                 callee,
                 args,
                 ty_pe,
-            } => self.function_call(callee, args, ty_pe),
+            } => self.function_call(callee, args, *ty_pe),
             LLExpr::Assign {
                 value,
                 index,
                 ty_pe,
-            } => self.assignment(value, *index, ty_pe),
+            } => self.assignment(value, *index, *ty_pe),
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
@@ -445,7 +445,7 @@ impl CodeGen {
     fn string(&mut self, literal: &str) -> RegisterIndex {
         let label = self.labels.create();
         self.emit_string(&label, literal);
-        let register = self.registers.allocate(&Type::String);
+        let register = self.registers.allocate(Type::String);
         self.emit_code("leaq", format!("{label}(%rip)"), &register);
         register
     }
@@ -469,7 +469,7 @@ impl CodeGen {
         &mut self,
         value: &LLExpr,
         index: u16,
-        ty_pe: &Type,
+        ty_pe: Type,
     ) -> RegisterIndex {
         let value = self.expression(value);
         let mov = self.move_for(ty_pe);
@@ -481,7 +481,7 @@ impl CodeGen {
         &mut self,
         callee: &str,
         args: &[LLExpr],
-        ty_pe: &Type,
+        ty_pe: Type,
     ) -> RegisterIndex {
         self.emit_code("andq", "$-16", "%rsp");
         let arguments = args
@@ -491,8 +491,8 @@ impl CodeGen {
         let arg_types: Vec<Type> =
             args.iter().map(|arg| arg.to_type()).collect();
         for (index, ty) in arg_types.iter().enumerate() {
-            let register_index = RegisterSize::from(ty) as usize;
-            let mov = self.move_for(ty);
+            let register_index = RegisterSize::from(*ty) as usize;
+            let mov = self.move_for(*ty);
             // SAFETY: Typechecker rejects functions with more than six
             // paramters
             let arg_value = unsafe { arguments.get_unchecked(index) };
@@ -503,27 +503,27 @@ impl CodeGen {
         self.emit_code("call", callee, "");
         self.emit_code("popq", "%r11", "");
         self.emit_code("popq", "%r10", "");
-        if *ty_pe != Type::Unit {
+        if ty_pe != Type::Unit {
             let result = self.registers.allocate(ty_pe);
             let mov = self.move_for(ty_pe);
             let rax = self.rax_for(ty_pe);
             self.emit_code(mov, rax, &result);
             result
         } else {
-            let result = self.registers.allocate(&Type::Number);
+            let result = self.registers.allocate(Type::Number);
             self.emit_code("movl", "$0", &result);
             result
         }
     }
 
-    fn boolean(&mut self, value: &bool) -> RegisterIndex {
-        let number = u8::from(*value);
-        let register = self.registers.allocate(&Type::Bool);
+    fn boolean(&mut self, value: bool) -> RegisterIndex {
+        let number = u8::from(value);
+        let register = self.registers.allocate(Type::Bool);
         self.emit_code("movb", format!("${number}"), &register);
         register
     }
 
-    fn move_for(&self, ty_pe: &Type) -> String {
+    fn move_for(&self, ty_pe: Type) -> String {
         match ty_pe.as_size() {
             1 => String::from("movb"),
             4 => String::from("movl"),
@@ -532,7 +532,7 @@ impl CodeGen {
         }
     }
 
-    fn rax_for(&self, ty_pe: &Type) -> String {
+    fn rax_for(&self, ty_pe: Type) -> String {
         match ty_pe.as_size() {
             1 => String::from("%al"),
             4 => String::from("%eax"),
@@ -541,7 +541,7 @@ impl CodeGen {
         }
     }
 
-    fn rsi_for(&self, ty_pe: &Type) -> String {
+    fn rsi_for(&self, ty_pe: Type) -> String {
         let lexeme = match ty_pe.as_size() {
             1 => ARGUMENTS[RegisterSize::Byte as usize][1],
             4 => ARGUMENTS[RegisterSize::DWord as usize][1],
@@ -551,7 +551,7 @@ impl CodeGen {
         lexeme.to_string()
     }
 
-    fn format_string(&mut self, ty_pe: &Type, register: &RegisterIndex) {
+    fn format_string(&mut self, ty_pe: Type, register: &RegisterIndex) {
         match ty_pe {
             Type::String => {
                 self.emit_code("leaq", ".format_string(%rip)", "%rax")
@@ -577,7 +577,7 @@ impl CodeGen {
     fn variable(
         &mut self,
         name: &str,
-        ty_pe: &Type,
+        ty_pe: Type,
         kind: &Kind,
     ) -> RegisterIndex {
         let register = self.registers.allocate(ty_pe);
@@ -599,7 +599,7 @@ impl CodeGen {
         left: &LLExpr,
         oper: &BinaryOperand,
         right: &LLExpr,
-        ty_pe: &Type,
+        ty_pe: Type,
     ) -> RegisterIndex {
         let left_register = self.expression(left);
         let right_register = self.expression(right);
@@ -660,7 +660,7 @@ impl CodeGen {
     }
 
     fn number(&mut self, value: i64) -> RegisterIndex {
-        let register = self.registers.allocate(&Type::Number);
+        let register = self.registers.allocate(Type::Number);
         self.emit_code(
             "movl",
             format!("${}", value as u64).as_str(),
