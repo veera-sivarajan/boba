@@ -20,25 +20,23 @@ impl Labels {
     }
 }
 
-#[derive(Copy, Clone)]
 enum RegisterSize {
     Byte,
     DWord,
     QWord,
 }
 
-impl From<u16> for RegisterSize {
-    fn from(value: u16) -> RegisterSize {
+impl From<&Type> for RegisterSize {
+    fn from(value: &Type) -> RegisterSize {
         match value {
-            1 => RegisterSize::Byte,
-            4 => RegisterSize::DWord,
-            8 => RegisterSize::QWord,
+            Type::Bool => RegisterSize::Byte,
+            Type::Number => RegisterSize::DWord,
+            Type::String => RegisterSize::QWord,
             _ => unreachable!(),
         }
     }
 }
 
-#[derive(Copy, Clone)]
 struct RegisterIndex {
     value: u8,
     size: RegisterSize,
@@ -81,7 +79,7 @@ impl ScratchRegisters {
                 *in_use = true;
                 return RegisterIndex {
                     value: index as u8,
-                    size: RegisterSize::from(ty_pe.as_size()),
+                    size: RegisterSize::from(ty_pe),
                 };
             }
         }
@@ -249,7 +247,7 @@ impl CodeGen {
         let mut size_sum = 0;
         for index in 0..param_types.len() {
             let param_type = param_types[index];
-            let register_size = RegisterSize::from(param_type.as_size());
+            let register_size = RegisterSize::from(&param_type);
             if index < 6 {
                 let mov = self.move_for(&param_type);
                 size_sum += param_type.as_size();
@@ -498,7 +496,7 @@ impl CodeGen {
             args.iter().map(|arg| arg.to_type()).collect();
         for index in 0..arg_types.len() {
             let ty = arg_types[index];
-            let register_index = RegisterSize::from(ty.as_size()) as usize;
+            let register_index = RegisterSize::from(&ty) as usize;
             let mov = self.move_for(&ty);
             self.emit_code(
                 mov,
@@ -515,11 +513,11 @@ impl CodeGen {
             let result = self.registers.allocate(ty_pe);
             let mov = self.move_for(ty_pe);
             let rax = self.rax_for(ty_pe);
-            self.emit_code(mov, rax, result);
+            self.emit_code(mov, rax, &result);
             result
         } else {
             let result = self.registers.allocate(&Type::Number);
-            self.emit_code("movl", "$0", result);
+            self.emit_code("movl", "$0", &result);
             result
         }
     }
