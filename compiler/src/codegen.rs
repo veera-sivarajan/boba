@@ -1,4 +1,3 @@
-use crate::error::BobaError;
 use crate::expr::{BinaryOperand, Comparison, LLExpr, UnaryOperand};
 use crate::stmt::LLStmt;
 use crate::typecheck::{Kind, Type};
@@ -140,31 +139,33 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(&mut self, ast: &[LLStmt]) -> Result<String, BobaError> {
+    pub fn compile(&mut self, ast: &[LLStmt]) -> String {
         for ele in ast {
-            self.codegen(ele)?;
+            self.codegen(ele);
         }
         self.build_assembly()
     }
 
-    fn build_assembly(&mut self) -> Result<String, BobaError> {
-        self.build_globals()?;
-        Ok(self.assembly.build())
+    fn build_assembly(&mut self) -> String {
+        self.build_globals();
+        self.assembly.build()
     }
 
-    fn build_globals(&mut self) -> Result<(), BobaError> {
+    fn build_globals(&mut self) {
         let mut globals = self.global_buffer.iter();
         if let Some(name) = globals.next() {
-            write!(&mut self.assembly.global, ".globl {name}")?;
+            write!(&mut self.assembly.global, ".globl {name}")
+                .expect("Unable to write global name.");
         }
         for other_names in globals {
-            write!(&mut self.assembly.global, ", {other_names}")?;
+            write!(&mut self.assembly.global, ", {other_names}")
+                .expect("Unable to write global name.");
         }
-        writeln!(&mut self.assembly.global)?;
-        Ok(())
+        writeln!(&mut self.assembly.global)
+            .expect("Unable to write into global.");
     }
 
-    fn codegen(&mut self, stmt: &LLStmt) -> Result<(), BobaError> {
+    fn codegen(&mut self, stmt: &LLStmt) {
         match stmt {
             LLStmt::LocalVariable {
                 init,
@@ -175,9 +176,8 @@ impl CodeGen {
                 self.global_variable_decl(name, init)
             }
             LLStmt::Expression(expr) => {
-                let register = self.expression(expr)?;
+                let register = self.expression(expr);
                 self.registers.deallocate(register);
-                Ok(())
             }
             LLStmt::Print { value, ty_pe } => self.print_stmt(value, ty_pe),
             LLStmt::If {
@@ -203,30 +203,28 @@ impl CodeGen {
         &mut self,
         condition: &LLExpr,
         body: &LLStmt,
-    ) -> Result<(), BobaError> {
+    ) {
         let loop_begin = self.labels.create();
         let loop_end = self.labels.create();
-        self.emit_label(loop_begin.clone())?;
-        self.boolean_expression(condition, &loop_end)?;
-        self.codegen(body)?;
-        self.emit_code("jmp", &loop_begin, "")?;
-        self.emit_label(loop_end)?;
-        Ok(())
+        self.emit_label(loop_begin.clone());
+        self.boolean_expression(condition, &loop_end);
+        self.codegen(body);
+        self.emit_code("jmp", &loop_begin, "");
+        self.emit_label(loop_end);
     }
 
     fn return_stmt(
         &mut self,
         name: &str,
         expr: &LLExpr,
-    ) -> Result<(), BobaError> {
+    ) {
         let return_type = expr.to_type();
-        let register = self.expression(expr)?;
+        let register = self.expression(expr);
         let mov = self.move_for(&return_type);
         let rax = self.rax_for(&return_type).to_string();
-        self.emit_code(mov, &register, rax)?;
-        self.emit_code("jmp", format!(".{name}_epilogue"), "")?;
+        self.emit_code(mov, &register, rax);
+        self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
-        Ok(())
     }
 
     fn local_variable_decl(
@@ -234,12 +232,11 @@ impl CodeGen {
         init: &LLExpr,
         ty_pe: &Type,
         index: &u16,
-    ) -> Result<(), BobaError> {
-        let register = self.expression(init)?;
+    ) {
+        let register = self.expression(init);
         let mov = self.move_for(ty_pe);
-        self.emit_code(mov, &register, format!("-{index}(%rbp)"))?;
+        self.emit_code(mov, &register, format!("-{index}(%rbp)"));
         self.registers.deallocate(register);
-        Ok(())
     }
 
     fn add_global_name(&mut self, name: &str) {
@@ -252,11 +249,11 @@ impl CodeGen {
         param_types: &[Type],
         space_for_locals: &u16,
         body: &LLStmt,
-    ) -> Result<(), BobaError> {
+    ) {
         self.add_global_name(name);
-        self.emit_label(name)?;
-        self.emit_code("pushq", "%rbp", "")?;
-        self.emit_code("movq", "%rsp", "%rbp")?;
+        self.emit_label(name);
+        self.emit_code("pushq", "%rbp", "");
+        self.emit_code("movq", "%rsp", "%rbp");
         let mut size_sum = 0;
         for index in 0..param_types.len() {
             let param_type = param_types[index];
@@ -268,25 +265,24 @@ impl CodeGen {
                     mov,
                     ARGUMENTS[register_size as usize][index],
                     format!("-{}(%rbp)", size_sum),
-                )?;
+                );
             } else {
                 todo!("Can't handle functions with more than six parameters.");
             }
         }
-        self.emit_code("subq", format!("${space_for_locals}"), "%rsp")?;
+        self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
-            self.emit_code("pushq", register, "")?;
+            self.emit_code("pushq", register, "");
         }
-        self.codegen(body)?;
-        self.emit_label(format!(".{name}_epilogue"))?;
+        self.codegen(body);
+        self.emit_label(format!(".{name}_epilogue"));
         for register in callee_saved_registers.iter().rev() {
-            self.emit_code("popq", register, "")?;
+            self.emit_code("popq", register, "");
         }
-        self.emit_code("movq", "%rbp", "%rsp")?;
-        self.emit_code("popq", "%rbp", "")?;
-        self.emit_code("ret", "", "")?;
-        Ok(())
+        self.emit_code("movq", "%rbp", "%rsp");
+        self.emit_code("popq", "%rbp", "");
+        self.emit_code("ret", "", "");
     }
 
     fn if_stmt(
@@ -294,25 +290,24 @@ impl CodeGen {
         condition: &LLExpr,
         then: &LLStmt,
         elze: &Option<Box<LLStmt>>,
-    ) -> Result<(), BobaError> {
+    ) {
         let false_label = self.labels.create();
         let done_label = self.labels.create();
-        self.boolean_expression(condition, &false_label)?;
-        self.codegen(then)?;
-        self.emit_code("jmp", &done_label, "")?;
-        self.emit_label(false_label)?;
+        self.boolean_expression(condition, &false_label);
+        self.codegen(then);
+        self.emit_code("jmp", &done_label, "");
+        self.emit_label(false_label);
         if let Some(else_body) = elze {
-            self.codegen(else_body)?;
+            self.codegen(else_body);
         }
-        self.emit_label(done_label)?;
-        Ok(())
+        self.emit_label(done_label);
     }
 
     fn boolean_expression(
         &mut self,
         condition: &LLExpr,
         false_label: &str,
-    ) -> Result<(), BobaError> {
+    ) {
         if let LLExpr::Binary {
             left,
             oper: BinaryOperand::Compare(operator),
@@ -320,61 +315,57 @@ impl CodeGen {
             ..
         } = condition
         {
-            let left = self.expression(left)?;
-            let right = self.expression(right)?;
-            self.emit_code("cmp", &right, &left)?;
-            self.comparison_operation(operator, false_label)?;
+            let left = self.expression(left);
+            let right = self.expression(right);
+            self.emit_code("cmp", &right, &left);
+            self.comparison_operation(operator, false_label);
             self.registers.deallocate(left);
             self.registers.deallocate(right);
         } else {
-            let result = self.expression(condition)?;
-            self.emit_code("cmp", "$1", &result)?; // condition code = result - 1
-            self.emit_code("js", false_label, "")?;
+            let result = self.expression(condition);
+            self.emit_code("cmp", "$1", &result); // condition code = result - 1
+            self.emit_code("js", false_label, "");
             self.registers.deallocate(result);
         }
-        Ok(())
     }
 
     fn comparison_operation(
         &mut self,
         operation: &Comparison,
         false_label: &str,
-    ) -> Result<(), BobaError> {
+    ) {
         match operation {
-            Comparison::Less => self.emit_code("jnl", false_label, "")?,
-            Comparison::LessEqual => self.emit_code("jnle", false_label, "")?,
-            Comparison::Greater => self.emit_code("jng", false_label, "")?,
+            Comparison::Less => self.emit_code("jnl", false_label, ""),
+            Comparison::LessEqual => self.emit_code("jnle", false_label, ""),
+            Comparison::Greater => self.emit_code("jng", false_label, ""),
             Comparison::GreaterEqual => {
-                self.emit_code("jnge", false_label, "")?
+                self.emit_code("jnge", false_label, "")
             }
             Comparison::EqualEqual => {
-                self.emit_code("jne", false_label, "")?;
+                self.emit_code("jne", false_label, "")
             }
         };
-        Ok(())
     }
 
-    fn block_stmt(&mut self, stmts: &[LLStmt]) -> Result<(), BobaError> {
+    fn block_stmt(&mut self, stmts: &[LLStmt]) {
         for stmt in stmts {
-            self.codegen(stmt)?;
+            self.codegen(stmt);
         }
-        Ok(())
     }
 
     fn print_stmt(
         &mut self,
         value: &LLExpr,
         ty_pe: &Type,
-    ) -> Result<(), BobaError> {
-        let register = self.expression(value)?;
-        self.emit_code("andq", "$-16", "%rsp")?;
-        self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe))?;
-        self.format_string(ty_pe, &register)?;
-        self.emit_code("movq", "%rax", "%rdi")?;
-        self.emit_code("xor", "%eax", "%eax")?;
-        self.emit_code("call", "printf@PLT", "")?;
+    ) {
+        let register = self.expression(value);
+        self.emit_code("andq", "$-16", "%rsp");
+        self.emit_code(self.move_for(ty_pe), &register, self.rsi_for(ty_pe));
+        self.format_string(ty_pe, &register);
+        self.emit_code("movq", "%rax", "%rdi");
+        self.emit_code("xor", "%eax", "%eax");
+        self.emit_code("call", "printf@PLT", "");
         self.registers.deallocate(register);
-        Ok(())
     }
 
     fn emit_data(
@@ -382,9 +373,8 @@ impl CodeGen {
         symbol_name: &str,
         size: &str,
         value: impl std::fmt::Debug,
-    ) -> Result<(), BobaError> {
-        self.data_writer(symbol_name, size, value)
-            .map_err(|e| e.into())
+    ) {
+        self.data_writer(symbol_name, size, value);
     }
 
     fn data_writer(
@@ -392,9 +382,11 @@ impl CodeGen {
         symbol_name: &str,
         size: &str,
         value: impl std::fmt::Debug,
-    ) -> fmt::Result {
-        writeln!(&mut self.assembly.data, "{symbol_name}:")?;
+    ) {
+        writeln!(&mut self.assembly.data, "{symbol_name}:")
+            .expect("Unable to write into data.");
         writeln!(&mut self.assembly.data, "{:8}.{size} {value:?}", " ")
+            .expect("Unable to write into data.");
     }
 
     fn code_writer(
@@ -402,19 +394,22 @@ impl CodeGen {
         instruction: impl fmt::Display,
         first_operand: impl fmt::Display,
         second_operand: impl fmt::Display,
-    ) -> Result<(), std::fmt::Error> {
-        write!(&mut self.assembly.code, "{:8}{instruction:6}", " ")?;
+    ) {
+        write!(&mut self.assembly.code, "{:8}{instruction:6}", " ")
+            .expect("Unable to write code.");
         let first_operand = first_operand.to_string();
         let second_operand = second_operand.to_string();
         if !first_operand.is_empty() && !second_operand.is_empty() {
             write!(
                 &mut self.assembly.code,
                 "{first_operand}, {second_operand}"
-            )?;
+            ).expect("Unable to write code.");
         } else if !first_operand.is_empty() {
-            write!(&mut self.assembly.code, "{first_operand}")?;
+            write!(&mut self.assembly.code, "{first_operand}")
+                .expect("Unable to write code.");
         }
         writeln!(&mut self.assembly.code)
+            .expect("Unable to write code.");
     }
 
     fn emit_code(
@@ -422,31 +417,30 @@ impl CodeGen {
         instruction: impl fmt::Display,
         first_operand: impl fmt::Display,
         second_operand: impl fmt::Display,
-    ) -> Result<(), BobaError> {
-        self.code_writer(instruction, first_operand, second_operand)
-            .map_err(|e| e.into())
+    ) {
+        self.code_writer(instruction, first_operand, second_operand);
     }
 
     fn emit_label<S: Into<String>>(
         &mut self,
         label: S,
-    ) -> Result<(), BobaError> {
+    ) {
         writeln!(&mut self.assembly.code, "{}:", label.into())
-            .map_err(|e| e.into())
+            .expect("Unable to write label.");
     }
 
     fn global_variable_decl(
         &mut self,
         name: &str,
         init: &LLExpr,
-    ) -> Result<(), BobaError> {
-        self.emit_data(name, "quad", init)
+    ) {
+        self.emit_data(name, "quad", init);
     }
 
     fn expression(
         &mut self,
         expr: &LLExpr,
-    ) -> Result<RegisterIndex, BobaError> {
+    ) -> RegisterIndex {
         match expr {
             LLExpr::Binary {
                 left,
@@ -479,38 +473,40 @@ impl CodeGen {
         &mut self,
         label: &str,
         literal: &str,
-    ) -> Result<(), BobaError> {
-        writeln!(&mut self.assembly.header, "{label}:")?;
-        writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")?;
-        writeln!(&mut self.assembly.header, "{:8}.text", " ")?;
-        Ok(())
+    ) {
+        writeln!(&mut self.assembly.header, "{label}:")
+            .expect("Unable to emit string.");
+        writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")
+            .expect("Unable to emit string.");
+        writeln!(&mut self.assembly.header, "{:8}.text", " ")
+            .expect("Unable to emit string.");
     }
 
-    fn string(&mut self, literal: &str) -> Result<RegisterIndex, BobaError> {
+    fn string(&mut self, literal: &str) -> RegisterIndex {
         let label = self.labels.create();
-        self.emit_string(&label, literal)?;
+        self.emit_string(&label, literal);
         let register = self.registers.allocate(&Type::String);
-        self.emit_code("leaq", format!("{label}(%rip)"), &register)?;
-        Ok(register)
+        self.emit_code("leaq", format!("{label}(%rip)"), &register);
+        register
     }
 
     fn unary(
         &mut self,
         oper: &UnaryOperand,
         right: &LLExpr,
-    ) -> Result<RegisterIndex, BobaError> {
-        let operand = self.expression(right)?;
+    ) -> RegisterIndex {
+        let operand = self.expression(right);
         match oper {
             UnaryOperand::LogicalNot => {
                 // FIXME: Find a better way to implement logical not
                 // using test and sete
-                self.emit_code("not", &operand, "")?;
-                self.emit_code("inc", &operand, "")?;
-                self.emit_code("inc", &operand, "")?;
+                self.emit_code("not", &operand, "");
+                self.emit_code("inc", &operand, "");
+                self.emit_code("inc", &operand, "");
             }
-            UnaryOperand::Negate => self.emit_code("neg", &operand, "")?,
+            UnaryOperand::Negate => self.emit_code("neg", &operand, ""),
         }
-        Ok(operand)
+        operand
     }
 
     fn assignment(
@@ -518,11 +514,11 @@ impl CodeGen {
         value: &LLExpr,
         index: u16,
         ty_pe: &Type,
-    ) -> Result<RegisterIndex, BobaError> {
-        let value = self.expression(value)?;
+    ) -> RegisterIndex {
+        let value = self.expression(value);
         let mov = self.move_for(ty_pe);
-        self.emit_code(mov, &value, format!("-{index}(%rbp)"))?;
-        Ok(value)
+        self.emit_code(mov, &value, format!("-{index}(%rbp)"));
+        value
     }
 
     fn function_call(
@@ -530,12 +526,12 @@ impl CodeGen {
         callee: &str,
         args: &[LLExpr],
         ty_pe: &Type,
-    ) -> Result<RegisterIndex, BobaError> {
-        self.emit_code("andq", "$-16", "%rsp")?;
+    ) -> RegisterIndex {
+        self.emit_code("andq", "$-16", "%rsp");
         let arguments = args
             .iter()
             .map(|arg| self.expression(arg))
-            .collect::<Result<Vec<RegisterIndex>, BobaError>>()?;
+            .collect::<Vec<RegisterIndex>>();
         let arg_types: Vec<Type> =
             args.iter().map(|arg| arg.to_type()).collect();
         for index in 0..arg_types.len() {
@@ -546,31 +542,31 @@ impl CodeGen {
                 mov,
                 arguments[index],
                 ARGUMENTS[register_index][index],
-            )?;
+            );
         }
-        self.emit_code("pushq", "%r10", "")?;
-        self.emit_code("pushq", "%r11", "")?;
-        self.emit_code("call", callee, "")?;
-        self.emit_code("popq", "%r11", "")?;
-        self.emit_code("popq", "%r10", "")?;
+        self.emit_code("pushq", "%r10", "");
+        self.emit_code("pushq", "%r11", "");
+        self.emit_code("call", callee, "");
+        self.emit_code("popq", "%r11", "");
+        self.emit_code("popq", "%r10", "");
         if *ty_pe != Type::Unit {
             let result = self.registers.allocate(ty_pe);
             let mov = self.move_for(ty_pe);
             let rax = self.rax_for(ty_pe);
-            self.emit_code(mov, rax, result)?;
-            Ok(result)
+            self.emit_code(mov, rax, result);
+            result
         } else {
             let result = self.registers.allocate(&Type::Number);
-            self.emit_code("movl", "$0", result)?;
-            Ok(result)
+            self.emit_code("movl", "$0", result);
+            result
         }
     }
 
-    fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {
+    fn boolean(&mut self, value: &bool) -> RegisterIndex {
         let number = u8::from(*value);
         let register = self.registers.allocate(&Type::Bool);
-        self.emit_code("movb", format!("${number}"), &register)?;
-        Ok(register)
+        self.emit_code("movb", format!("${number}"), &register);
+        register
     }
 
     fn move_for(&self, ty_pe: &Type) -> String {
@@ -605,28 +601,27 @@ impl CodeGen {
         &mut self,
         ty_pe: &Type,
         register: &RegisterIndex,
-    ) -> Result<(), BobaError> {
+    ) {
         match ty_pe {
             Type::String => {
-                self.emit_code("leaq", ".format_string(%rip)", "%rax")?
+                self.emit_code("leaq", ".format_string(%rip)", "%rax")
             }
             Type::Number => {
-                self.emit_code("leaq", ".format_number(%rip)", "%rax")?
+                self.emit_code("leaq", ".format_number(%rip)", "%rax")
             }
             Type::Bool => {
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code("cmp", "$1", register)?;
-                self.emit_code("jne", &false_label, "")?;
-                self.emit_code("leaq", ".format_true(%rip)", "%rax")?;
-                self.emit_code("jmp", &done_label, "")?;
-                self.emit_label(false_label)?;
-                self.emit_code("leaq", ".format_false(%rip)", "%rax")?;
-                self.emit_label(done_label)?;
+                self.emit_code("cmp", "$1", register);
+                self.emit_code("jne", &false_label, "");
+                self.emit_code("leaq", ".format_true(%rip)", "%rax");
+                self.emit_code("jmp", &done_label, "");
+                self.emit_label(false_label);
+                self.emit_code("leaq", ".format_false(%rip)", "%rax");
+                self.emit_label(done_label);
             }
             _ => unreachable!(),
         }
-        Ok(())
     }
 
     fn variable(
@@ -634,19 +629,19 @@ impl CodeGen {
         name: &str,
         ty_pe: &Type,
         kind: &Kind,
-    ) -> Result<RegisterIndex, BobaError> {
+    ) -> RegisterIndex {
         let register = self.registers.allocate(ty_pe);
         if let Kind::Parameter(index) | Kind::LocalVariable(index) = kind {
             self.emit_code(
                 self.move_for(ty_pe),
                 format!("-{index}(%rbp)"),
                 &register,
-            )?;
+            );
         } else {
             let symbol = format!("{name}(%rip)");
-            self.emit_code(self.move_for(ty_pe), symbol, &register)?;
+            self.emit_code(self.move_for(ty_pe), symbol, &register);
         }
-        Ok(register)
+        register
     }
 
     fn binary(
@@ -655,72 +650,72 @@ impl CodeGen {
         oper: &BinaryOperand,
         right: &LLExpr,
         ty_pe: &Type,
-    ) -> Result<RegisterIndex, BobaError> {
-        let left_register = self.expression(left)?;
-        let right_register = self.expression(right)?;
+    ) -> RegisterIndex {
+        let left_register = self.expression(left);
+        let right_register = self.expression(right);
         match &oper {
             BinaryOperand::Add => {
-                self.emit_code("addl", &left_register, &right_register)?;
+                self.emit_code("addl", &left_register, &right_register);
                 self.registers.deallocate(left_register);
-                Ok(right_register)
+                right_register
             }
             BinaryOperand::Subtract => {
-                self.emit_code("subl", &right_register, &left_register)?;
+                self.emit_code("subl", &right_register, &left_register);
                 self.registers.deallocate(right_register);
-                Ok(left_register)
+                left_register
             }
             BinaryOperand::Multiply => {
                 let result_register = self.registers.allocate(ty_pe);
-                self.emit_code("movl", &right_register, "%eax")?;
-                self.emit_code("imull", &left_register, "")?;
-                self.emit_code("movl", "%eax", &result_register)?;
+                self.emit_code("movl", &right_register, "%eax");
+                self.emit_code("imull", &left_register, "");
+                self.emit_code("movl", "%eax", &result_register);
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
-                Ok(result_register)
+                result_register
             }
             BinaryOperand::Divide => {
                 let result_register = self.registers.allocate(ty_pe);
-                self.emit_code("movl", &left_register, "%eax")?;
-                self.emit_code("cqo", "", "")?;
-                self.emit_code("idivl", &right_register, "")?;
-                self.emit_code("movl", "%eax", &result_register)?;
+                self.emit_code("movl", &left_register, "%eax");
+                self.emit_code("cqo", "", "");
+                self.emit_code("idivl", &right_register, "");
+                self.emit_code("movl", "%eax", &result_register);
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
-                Ok(result_register)
+                result_register
             }
             BinaryOperand::Modulus => {
                 let result_register = self.registers.allocate(ty_pe);
-                self.emit_code("movl", &left_register, "%eax")?;
-                self.emit_code("cqo", "", "")?;
-                self.emit_code("idivl", &right_register, "")?;
-                self.emit_code("movl", "%edx", &result_register)?;
+                self.emit_code("movl", &left_register, "%eax");
+                self.emit_code("cqo", "", "");
+                self.emit_code("idivl", &right_register, "");
+                self.emit_code("movl", "%edx", &result_register);
                 self.registers.deallocate(left_register);
                 self.registers.deallocate(right_register);
-                Ok(result_register)
+                result_register
             }
             BinaryOperand::Compare(comparison_operand) => {
                 let result = self.registers.allocate(ty_pe);
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code("cmpl", &right_register, &left_register)?;
-                self.comparison_operation(comparison_operand, &false_label)?;
-                self.emit_code("movb", "$1", &result)?;
-                self.emit_code("jmp", &done_label, "")?;
-                self.emit_label(false_label)?;
-                self.emit_code("movb", "$0", &result)?;
-                self.emit_label(done_label)?;
-                Ok(result)
+                self.emit_code("cmpl", &right_register, &left_register);
+                self.comparison_operation(comparison_operand, &false_label);
+                self.emit_code("movb", "$1", &result);
+                self.emit_code("jmp", &done_label, "");
+                self.emit_label(false_label);
+                self.emit_code("movb", "$0", &result);
+                self.emit_label(done_label);
+                result
             }
         }
     }
 
-    fn number(&mut self, value: i64) -> Result<RegisterIndex, BobaError> {
+    fn number(&mut self, value: i64) -> RegisterIndex {
         let register = self.registers.allocate(&Type::Number);
         self.emit_code(
             "movl",
             format!("${}", value as u64).as_str(),
             &register,
-        )?;
-        Ok(register)
+        );
+        register
     }
 }

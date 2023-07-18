@@ -16,7 +16,7 @@ fn compile_helper(source: &str) -> Result<String, BobaError> {
         let mut parser = Parser::new(tokens.into_iter());
         let ast = parser.parse()?;
         let ll_ast = typecheck::TypeChecker::new().check(&ast)?;
-        codegen::CodeGen::new().compile(&ll_ast)
+        Ok(codegen::CodeGen::new().compile(&ll_ast))
     } else {
         Err(BobaError::General(
             "Consider adding a 'main' function.".into(),
