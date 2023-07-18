@@ -30,7 +30,6 @@ enum RegisterSize {
 
 impl From<u16> for RegisterSize {
     fn from(value: u16) -> RegisterSize {
-        dbg!(value);
         match value {
             1 => RegisterSize::Byte,
             4 => RegisterSize::DWord,
@@ -554,11 +553,17 @@ impl CodeGen {
         self.emit_code("call", callee, "")?;
         self.emit_code("popq", "%r11", "")?;
         self.emit_code("popq", "%r10", "")?;
-        let result = self.registers.allocate(ty_pe);
-        let mov = self.move_for(ty_pe);
-        let rax = self.rax_for(ty_pe);
-        self.emit_code(mov, rax, result)?;
-        Ok(result)
+        if *ty_pe != Type::Unit {
+            let result = self.registers.allocate(ty_pe);
+            let mov = self.move_for(ty_pe);
+            let rax = self.rax_for(ty_pe);
+            self.emit_code(mov, rax, result)?;
+            Ok(result)
+        } else {
+            let result = self.registers.allocate(&Type::Number);
+            self.emit_code("movl", "$0", result)?;
+            Ok(result)
+        }
     }
 
     fn boolean(&mut self, value: &bool) -> Result<RegisterIndex, BobaError> {

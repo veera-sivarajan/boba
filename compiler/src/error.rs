@@ -75,6 +75,7 @@ pub enum BobaError {
     UndeclaredVariable(Token),
     UndeclaredFunction(Token),
     LocalFunction(Token),
+    ReturnTypeNotFound(Token),
     MainNotFound,
     AssignToImmutable(Token),
     AssigningUnitType(Token),
@@ -88,6 +89,13 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            ReturnTypeNotFound(token) => {
+                writeln!(
+                    f,
+                    "Type Error: Function '{token}' needs a return type at {}",
+                    token.span
+                )
+            }
             GlobalVariableNotConst(token) => {
                 writeln!(f, "Error: Expected global variable '{token}' to be initalized with a constant value at {}.", token.span)
             }

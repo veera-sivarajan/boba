@@ -48,6 +48,7 @@ pub struct TypeChecker {
     errors: Vec<BobaError>,
     space_for_locals: u16,
     statements: Vec<LLStmt>,
+    return_stmt_verified: bool,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -82,6 +83,7 @@ impl TypeChecker {
             functions: vec![],
             space_for_locals: 0,
             statements: vec![],
+            return_stmt_verified: false,
         }
     }
 
@@ -173,8 +175,11 @@ impl TypeChecker {
                 elze,
             } => self.if_stmt(condition, then, elze),
             Stmt::Function {
-                name, body, params, ..
-            } => self.function_decl(name, body, params),
+                name,
+                body,
+                params,
+                return_type,
+            } => self.function_decl(name, body, params, return_type),
             Stmt::Block(stmts) => self.block(stmts, None),
             Stmt::LocalVariable {
                 name,
@@ -198,18 +203,25 @@ impl TypeChecker {
         }
     }
 
+    fn init_function_checker(&mut self) {
+        self.space_for_locals = 0;
+        self.return_stmt_verified = false;
+    }
+
     fn function_decl(
         &mut self,
         name: &Token,
         body: &[Stmt],
         params: &[Parameter],
+        return_type: &Type,
     ) -> LLStmt {
-        self.space_for_locals = 0;
+        self.init_function_checker();
         let body = Box::new(self.block(body, Some(params)));
+        if *return_type != Type::Unit && !self.return_stmt_verified {
+            self.error(BobaError::ReturnTypeNotFound(name.clone()));
+        };
         let param_types: Vec<Type> =
             params.iter().map(|param| param.1).collect();
-        let _param_space: u16 =
-            params.iter().map(|param| param.1.as_size()).sum();
         LLStmt::Function {
             name: name.to_string(),
             param_types,
@@ -226,6 +238,7 @@ impl TypeChecker {
                 value.to_type(),
                 Token::from(expr).span,
             );
+            self.return_stmt_verified = true;
         };
         LLStmt::Return {
             name: function_name.to_string(),
