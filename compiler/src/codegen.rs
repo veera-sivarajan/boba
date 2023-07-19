@@ -249,17 +249,14 @@ impl CodeGen {
     fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
-        let mov = move_for(return_type);
-        let rax = rax_for(return_type).to_string();
-        self.emit_code(mov, &register, rax);
+        self.emit_code(move_for(return_type), &register, rax_for(return_type));
         self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
     }
 
     fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: Type, index: u16) {
         let register = self.expression(init);
-        let mov = move_for(ty_pe);
-        self.emit_code(mov, &register, format!("-{index}(%rbp)"));
+        self.emit_code(move_for(ty_pe), &register, format!("-{index}(%rbp)"));
         self.registers.deallocate(register);
     }
 
@@ -288,10 +285,9 @@ impl CodeGen {
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(*param_type);
-            let mov = move_for(*param_type);
             size_sum += param_type.as_size();
             self.emit_code(
-                mov,
+                move_for(*param_type),
                 ARGUMENTS[register_size as usize][index],
                 format!("-{size_sum}(%rbp)"),
             );
@@ -514,8 +510,7 @@ impl CodeGen {
         ty_pe: Type,
     ) -> RegisterIndex {
         let value = self.expression(value);
-        let mov = move_for(ty_pe);
-        self.emit_code(mov, &value, format!("-{index}(%rbp)"));
+        self.emit_code(move_for(ty_pe), &value, format!("-{index}(%rbp)"));
         value
     }
 
@@ -533,11 +528,10 @@ impl CodeGen {
             args.iter().map(|arg| arg.to_type()).collect();
         for (index, ty) in arg_types.iter().enumerate() {
             let register_index = RegisterSize::from(*ty) as usize;
-            let mov = move_for(*ty);
             // SAFETY: Typechecker rejects functions with more than six
             // paramters
             let arg_value = unsafe { arguments.get_unchecked(index) };
-            self.emit_code(mov, arg_value, ARGUMENTS[register_index][index]);
+            self.emit_code(move_for(*ty), arg_value, ARGUMENTS[register_index][index]);
         }
         self.emit_code("pushq", "%r10", "");
         self.emit_code("pushq", "%r11", "");
@@ -546,9 +540,7 @@ impl CodeGen {
         self.emit_code("popq", "%r10", "");
         if ty_pe != Type::Unit {
             let result = self.registers.allocate(ty_pe);
-            let mov = move_for(ty_pe);
-            let rax = rax_for(ty_pe);
-            self.emit_code(mov, rax, &result);
+            self.emit_code(move_for(ty_pe), rax_for(ty_pe), &result);
             result
         } else {
             let result = self.registers.allocate(Type::Number);
