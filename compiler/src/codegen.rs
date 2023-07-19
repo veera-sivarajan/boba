@@ -90,7 +90,9 @@ fn cmp_for(ty_pe: Type) -> String {
     match ty_pe.as_size() {
         1 => String::from("cmpb"),
         4 => String::from("cmpl"),
-        _ => unreachable!("Cannot compare these types. Typechecker should reject it."),
+        _ => unreachable!(
+            "Cannot compare these types. Typechecker should reject it."
+        ),
     }
 }
 
@@ -254,12 +256,7 @@ impl CodeGen {
         self.registers.deallocate(register);
     }
 
-    fn local_variable_decl(
-        &mut self,
-        init: &LLExpr,
-        ty_pe: Type,
-        index: u16,
-    ) {
+    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: Type, index: u16) {
         let register = self.expression(init);
         let mov = move_for(ty_pe);
         self.emit_code(mov, &register, format!("-{index}(%rbp)"));
@@ -281,7 +278,11 @@ impl CodeGen {
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
-        self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
+        if space_for_locals > 0 {
+            let space_for_locals =
+                ((((40 + space_for_locals) - 1) | 15) + 1) - 40;
+            self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
+        };
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(*param_type);
@@ -558,7 +559,6 @@ impl CodeGen {
         self.emit_code("movb", format!("${number}"), &register);
         register
     }
-
 
     fn format_string(&mut self, ty_pe: Type, register: &RegisterIndex) {
         match ty_pe {
