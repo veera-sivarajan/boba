@@ -9,7 +9,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Number {
-        value: i64,
+        value: i32,
         meta: Token,
     },
     Variable(Token),
@@ -164,7 +164,7 @@ pub enum LLExpr {
         right: Box<LLExpr>,
         ty_pe: Type,
     },
-    Number(i64),
+    Number(i32),
     Variable {
         name: String,
         ty_pe: Type,

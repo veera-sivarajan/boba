@@ -668,11 +668,11 @@ impl CodeGen {
         }
     }
 
-    fn number(&mut self, value: i64) -> RegisterIndex {
+    fn number(&mut self, value: i32) -> RegisterIndex {
         let register = self.registers.allocate(Type::Number);
         self.emit_code(
             "movl",
-            format!("${}", value as u64).as_str(),
+            format!("${}", value).as_str(),
             &register,
         );
         register

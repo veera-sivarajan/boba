@@ -35,7 +35,7 @@ pub enum TokenType {
     MultiplyAssign,
     DivideAssign,
 
-    Number(i64),
+    Number(i32),
     Boolean(bool),
     Unknown,
     Identifier(String),
@@ -458,7 +458,7 @@ impl<'src> Lexer<'src> {
                 lexeme.push(num);
             }
         }
-        let num = lexeme.parse::<i64>().expect("Unable to parse number.");
+        let num = lexeme.parse::<i32>().expect("Unable to parse number.");
         let span = self.make_span(start_pos, lexeme.len());
         self.tokens.push(Token::new(TokenType::Number(num), span));
     }
@@ -488,7 +488,7 @@ impl<'src> Lexer<'src> {
             "mut" => TokenType::Mutable,
             "while" => TokenType::While,
             "str" => TokenType::Type(typecheck::Type::String),
-            "i64" => TokenType::Type(typecheck::Type::Number),
+            "i32" => TokenType::Type(typecheck::Type::Number),
             "bool" => TokenType::Type(typecheck::Type::Bool),
             _ => TokenType::Identifier(lexeme),
         };
