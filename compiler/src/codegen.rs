@@ -274,14 +274,18 @@ impl CodeGen {
         space_for_locals: u16,
         body: &LLStmt,
     ) {
+        // Funtion prologue
         self.add_global_name(name);
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
+        let locals_space = if space_for_locals > 0 {
+            format!("${}", ((((40 + space_for_locals) - 1) | 15) + 1) - 40)
+        } else {
+            String::from("$0")
+        };
         if space_for_locals > 0 {
-            let space_for_locals =
-                ((((40 + space_for_locals) - 1) | 15) + 1) - 40;
-            self.emit_code("subq", format!("${space_for_locals}"), "%rsp");
+            self.emit_code("subq", &locals_space, "%rsp");
         };
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
@@ -298,11 +302,17 @@ impl CodeGen {
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "");
         }
+        // Function body
         self.codegen(body);
+
+        // Function epilogue
         self.emit_label(format!(".{name}_epilogue"));
         for register in callee_saved_registers.iter().rev() {
             self.emit_code("popq", register, "");
         }
+        if space_for_locals > 0 {
+            self.emit_code("addq", &locals_space, "%rsp");
+        };
         self.emit_code("movq", "%rbp", "%rsp");
         self.emit_code("popq", "%rbp", "");
         self.emit_code("ret", "", "");
