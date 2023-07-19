@@ -36,7 +36,7 @@ pub enum TypeError {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Type::Number => write!(f, "i64"),
+            Type::Number => write!(f, "i32"),
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "bool"),
             Type::Unknown => write!(f, "unknown type"),

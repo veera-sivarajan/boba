@@ -341,11 +341,11 @@ impl CodeGen {
         } = condition
         {
             let lhs = self.expression(left);
-            let right = self.expression(right);
-            self.emit_code(cmp_for(left.to_type()), &right, &lhs);
+            let rhs = self.expression(right);
+            self.emit_code(cmp_for(left.to_type()), &rhs, &lhs);
             self.comparison_operation(operator, false_label);
             self.registers.deallocate(lhs);
-            self.registers.deallocate(right);
+            self.registers.deallocate(rhs);
         } else {
             let result = self.expression(condition);
             self.emit_code(cmp_for(condition.to_type()), "$1", &result); // condition code = result - 1
@@ -656,7 +656,7 @@ impl CodeGen {
                 let result = self.registers.allocate(ty_pe);
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code(cmp_for(ty_pe), &right_register, &left_register);
+                self.emit_code(cmp_for(left.to_type()), &right_register, &left_register);
                 self.comparison_operation(comparison_operand, &false_label);
                 self.emit_code("movb", "$1", &result);
                 self.emit_code("jmp", &done_label, "");

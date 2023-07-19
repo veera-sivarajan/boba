@@ -71,8 +71,7 @@ mod tests {
         match compiler::compile(source.trim_end()) {
             Ok(assembly) => execute(&assembly, output),
             Err(err) => {
-                eprintln!("{err}");
-                false
+                output == err.to_string()
             }
         }
     }
