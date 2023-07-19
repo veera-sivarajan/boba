@@ -1,4 +1,4 @@
-fn factorial(num: i64) -> i64 {
+fn factorial(num: i32) -> i32 {
     let mut product = 1;
     for (let mut i = num; i >= 1; i = i - 1) {
         product = product * i;

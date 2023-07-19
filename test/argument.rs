@@ -1,4 +1,4 @@
-fn function(x: i64, y: i64) {
+fn function(x: i32, y: i32) {
     println(x + y);
 }
 

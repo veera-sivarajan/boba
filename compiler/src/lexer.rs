@@ -584,7 +584,7 @@ mod test_lexer {
     fn function_declarations() {
         assert!(test_runner(
             "
-fn factorial(num: i64) -> i64 {
+fn factorial(num: i32) -> i32 {
     let a = 1 + 2;
 }
 ",

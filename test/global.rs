@@ -1,6 +1,6 @@
 let global = 100;
 
-fn factorial(x: i64, y: i64) {
+fn factorial(x: i32, y: i32) {
     let apple = 10;
     let ball = 20;
     if x > y {

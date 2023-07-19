@@ -10,7 +10,7 @@
 main:
         pushq %rbp
         movq  %rsp, %rbp
-        subq  $0, %rsp
+        subq  $8, %rsp
         pushq %rbx
         pushq %r12
         pushq %r13
@@ -18,10 +18,9 @@ main:
         pushq %r15
         movl  $2, %ebx
         movl  $1, %r10d
-        cmp   %r10d, %ebx
+        cmpl  %r10d, %ebx
         jng   .L0
         movl  $2, %ebx
-        andq  $-16, %rsp
         movl  %ebx, %esi
         leaq  .format_number(%rip), %rax
         movq  %rax, %rdi
@@ -30,7 +29,6 @@ main:
         jmp   .L1
 .L0:
         movl  $1, %ebx
-        andq  $-16, %rsp
         movl  %ebx, %esi
         leaq  .format_number(%rip), %rax
         movq  %rax, %rdi
@@ -43,6 +41,7 @@ main:
         popq  %r13
         popq  %r12
         popq  %rbx
+        addq  $8, %rsp
         movq  %rbp, %rsp
         popq  %rbp
         ret   

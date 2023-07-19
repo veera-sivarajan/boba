@@ -1,4 +1,4 @@
-fn compute(a: i64, b: i64, c: i64) -> i64 {
+fn compute(a: i32, b: i32, c: i32) -> i32 {
     let x = a + b + c;
     let y = x * 5;
     return y;

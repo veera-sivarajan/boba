@@ -1,4 +1,4 @@
-fn main() -> i64 {
+fn main() -> i32 {
     let mut a = 0;
     let b = 5;
     while b > a {
