@@ -279,14 +279,12 @@ impl CodeGen {
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
-        let locals_space = if space_for_locals > 0 {
-            format!("${}", ((((40 + space_for_locals) - 1) | 15) + 1) - 40)
+        let locals_space = if space_for_locals == 0 {
+            String::from("$8")
         } else {
-            String::from("$0")
+            format!("${}", ((((40 + space_for_locals) - 1) | 15) + 1) - 40)
         };
-        if space_for_locals > 0 {
-            self.emit_code("subq", &locals_space, "%rsp");
-        };
+        self.emit_code("subq", &locals_space, "%rsp");
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(*param_type);
@@ -310,9 +308,7 @@ impl CodeGen {
         for register in callee_saved_registers.iter().rev() {
             self.emit_code("popq", register, "");
         }
-        if space_for_locals > 0 {
-            self.emit_code("addq", &locals_space, "%rsp");
-        };
+        self.emit_code("addq", &locals_space, "%rsp");
         self.emit_code("movq", "%rbp", "%rsp");
         self.emit_code("popq", "%rbp", "");
         self.emit_code("ret", "", "");
@@ -380,7 +376,6 @@ impl CodeGen {
 
     fn print_stmt(&mut self, value: &LLExpr, ty_pe: Type) {
         let register = self.expression(value);
-        self.emit_code("andq", "$-16", "%rsp");
         self.emit_code(move_for(ty_pe), &register, rsi_for(ty_pe));
         self.format_string(ty_pe, &register);
         self.emit_code("movq", "%rax", "%rdi");
@@ -530,7 +525,6 @@ impl CodeGen {
         args: &[LLExpr],
         ty_pe: Type,
     ) -> RegisterIndex {
-        self.emit_code("andq", "$-16", "%rsp");
         let arguments = args
             .iter()
             .map(|arg| self.expression(arg))
