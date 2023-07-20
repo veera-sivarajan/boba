@@ -70,9 +70,7 @@ mod tests {
     fn compile_and_execute(source: &str, output: &str) -> bool {
         match compiler::compile(source.trim_end()) {
             Ok(assembly) => execute(&assembly, output),
-            Err(err) => {
-                output == err.to_string()
-            }
+            Err(err) => output == err.to_string(),
         }
     }
 

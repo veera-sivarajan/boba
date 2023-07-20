@@ -264,14 +264,13 @@ impl CodeGen {
         self.global_buffer.push(name.into());
     }
 
-    fn function_decl(
+    fn function_prologue(
         &mut self,
         name: &str,
-        param_types: &[Type],
+        callee_saved_registers: &[&str; 5],
         space_for_locals: u16,
-        body: &LLStmt,
+        param_types: &[Type],
     ) {
-        // Funtion prologue
         self.add_global_name(name);
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
@@ -292,19 +291,38 @@ impl CodeGen {
                 format!("-{size_sum}(%rbp)"),
             );
         }
-        let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         for register in callee_saved_registers {
             self.emit_code("pushq", register, "");
         }
-        // Function body
-        self.codegen(body);
+    }
 
-        // Function epilogue
+    fn function_decl(
+        &mut self,
+        name: &str,
+        param_types: &[Type],
+        space_for_locals: u16,
+        body: &LLStmt,
+    ) {
+        let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
+        self.function_prologue(
+            name,
+            &callee_saved_registers,
+            space_for_locals,
+            param_types,
+        );
+        self.codegen(body);
+        self.function_epilogue(name, &callee_saved_registers);
+    }
+
+    fn function_epilogue(
+        &mut self,
+        name: &str,
+        callee_saved_registers: &[&str; 5],
+    ) {
         self.emit_label(format!(".{name}_epilogue"));
         for register in callee_saved_registers.iter().rev() {
             self.emit_code("popq", register, "");
         }
-        self.emit_code("addq", &locals_space, "%rsp");
         self.emit_code("movq", "%rbp", "%rsp");
         self.emit_code("popq", "%rbp", "");
         self.emit_code("ret", "", "");
@@ -531,7 +549,11 @@ impl CodeGen {
             // SAFETY: Typechecker rejects functions with more than six
             // paramters
             let arg_value = unsafe { arguments.get_unchecked(index) };
-            self.emit_code(move_for(*ty), arg_value, ARGUMENTS[register_index][index]);
+            self.emit_code(
+                move_for(*ty),
+                arg_value,
+                ARGUMENTS[register_index][index],
+            );
         }
         self.emit_code("pushq", "%r10", "");
         self.emit_code("pushq", "%r11", "");
@@ -648,7 +670,11 @@ impl CodeGen {
                 let result = self.registers.allocate(ty_pe);
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
-                self.emit_code(cmp_for(left.to_type()), &right_register, &left_register);
+                self.emit_code(
+                    cmp_for(left.to_type()),
+                    &right_register,
+                    &left_register,
+                );
                 self.comparison_operation(comparison_operand, &false_label);
                 self.emit_code("movb", "$1", &result);
                 self.emit_code("jmp", &done_label, "");
@@ -662,11 +688,7 @@ impl CodeGen {
 
     fn number(&mut self, value: i32) -> RegisterIndex {
         let register = self.registers.allocate(Type::Number);
-        self.emit_code(
-            "movl",
-            format!("${}", value).as_str(),
-            &register,
-        );
+        self.emit_code("movl", format!("${}", value).as_str(), &register);
         register
     }
 }
