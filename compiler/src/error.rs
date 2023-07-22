@@ -84,12 +84,20 @@ pub enum BobaError {
     AssignToGlobalVariable(Token),
     GlobalVariableNotConst(Token),
     ArgumentCountNotEqual(Token, usize, usize),
+    CannotPrintUnit(Token),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            CannotPrintUnit(token) => {
+                writeln!(
+                    f,
+                    "Error: Unit type '{token}' cannot be printed at {}",
+                    token.span
+                )
+            }
             MoreThanSixParams(token) => {
                 writeln!(
                     f,

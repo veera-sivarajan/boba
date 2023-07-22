@@ -252,9 +252,17 @@ impl TypeChecker {
 
     fn print_stmt(&mut self, expr: &Expr) -> LLStmt {
         let value = self.expression(expr);
-        LLStmt::Print {
-            ty_pe: value.to_type(),
-            value,
+        let ty_pe = value.to_type();
+        if ty_pe == Type::Unit {
+            LLStmt::Print {
+                ty_pe: self.error(BobaError::CannotPrintUnit(expr.into())),
+                value: LLExpr::Number(0),
+            }
+        } else {
+            LLStmt::Print {
+                ty_pe,
+                value,
+            }
         }
     }
 
