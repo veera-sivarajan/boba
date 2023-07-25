@@ -124,6 +124,7 @@ impl TypeChecker {
     }
 
     fn check_all_globals(&mut self, ast: &[Stmt]) {
+        let mut contains_main = false;
         for stmt in ast {
             match stmt {
                 Stmt::GlobalVariable { name, init } => {
@@ -174,6 +175,10 @@ impl TypeChecker {
                 }
                 _ => continue,
             }
+        }
+
+        if !contains_main {
+            self.error(BobaError::MainNotFound);
         }
     }
 
