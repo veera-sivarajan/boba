@@ -601,6 +601,7 @@ impl TypeChecker {
             | TokenType::LessEqual
             | TokenType::Greater
             | TokenType::GreaterEqual
+            | TokenType::BangEqual
             | TokenType::EqualEqual => Type::Bool,
             _ => unreachable!(),
         };

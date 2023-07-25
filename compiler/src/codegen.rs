@@ -384,6 +384,7 @@ impl CodeGen {
             Comparison::Greater => self.emit_code("jng", false_label, ""),
             Comparison::GreaterEqual => self.emit_code("jnge", false_label, ""),
             Comparison::EqualEqual => self.emit_code("jne", false_label, ""),
+            Comparison::BangEqual => self.emit_code("je", false_label, ""),
         };
     }
 

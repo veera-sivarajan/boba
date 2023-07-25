@@ -78,6 +78,7 @@ pub enum Comparison {
     Greater,
     GreaterEqual,
     EqualEqual,
+    BangEqual,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -114,6 +115,7 @@ impl std::fmt::Display for Comparison {
             Greater => write!(f, ">"),
             GreaterEqual => write!(f, ">="),
             EqualEqual => write!(f, "=="),
+            BangEqual => write!(f, "!="),
         }
     }
 }
@@ -150,6 +152,9 @@ impl From<&Token> for BinaryOperand {
             }
             TokenType::EqualEqual => {
                 BinaryOperand::Compare(Comparison::EqualEqual)
+            }
+            TokenType::BangEqual => {
+                BinaryOperand::Compare(Comparison::BangEqual)
             }
             _ => panic!("Cannot turn {token} into binary operand."),
         }
