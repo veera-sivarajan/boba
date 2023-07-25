@@ -313,7 +313,7 @@ impl CodeGen {
             param_types,
         );
         self.codegen(body);
-        if return_type == Type::Unit {
+        if name == "main" && return_type == Type::Unit {
             self.emit_code("movl", "$0", "%eax");
         }
         self.function_epilogue(name, &callee_saved_registers);
