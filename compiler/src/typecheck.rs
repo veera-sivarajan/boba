@@ -231,6 +231,7 @@ impl TypeChecker {
             param_types,
             space_for_locals: self.space_for_locals,
             body,
+            return_type,
         }
     }
 

@@ -228,7 +228,8 @@ impl CodeGen {
                 param_types,
                 space_for_locals,
                 body,
-            } => self.function_decl(name, param_types, *space_for_locals, body),
+                return_type,
+            } => self.function_decl(name, param_types, *space_for_locals, body, *return_type),
             LLStmt::Return { name, value } => self.return_stmt(name, value),
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
@@ -302,6 +303,7 @@ impl CodeGen {
         param_types: &[Type],
         space_for_locals: u16,
         body: &LLStmt,
+        return_type: Type,
     ) {
         let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         self.function_prologue(
@@ -311,6 +313,9 @@ impl CodeGen {
             param_types,
         );
         self.codegen(body);
+        if return_type == Type::Unit {
+            self.emit_code("movl", "$0", "%eax");
+        }
         self.function_epilogue(name, &callee_saved_registers);
     }
 

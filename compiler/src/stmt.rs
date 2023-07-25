@@ -77,6 +77,7 @@ pub enum LLStmt {
         param_types: Vec<Type>,
         space_for_locals: u16,
         body: Box<LLStmt>,
+        return_type: Type,
     },
     Return {
         name: String,
