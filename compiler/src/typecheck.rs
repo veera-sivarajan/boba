@@ -158,10 +158,16 @@ impl TypeChecker {
                             name.clone(),
                         ));
                     } else {
+                        if name.to_string() == "main" {
+                            contains_main = true;
+                        };
+                        
                         if params.len() > 6 {
                             self.error(BobaError::MoreThanSixParams(
                                 name.clone(),
                             ));
+                        } else if name.to_string() == "main" && !(*return_type == Type::Unit || *return_type == Type::Number) {
+                            self.error(BobaError::MainReturnType(name.clone()));
                         };
                         self.add_function(name, params, *return_type);
                     }

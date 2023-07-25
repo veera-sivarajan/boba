@@ -85,12 +85,18 @@ pub enum BobaError {
     GlobalVariableNotConst(Token),
     ArgumentCountNotEqual(Token, usize, usize),
     CannotPrintUnit(Token),
+    MainReturnType(Token),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            MainReturnType(token) => {
+                writeln!(
+                    f,
+                    "Error: Function `main()` can only return a value of type 'i32' or '()' at {}", token.span)
+            }
             CannotPrintUnit(token) => {
                 writeln!(
                     f,
