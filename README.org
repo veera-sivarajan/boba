@@ -1,6 +1,10 @@
 * boba
-~boba~ compiles rust-like source code to x86 assembly. Uses ~gcc~ to link the generated assembly with C standard library (to access ~printf()~) and to create an executable.
+~boba~ is a compiler project to learn about implementing type system, code optimization and code generation. It compiles rust-like source code to x86-64 assembly.
 
-For details about the syntax and semantics of the language, refer to [[./docs.org][documentation]].
+The generated assembly is linked with the C standard library (to access ~printf()~) and converted into an ELF executable using ~gcc~.
+** Documentation
+Refer to [[./docs.org][documentation]] for details about the syntax and semantics of the language.
+** Example Programs
+The [[./test/][/test/]] directory contains a bunch of example programs that can be compiled with this compiler.
 * Blog
 - [[https://veera.app/codegen.html][Boba Devlog #0: Compiling Pseudo-Rust to x86 Assembly]]
