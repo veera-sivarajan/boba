@@ -1,0 +1,114 @@
+* Language Tour
+~boba~ aims to be a safe, static and implicitly typed language. The compiler supports the following language constructs:
+** Primary Data Types
+1. ~str~: Static immutable string stored in the read-only memory of the binary. Equivalent to ~&'static str~ in Rust.
+2. ~i32~: 32-bit signed number data type. Equivalent to ~int~ in C.
+3. ~bool~: 8-bit boolean data type used to denote either ~true~ or ~false~. Internally, ~true~ is stored as ~1~ and ~false~ is ~0~.
+** Unary Expressions
+*** Negation
+The symbol ~-~ followed by a value of type ~i32~ is an unary negation expression. It will evaluate to a value of type ~i32~.
+#+BEGIN_SRC rust
+  let two = 2;
+  let minus_two = -two;
+#+END_SRC
+*** Logical Not
+The symbol ~!~ followed by a value of type ~bool~ is a logical not expression. It will evaluate to a value of type ~bool~.
+#+BEGIN_SRC rust
+  let going_to_rain = true;
+  if !going_to_rain {
+      go_out();
+  } else {
+      stay_in();
+  }
+#+END_SRC
+** Binary Expressions
+*** Numerical
+Here, both ~a~ and ~b~ are values of type ~i32~. All numerical expressions evaluates to a value of type ~i32~.
+1. Addition: ~a + b~
+2. Subtraction: ~a - b~
+3. Multiplication: ~a * b~
+4. Division: ~a / b~
+5. Modulus: ~a % b~
+*** Comparison
+Here, both ~a~ and ~b~ are values of type ~i32~. All comparison expressions evaluates to a value of type ~bool~.
+1. Greater: ~a > b~
+2. Greater Equal: ~a >= b~
+3. Lesser: ~a < b~
+4. Lesser Equal: ~a <= b~
+5. Equality: ~a == b~
+6. Non Equality: ~a != b~
+** Function Declaration
+The syntax for function declaration is identical to that of Rust. However, the compiler cannot handle functions with more than six parameters as I'm still figuring out how to use the stack to pass the arguments into the function.
+#+BEGIN_SRC rust
+  fn factorial(num: i32) -> i32 {
+      if num == 0 {
+          return 1;
+      } else {
+          return num * factorial(num - 1);
+      }
+  }
+
+  fn main() {
+      println(factorial(5));
+  }
+#+END_SRC
+Every valid program should contain a ~main()~ function because ~main()~ is the entry point for all programs. It can explicitly specify the return type as ~i32~ or not specify the return type and let the compiler implicitly add instructions to return a ~0~.
+
+Functions can be declared in any order and can be called from any local scope in the source file.
+** Variable Declaration
+Variables can be declared in both global and local scopes. Globally declared variables cannot be reassigned but local variables can be declared with the ~mut~ keyword to state that it can be reassigned with an other value of the same type.
+#+BEGIN_SRC rust
+  let size = 23;
+  let mut temperature = 35;
+#+END_SRC
+The types of all variables will be inferred at the time of declaration. 
+** Control Flow
+The ~if~ statement follows Rust's syntax but C's semantics. In other words, it is a conditional statement, not an expression. 
+#+BEGIN_SRC rust
+  if 2 > 1 {
+      println("two is greater than one");
+  } else {
+      println("two is less than one");
+  }
+#+END_SRC
+The following ~else~ statement is optional and can be skipped without any additional syntax.
+** Loops
+A ~while~ loop can be declared using the ~while~ keyword followed by a condition and the body of the loop in curly braces.
+#+BEGIN_SRC rust
+  let mut a = 5;
+  while a > 0 {
+      println(a);
+      a = a - 1;
+  }
+#+END_SRC
+
+Syntax for ~for~ loop is similar to that of C. Internally, a ~for~ loop desugars into a ~while~ loop.
+#+BEGIN_SRC rust
+  for (let mut a = 5; a > 0; a = a - 1) {
+      println(a);
+  }
+#+END_SRC
+** Print Statement
+It is a builtin function that takes an expression as argument and prints its value on a newline in ~stdout~. It compiles to a call to libc's ~printf()~ with an appropriate format specifier.
+#+BEGIN_SRC rust
+  fn main() {
+      println("Hello, world!");
+      println(factorial(5));
+
+      let a = 10;
+      println(a);
+  }
+#+END_SRC
+** Return Statement
+It is used to return the value of an expression from a function. This expression's type should be the same as the return type specified in the function signature.
+#+BEGIN_SRC rust
+  fn greet() -> str {
+      return "hello";
+  }
+
+  fn is_even(num: i32) -> bool {
+      return num % 2 == 0;
+  }
+#+END_SRC
+
+
