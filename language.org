@@ -1,4 +1,4 @@
-* Language Tour
+* Language Documentation
 ~boba~ aims to be a safe, static and implicitly typed language. The compiler supports the following language constructs:
 ** Primary Data Types
 1. ~str~: Static immutable string stored in the read-only memory of the binary. Equivalent to ~&'static str~ in Rust.

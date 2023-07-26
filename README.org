@@ -2,8 +2,8 @@
 ~boba~ is a compiler project to learn about implementing type system, code optimization and code generation. It compiles rust-like source code to x86-64 assembly.
 
 The generated assembly is linked with the C standard library (to access ~printf()~) and converted into an ELF executable using ~gcc~.
-** Documentation
-Refer to [[./docs.org][documentation]] for details about the syntax and semantics of the language.
+** Language Documentation
+Check [[./language.org][language documentation]] for details about the syntax and semantics of the language.
 ** Example Programs
 The [[./test/][test/]] directory contains a bunch of example programs that can be compiled with this compiler.
 * Devlog
