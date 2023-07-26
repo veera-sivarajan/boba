@@ -63,7 +63,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    fn consume_type(&mut self, error_msg: &str) -> Result<Type, BobaError> {
+    fn consume_type(
+        &mut self,
+        error_msg: &str,
+    ) -> Result<Type, BobaError> {
         self.cursor
             .next_if(|token| token.is_type())
             .and_then(|token| token.to_type())
@@ -75,7 +78,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return Err(self.error("Global variables cannot be mutable."));
         }
 
-        let name = self.consume_identifier("Expect global variable name.")?;
+        let name =
+            self.consume_identifier("Expect global variable name.")?;
         self.consume(
             TokenType::Equal,
             "Global variables should be initalized at declaration.",
@@ -111,7 +115,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
-    fn statement(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+    fn statement(
+        &mut self,
+        function_name: &Token,
+    ) -> Result<Stmt, BobaError> {
         if self.next_eq(TokenType::Print) {
             self.print_stmt()
         } else if self.next_eq(TokenType::If) {
@@ -123,8 +130,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else if self.next_eq(TokenType::While) {
             self.while_stmt(function_name)
         } else if self.peek_check(TokenType::Fn) {
-            Err(self
-                .error("Functions cannot be declared within a local scope."))
+            Err(self.error(
+                "Functions cannot be declared within a local scope.",
+            ))
         } else if self.next_eq(TokenType::Return) {
             self.return_stmt(function_name)
         } else if self.next_eq(TokenType::For) {
@@ -134,7 +142,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
-    fn for_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+    fn for_stmt(
+        &mut self,
+        function_name: &Token,
+    ) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
         let init = if self.next_eq(TokenType::Semicolon) {
             None
@@ -164,7 +175,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else {
             Some(self.expression()?)
         };
-        self.consume(TokenType::RightParen, "Expect ')' after 'for' clauses.")?;
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after 'for' clauses.",
+        )?;
         let mut body = self.statement(function_name)?;
         if let Some(expression) = increment {
             body = Stmt::Block(vec![body, Stmt::Expression(expression)]);
@@ -179,7 +193,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(body)
     }
 
-    fn while_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+    fn while_stmt(
+        &mut self,
+        function_name: &Token,
+    ) -> Result<Stmt, BobaError> {
         let condition = self.expression()?;
         self.consume(
             TokenType::LeftBrace,
@@ -201,8 +218,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         })
     }
 
-    fn parse_parameter_and_type(&mut self) -> Result<Parameter, BobaError> {
-        let identifier = self.consume_identifier("Expect parameter name.")?;
+    fn parse_parameter_and_type(
+        &mut self,
+    ) -> Result<Parameter, BobaError> {
+        let identifier =
+            self.consume_identifier("Expect parameter name.")?;
         self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
         let id_type = self.consume_type("Expect parameter type.")?;
         Ok((Expr::Variable(identifier), id_type))
@@ -210,7 +230,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
         let name = self.consume_identifier("Expect function name.")?;
-        self.consume(TokenType::LeftParen, "Expect '(' after function name.")?;
+        self.consume(
+            TokenType::LeftParen,
+            "Expect '(' after function name.",
+        )?;
         let mut params: Vec<Parameter> = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightParen) {
             params.push(self.parse_parameter_and_type()?);
@@ -218,14 +241,23 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 params.push(self.parse_parameter_and_type()?);
             }
         }
-        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after parameters.",
+        )?;
         let return_type = if self.peek_check(TokenType::Arrow) {
-            self.consume(TokenType::Arrow, "Expect '->' after parameters.")?;
+            self.consume(
+                TokenType::Arrow,
+                "Expect '->' after parameters.",
+            )?;
             self.consume_type("Expect correct return type.")?
         } else {
             Type::Unit
         };
-        self.consume(TokenType::LeftBrace, "Expect '{' before function body")?;
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' before function body",
+        )?;
         let body = self.block_stmt(&name)?;
         Ok(Stmt::Function {
             name,
@@ -235,7 +267,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         })
     }
 
-    fn if_stmt(&mut self, function_name: &Token) -> Result<Stmt, BobaError> {
+    fn if_stmt(
+        &mut self,
+        function_name: &Token,
+    ) -> Result<Stmt, BobaError> {
         let condition = self.expression()?;
         self.consume(
             TokenType::LeftBrace,
@@ -270,18 +305,29 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(stmts)
     }
 
+    fn consume_string(
+        &mut self,
+        error_msg: &str,
+    ) -> Result<String, BobaError> {
+        self.cursor
+            .next_if(|token| {
+                matches!(token.kind, TokenType::StringLiteral(_))
+            })
+            .ok_or(self.error(error_msg))
+            .map(|token| token.to_string())
+    }
+
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         if self.peek_check(TokenType::RightParen) {
-            Err(self.error("Expect an expression inside print statement."))
+            Err(self.error("Expected format string and arguments inside print statement."))
         } else {
-            let value = self.expression()?;
-            self.consume(TokenType::RightParen, "Expect closing parenthesis")?;
+            let args = self.parse_arguments()?;
             self.consume(
                 TokenType::Semicolon,
                 "Expected semicolon after print statement",
             )?;
-            Ok(Stmt::Print(value))
+            Ok(Stmt::Print(args))
         }
     }
 
@@ -305,7 +351,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     value: Box::new(value),
                 }),
                 _ => Err(self.error(
-                    format!("Expect variable name but found {expr:?}").as_str(),
+                    format!("Expect variable name but found {expr:?}")
+                        .as_str(),
                 )),
             }
         } else {
@@ -349,7 +396,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn term(&mut self) -> Result<Expr, BobaError> {
         let mut expr = self.factor()?;
-        while let Some(oper) = next_eq!(self, TokenType::Plus, TokenType::Minus)
+        while let Some(oper) =
+            next_eq!(self, TokenType::Plus, TokenType::Minus)
         {
             let right = self.factor()?;
             expr = Expr::Binary {
@@ -380,7 +428,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn unary(&mut self) -> Result<Expr, BobaError> {
-        if let Some(oper) = next_eq!(self, TokenType::Bang, TokenType::Minus) {
+        if let Some(oper) =
+            next_eq!(self, TokenType::Bang, TokenType::Minus)
+        {
             let right = Box::new(self.unary()?);
             Ok(Expr::Unary { oper, right })
         } else {
@@ -400,7 +450,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(expr)
     }
 
-    fn finish_call(&mut self, callee: &Expr) -> Result<Expr, BobaError> {
+    fn parse_arguments(&mut self) -> Result<Vec<Expr>, BobaError> {
         let mut args = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightParen) {
             args.push(self.expression()?);
@@ -408,7 +458,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 args.push(self.expression()?);
             }
         }
-        self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        self.consume(
+            TokenType::RightParen,
+            "Expect ')' after arguments.",
+        )?;
+        Ok(args)
+    }
+
+    fn finish_call(&mut self, callee: &Expr) -> Result<Expr, BobaError> {
+        let args = self.parse_arguments()?;
         if let Expr::Variable(name) = callee {
             Ok(Expr::Call {
                 callee: name.clone(),

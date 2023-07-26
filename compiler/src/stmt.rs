@@ -16,7 +16,7 @@ pub enum Stmt {
         init: Expr,
     },
     Expression(Expr),
-    Print(Expr),
+    Print(Vec<Expr>),
     If {
         condition: Expr,
         then: Box<Stmt>,
