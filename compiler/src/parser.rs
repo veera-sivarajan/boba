@@ -453,7 +453,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     )?;
                     Ok(Expr::Group(Box::new(expr)))
                 }
-                _ => todo!("{}", meta.kind),
+                _ => Err(self.error(
+                    format!(
+                        "Expected a primary expression but found '{}'",
+                        meta.kind
+                    )
+                    .as_str(),
+                )),
             }
         } else {
             Err(self.error("Expected a primary expression"))
