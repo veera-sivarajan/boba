@@ -291,7 +291,7 @@ impl TypeChecker {
                         let replace = match arg.to_type() {
                             Type::Number => 'd',
                             Type::String | Type::Bool => 's',
-                            _ => unreachable!(),
+                            _ => ' ',
                         };
                         args.push(arg);
                         format.push(replace);
