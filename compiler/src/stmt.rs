@@ -66,8 +66,8 @@ pub enum LLStmt {
     },
     Expression(LLExpr),
     Print {
-        value: LLExpr,
-        ty_pe: Type,
+        format: String,
+        args: Vec<LLExpr>,
     },
     Block(Vec<LLStmt>),
     If {

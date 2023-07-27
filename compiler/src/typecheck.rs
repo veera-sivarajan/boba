@@ -305,7 +305,7 @@ impl TypeChecker {
                 LLStmt::Error
             } else {
                 let mut format = String::new();
-                let mut arguments = Vec::with_capacity(5);
+                let mut args = Vec::with_capacity(5);
                 for ch in format_string.chars() {
                     if ch == '{' {
                         format.push('%');
@@ -316,7 +316,7 @@ impl TypeChecker {
                             Type::String | Type::Bool => 's',
                             _ => unreachable!(),
                         };
-                        arguments.push(arg);
+                        args.push(arg);
                         format.push(replace);
                     } else {
                         format.push(ch);
@@ -324,7 +324,10 @@ impl TypeChecker {
                 }
                 format.push_str("\\n");
                 println!("Format: {format}");
-                todo!()
+                LLStmt::Print {
+                    format,
+                    args,
+                }
             }
         } else {
             self.error(BobaError::ExpectFormatString(meta.clone()));

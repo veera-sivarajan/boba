@@ -216,7 +216,7 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print { value, ty_pe } => self.print_stmt(value, *ty_pe),
+            LLStmt::Print { format, args } => self.print_stmt(format, args),
             LLStmt::If {
                 condition,
                 then,
@@ -395,14 +395,15 @@ impl CodeGen {
         }
     }
 
-    fn print_stmt(&mut self, value: &LLExpr, ty_pe: Type) {
-        let register = self.expression(value);
-        self.emit_code(move_for(ty_pe), &register, rsi_for(ty_pe));
-        self.format_string(ty_pe, &register);
-        self.emit_code("movq", "%rax", "%rdi");
-        self.emit_code("xor", "%eax", "%eax");
-        self.emit_code("call", "printf@PLT", "");
-        self.registers.deallocate(register);
+    fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
+        // let register = self.expression(value);
+        // self.emit_code(move_for(ty_pe), &register, rsi_for(ty_pe));
+        // self.format_string(ty_pe, &register);
+        // self.emit_code("movq", "%rax", "%rdi");
+        // self.emit_code("xor", "%eax", "%eax");
+        // self.emit_code("call", "printf@PLT", "");
+        // self.registers.deallocate(register);
+        todo!()
     }
 
     fn emit_data(
