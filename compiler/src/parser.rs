@@ -305,18 +305,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(stmts)
     }
 
-    fn consume_string(
-        &mut self,
-        error_msg: &str,
-    ) -> Result<String, BobaError> {
-        self.cursor
-            .next_if(|token| {
-                matches!(token.kind, TokenType::StringLiteral(_))
-            })
-            .ok_or(self.error(error_msg))
-            .map(|token| token.to_string())
-    }
-
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
         self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         if self.peek_check(TokenType::RightParen) {

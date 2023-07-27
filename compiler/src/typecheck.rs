@@ -32,7 +32,11 @@ struct FunctionData {
 }
 
 impl FunctionData {
-    fn new(name: Token, params: Vec<Parameter>, return_type: Type) -> Self {
+    fn new(
+        name: Token,
+        params: Vec<Parameter>,
+        return_type: Type,
+    ) -> Self {
         FunctionData {
             name,
             params,
@@ -94,7 +98,10 @@ impl TypeChecker {
         }
     }
 
-    pub fn check(&mut self, ast: &[Stmt]) -> Result<Vec<LLStmt>, BobaError> {
+    pub fn check(
+        &mut self,
+        ast: &[Stmt],
+    ) -> Result<Vec<LLStmt>, BobaError> {
         self.check_all_globals(ast);
         for stmt in ast {
             let ll_stmt = self.statement(stmt);
@@ -132,7 +139,9 @@ impl TypeChecker {
                         self.error(BobaError::GlobalVariableNotConst(
                             name.clone(),
                         ));
-                    } else if self.variable_is_declared_in_current_scope(name) {
+                    } else if self
+                        .variable_is_declared_in_current_scope(name)
+                    {
                         self.error(BobaError::VariableRedeclaration(
                             name.clone(),
                         ));
@@ -162,13 +171,18 @@ impl TypeChecker {
                         if name.to_string() == "main" {
                             contains_main = true;
                         };
-                        
+
                         if params.len() > 6 {
                             self.error(BobaError::MoreThanSixParams(
                                 name.clone(),
                             ));
-                        } else if name.to_string() == "main" && !(*return_type == Type::Unit || *return_type == Type::Number) {
-                            self.error(BobaError::MainReturnType(name.clone()));
+                        } else if name.to_string() == "main"
+                            && !(*return_type == Type::Unit
+                                || *return_type == Type::Number)
+                        {
+                            self.error(BobaError::MainReturnType(
+                                name.clone(),
+                            ));
                         };
                         self.add_function(name, params, *return_type);
                     }
@@ -204,14 +218,22 @@ impl TypeChecker {
             Stmt::GlobalVariable { name, init } => {
                 self.global_variable_decl(name, init)
             }
-            Stmt::Expression(expr) => LLStmt::Expression(self.expression(expr)),
-            Stmt::While { condition, body } => self.while_stmt(condition, body),
-            Stmt::Print(expr) => self.print_stmt(expr),
+            Stmt::Expression(expr) => {
+                LLStmt::Expression(self.expression(expr))
+            }
+            Stmt::While { condition, body } => {
+                self.while_stmt(condition, body)
+            }
+            Stmt::Print(args) => self.print_stmt(args),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
         }
     }
 
-    fn global_variable_decl(&mut self, name: &Token, init: &Expr) -> LLStmt {
+    fn global_variable_decl(
+        &mut self,
+        name: &Token,
+        init: &Expr,
+    ) -> LLStmt {
         LLStmt::GlobalVariable {
             name: name.to_string(),
             init: self.expression(init),
@@ -246,7 +268,11 @@ impl TypeChecker {
         }
     }
 
-    fn return_stmt(&mut self, function_name: &Token, expr: &Expr) -> LLStmt {
+    fn return_stmt(
+        &mut self,
+        function_name: &Token,
+        expr: &Expr,
+    ) -> LLStmt {
         let value = self.expression(expr);
         if let Some(data) = self.function_is_defined(function_name) {
             self.error_if_ne(
@@ -262,19 +288,38 @@ impl TypeChecker {
         }
     }
 
-    fn print_stmt(&mut self, expr: &Expr) -> LLStmt {
-        let value = self.expression(expr);
-        let ty_pe = value.to_type();
-        if ty_pe == Type::Unit {
-            LLStmt::Print {
-                ty_pe: self.error(BobaError::CannotPrintUnit(expr.into())),
-                value: LLExpr::Number(0),
+    fn print_stmt(&mut self, args: &[Expr]) -> LLStmt {
+        let mut types = args.iter().map(|expr| self.expression(expr));
+        if let Some(LLExpr::String(format_string)) = types.next() {
+            if format_string.matches("{}").count() != args.len() - 1 {
+                todo!()
+            } else if args.len() > 5 {
+                todo!()
+            } else {
+                let mut format = String::new();
+                let mut arguments = Vec::with_capacity(5);
+                for ch in format_string.chars() {
+                    if ch == '{' {
+                        format.push('%');
+                    } else if ch == '}' {
+                        let arg = types.next().unwrap();
+                        let replace = match arg.to_type() {
+                            Type::Number => 'd',
+                            Type::String | Type::Bool => 's',
+                            _ => unreachable!(),
+                        };
+                        arguments.push(arg);
+                        format.push(replace);
+                    } else {
+                        format.push(ch);
+                    }
+                }
+                format.push_str("\\n");
+                println!("Format: {format}");
+                todo!()
             }
         } else {
-            LLStmt::Print {
-                ty_pe,
-                value,
-            }
+            todo!()
         }
     }
 
@@ -327,7 +372,8 @@ impl TypeChecker {
             if init.to_type() == Type::Unit {
                 self.error(BobaError::AssigningUnitType(value.into()));
             };
-            let variable_index = self.update_space_for_locals(init.to_type());
+            let variable_index =
+                self.update_space_for_locals(init.to_type());
             self.add_variable(
                 name.clone(),
                 Info::new(
@@ -358,7 +404,8 @@ impl TypeChecker {
             if self.variable_is_declared_in_current_scope(&param_token) {
                 self.error(BobaError::VariableRedeclaration(param_token));
             } else {
-                let parameter_index = self.update_space_for_locals(*param_type);
+                let parameter_index =
+                    self.update_space_for_locals(*param_type);
                 self.add_variable(
                     param_token,
                     Info::new(
@@ -392,12 +439,13 @@ impl TypeChecker {
         }
 
         if expected != found {
-            self.errors
-                .push(BobaError::TypeCheck(TypeError::Mismatched {
+            self.errors.push(BobaError::TypeCheck(
+                TypeError::Mismatched {
                     expected,
                     found,
                     span,
-                }));
+                },
+            ));
         }
     }
 
@@ -414,7 +462,8 @@ impl TypeChecker {
             Token::from(cond).span,
         );
         let then = Box::new(self.statement(then));
-        let elze = elze.as_ref().map(|stmt| Box::new(self.statement(stmt)));
+        let elze =
+            elze.as_ref().map(|stmt| Box::new(self.statement(stmt)));
         LLStmt::If {
             condition,
             then,
@@ -440,7 +489,9 @@ impl TypeChecker {
                 }
             }
             Expr::Unary { oper, right } => self.unary(oper, right),
-            Expr::Call { callee, args } => self.function_call(callee, args),
+            Expr::Call { callee, args } => {
+                self.function_call(callee, args)
+            }
         }
     }
 
@@ -514,7 +565,8 @@ impl TypeChecker {
                 if let Some(Info {
                     ty_pe,
                     is_mutable,
-                    kind: Kind::Parameter(index) | Kind::LocalVariable(index),
+                    kind:
+                        Kind::Parameter(index) | Kind::LocalVariable(index),
                 }) = self.get_info(token)
                 {
                     if is_mutable {
@@ -538,7 +590,10 @@ impl TypeChecker {
                     )
                 }
             }
-            _ => (self.error(BobaError::AssignToNonVariable(name.into())), 0),
+            _ => (
+                self.error(BobaError::AssignToNonVariable(name.into())),
+                0,
+            ),
         };
         LLExpr::Assign {
             value: Box::new(self.expression(value)),
@@ -586,7 +641,12 @@ impl TypeChecker {
         }
     }
 
-    fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) -> LLExpr {
+    fn binary(
+        &mut self,
+        left: &Expr,
+        oper: &Token,
+        right: &Expr,
+    ) -> LLExpr {
         let left = self.expression(left);
         let right = self.expression(right);
         self.error_if_ne(Type::Number, left.to_type(), oper.span);
