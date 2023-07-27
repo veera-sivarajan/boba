@@ -76,16 +76,6 @@ fn rax_for(ty_pe: Type) -> String {
     }
 }
 
-fn rsi_for(ty_pe: Type) -> String {
-    let lexeme = match ty_pe.as_size() {
-        1 => ARGUMENTS[RegisterSize::Byte as usize][1],
-        4 => ARGUMENTS[RegisterSize::DWord as usize][1],
-        8 => ARGUMENTS[RegisterSize::QWord as usize][1],
-        _ => unreachable!(),
-    };
-    lexeme.to_string()
-}
-
 fn cmp_for(ty_pe: Type) -> String {
     match ty_pe.as_size() {
         1 => String::from("cmpb"),
@@ -427,7 +417,8 @@ impl CodeGen {
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
         let format_string = self.string(format);
-        self.emit_code("movq", format_string, "%rdi");
+        self.emit_code("movq", &format_string, "%rdi");
+        self.registers.deallocate(format_string);
         for (index, arg) in args.iter().enumerate() {
             let register = self.expression(arg);
             match arg.to_type() {
@@ -637,6 +628,9 @@ impl CodeGen {
                 ARGUMENTS[register_index][index],
             );
         }
+        for register in arguments {
+            self.registers.deallocate(register);
+        }
         self.emit_code("pushq", "%r10", "");
         self.emit_code("pushq", "%r11", "");
         self.emit_code("call", callee, "");
@@ -743,6 +737,8 @@ impl CodeGen {
                 self.emit_label(false_label);
                 self.emit_code("movb", "$0", &result);
                 self.emit_label(done_label);
+                self.registers.deallocate(left_register);
+                self.registers.deallocate(right_register);
                 result
             }
         }

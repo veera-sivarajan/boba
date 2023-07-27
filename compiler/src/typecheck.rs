@@ -325,7 +325,6 @@ impl TypeChecker {
                     }
                 }
                 format.push_str("\\n");
-                println!("Format: {format}");
                 LLStmt::Print { format, args }
             }
         } else {

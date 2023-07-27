@@ -53,7 +53,7 @@ pub enum Stmt {
 //     }
 // }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum LLStmt {
     LocalVariable {
         init: LLExpr,
