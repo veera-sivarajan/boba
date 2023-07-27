@@ -416,25 +416,18 @@ impl CodeGen {
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
+        let registers: Vec<RegisterIndex> =
+            args.iter().map(|expr| self.expression(expr)).collect();
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
-        for (index, arg) in args.iter().enumerate() {
-            let register = self.expression(arg);
+        for ((index, arg), register) in args.iter().enumerate().zip(registers) {
             match arg.to_type() {
                 Type::Number => {
-                    self.emit_code(
-                        "movl",
-                        &register,
-                        ARGUMENTS[1][index + 1],
-                    );
+                    self.emit_code("movl", &register, ARGUMENTS[1][index + 1]);
                 }
                 Type::String => {
-                    self.emit_code(
-                        "movq",
-                        &register,
-                        ARGUMENTS[2][index + 1],
-                    );
+                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
                 }
                 Type::Bool => {
                     let false_label = self.labels.create();
