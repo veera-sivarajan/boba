@@ -3,5 +3,5 @@ fn hello() -> str {
 }
 
 fn main() {
-    println(hello());
+    println("{}", hello());
 }

@@ -1,12 +1,11 @@
 .globl main
-.format_string:
-        .string "%s\n"
-.format_number:
-        .string "%d\n"
 .format_true:
-        .string "true\n"
+        .string "true"
 .format_false:
-        .string "false\n"
+        .string "false"
+.L0:
+        .string "%d\n"
+        .text
 main:
         pushq %rbp
         movq  %rsp, %rbp
@@ -21,18 +20,18 @@ main:
         movl  $5, %ebx
         movl  %ebx, -4(%rbp)
         movl  -4(%rbp), %ebx
+        leaq  .L0(%rip), %r10
+        movq  %r10, %rdi
         movl  %ebx, %esi
-        leaq  .format_number(%rip), %rax
-        movq  %rax, %rdi
         xor   %eax, %eax
         call  printf@PLT
+        movl  $0, %eax
 .main_epilogue:
         popq  %r15
         popq  %r14
         popq  %r13
         popq  %r12
         popq  %rbx
-        addq  $8, %rsp
         movq  %rbp, %rsp
         popq  %rbp
         ret   

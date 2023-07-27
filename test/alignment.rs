@@ -10,5 +10,5 @@ fn factorial(num: i32) -> i32 {
 
 fn main() {
     let c = 4;
-    println(factorial(5));
+    println("{}", factorial(5));
 }

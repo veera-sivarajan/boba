@@ -16,8 +16,8 @@ fn is_even(num: i32) -> bool {
 }
 
 fn main() {
-    println(hello());
-    println(number());
-    println(is_even(3));
+    println("{}", hello());
+    println("{}", number());
+    println("{}", is_even(3));
 }
 

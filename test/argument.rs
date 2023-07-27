@@ -1,5 +1,5 @@
 fn function(x: i32, y: i32) {
-    println(x + y);
+    println("{}", x + y);
 }
 
 fn main() {

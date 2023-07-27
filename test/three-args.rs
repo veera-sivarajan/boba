@@ -5,5 +5,5 @@ fn compute(a: i32, b: i32, c: i32) -> i32 {
 }
 
 fn main() {
-    println(compute(1, 2, 3));
+    println("{}", compute(1, 2, 3));
 }

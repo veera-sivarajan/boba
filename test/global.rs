@@ -5,11 +5,11 @@ fn factorial(x: i32, y: i32) {
     let ball = 20;
     if x > y {
         let car = 30;
-        println(apple + car);
+        println("{}", apple + car);
     } else {
         let apple = 100;
         let ball = 250;
-        println(apple + ball);
+        println("{}", apple + ball);
     }
 }
 
