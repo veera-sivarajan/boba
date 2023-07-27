@@ -40,7 +40,9 @@ impl Expr {
     pub fn is_constant(&self) -> bool {
         matches!(
             self,
-            Expr::Number { .. } | Expr::Boolean { .. } | Expr::String { .. }
+            Expr::Number { .. }
+                | Expr::Boolean { .. }
+                | Expr::String { .. }
         )
     }
 }
@@ -146,7 +148,9 @@ impl From<&Token> for BinaryOperand {
             TokenType::LessEqual => {
                 BinaryOperand::Compare(Comparison::LessEqual)
             }
-            TokenType::Greater => BinaryOperand::Compare(Comparison::Greater),
+            TokenType::Greater => {
+                BinaryOperand::Compare(Comparison::Greater)
+            }
             TokenType::GreaterEqual => {
                 BinaryOperand::Compare(Comparison::GreaterEqual)
             }

@@ -159,14 +159,10 @@ impl CodeGen {
             registers: ScratchRegisters::new(),
             assembly: Assembly {
                 global: String::new(),
-                header: r#".format_string:
-        .string "%s\n"
-.format_number:
-        .string "%d\n"
-.format_true:
-        .string "true\n"
+                header: r#".format_true:
+        .string "true"
 .format_false:
-        .string "false\n"
+        .string "false"
 "#
                 .to_string(),
                 code: String::new(),
@@ -216,7 +212,9 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print { format, args } => self.print_stmt(format, args),
+            LLStmt::Print { format, args } => {
+                self.print_stmt(format, args)
+            }
             LLStmt::If {
                 condition,
                 then,
@@ -229,8 +227,16 @@ impl CodeGen {
                 space_for_locals,
                 body,
                 return_type,
-            } => self.function_decl(name, param_types, *space_for_locals, body, *return_type),
-            LLStmt::Return { name, value } => self.return_stmt(name, value),
+            } => self.function_decl(
+                name,
+                param_types,
+                *space_for_locals,
+                body,
+                *return_type,
+            ),
+            LLStmt::Return { name, value } => {
+                self.return_stmt(name, value)
+            }
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
             }
@@ -251,14 +257,27 @@ impl CodeGen {
     fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
-        self.emit_code(move_for(return_type), &register, rax_for(return_type));
+        self.emit_code(
+            move_for(return_type),
+            &register,
+            rax_for(return_type),
+        );
         self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
     }
 
-    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: Type, index: u16) {
+    fn local_variable_decl(
+        &mut self,
+        init: &LLExpr,
+        ty_pe: Type,
+        index: u16,
+    ) {
         let register = self.expression(init);
-        self.emit_code(move_for(ty_pe), &register, format!("-{index}(%rbp)"));
+        self.emit_code(
+            move_for(ty_pe),
+            &register,
+            format!("-{index}(%rbp)"),
+        );
         self.registers.deallocate(register);
     }
 
@@ -306,7 +325,8 @@ impl CodeGen {
         body: &LLStmt,
         return_type: Type,
     ) {
-        let callee_saved_registers = ["%rbx", "%r12", "%r13", "%r14", "%r15"];
+        let callee_saved_registers =
+            ["%rbx", "%r12", "%r13", "%r14", "%r15"];
         self.function_prologue(
             name,
             &callee_saved_registers,
@@ -352,7 +372,11 @@ impl CodeGen {
         self.emit_label(done_label);
     }
 
-    fn boolean_expression(&mut self, condition: &LLExpr, false_label: &str) {
+    fn boolean_expression(
+        &mut self,
+        condition: &LLExpr,
+        false_label: &str,
+    ) {
         if let LLExpr::Binary {
             left,
             oper: BinaryOperand::Compare(operator),
@@ -381,10 +405,16 @@ impl CodeGen {
     ) {
         match operation {
             Comparison::Less => self.emit_code("jnl", false_label, ""),
-            Comparison::LessEqual => self.emit_code("jnle", false_label, ""),
+            Comparison::LessEqual => {
+                self.emit_code("jnle", false_label, "")
+            }
             Comparison::Greater => self.emit_code("jng", false_label, ""),
-            Comparison::GreaterEqual => self.emit_code("jnge", false_label, ""),
-            Comparison::EqualEqual => self.emit_code("jne", false_label, ""),
+            Comparison::GreaterEqual => {
+                self.emit_code("jnge", false_label, "")
+            }
+            Comparison::EqualEqual => {
+                self.emit_code("jne", false_label, "")
+            }
             Comparison::BangEqual => self.emit_code("je", false_label, ""),
         };
     }
@@ -396,33 +426,42 @@ impl CodeGen {
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
-        // let register = self.expression(value);
-        // self.emit_code(move_for(ty_pe), &register, rsi_for(ty_pe));
-        // self.format_string(ty_pe, &register);
-        // self.emit_code("movq", "%rax", "%rdi");
-        // self.emit_code("xor", "%eax", "%eax");
-        // self.emit_code("call", "printf@PLT", "");
-        // self.registers.deallocate(register);
         let format_string = self.string(format);
         self.emit_code("movq", format_string, "%rdi");
         for (index, arg) in args.iter().enumerate() {
             let register = self.expression(arg);
             match arg.to_type() {
                 Type::Number => {
-                    self.emit_code("movl", &register, ARGUMENTS[1][index + 1]);
+                    self.emit_code(
+                        "movl",
+                        &register,
+                        ARGUMENTS[1][index + 1],
+                    );
                 }
                 Type::String => {
-                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
+                    self.emit_code(
+                        "movq",
+                        &register,
+                        ARGUMENTS[2][index + 1],
+                    );
                 }
                 Type::Bool => {
                     let false_label = self.labels.create();
                     let done_label = self.labels.create();
                     self.emit_code("cmpb", "$1", &register);
                     self.emit_code("jne", &false_label, "");
-                    self.emit_code("leaq", ".format_true(%rip)", ARGUMENTS[2][index + 1]);
+                    self.emit_code(
+                        "leaq",
+                        ".format_true(%rip)",
+                        ARGUMENTS[2][index + 1],
+                    );
                     self.emit_code("jmp", &done_label, "");
                     self.emit_label(false_label);
-                    self.emit_code("leaq", ".format_false(%rip)", ARGUMENTS[2][index + 1]);
+                    self.emit_code(
+                        "leaq",
+                        ".format_false(%rip)",
+                        ARGUMENTS[2][index + 1],
+                    );
                     self.emit_label(done_label);
                 }
                 _ => unreachable!(),
@@ -527,8 +566,12 @@ impl CodeGen {
     fn emit_string(&mut self, label: &str, literal: &str) {
         writeln!(&mut self.assembly.header, "{label}:")
             .expect("Unable to emit string.");
-        writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")
-            .expect("Unable to emit string.");
+        writeln!(
+            &mut self.assembly.header,
+            "{:8}.string \"{literal}\"",
+            " "
+        )
+        .expect("Unable to emit string.");
         writeln!(&mut self.assembly.header, "{:8}.text", " ")
             .expect("Unable to emit string.");
     }
@@ -541,7 +584,11 @@ impl CodeGen {
         register
     }
 
-    fn unary(&mut self, oper: &UnaryOperand, right: &LLExpr) -> RegisterIndex {
+    fn unary(
+        &mut self,
+        oper: &UnaryOperand,
+        right: &LLExpr,
+    ) -> RegisterIndex {
         let operand = self.expression(right);
         match oper {
             UnaryOperand::LogicalNot => {
@@ -611,29 +658,6 @@ impl CodeGen {
         let register = self.registers.allocate(Type::Bool);
         self.emit_code("movb", format!("${number}"), &register);
         register
-    }
-
-    fn format_string(&mut self, ty_pe: Type, register: &RegisterIndex) {
-        match ty_pe {
-            Type::String => {
-                self.emit_code("leaq", ".format_string(%rip)", "%rax")
-            }
-            Type::Number => {
-                self.emit_code("leaq", ".format_number(%rip)", "%rax")
-            }
-            Type::Bool => {
-                let false_label = self.labels.create();
-                let done_label = self.labels.create();
-                self.emit_code("cmpb", "$1", register);
-                self.emit_code("jne", &false_label, "");
-                self.emit_code("leaq", ".format_true(%rip)", "%rax");
-                self.emit_code("jmp", &done_label, "");
-                self.emit_label(false_label);
-                self.emit_code("leaq", ".format_false(%rip)", "%rax");
-                self.emit_label(done_label);
-            }
-            _ => unreachable!(),
-        }
     }
 
     fn variable(
@@ -710,7 +734,10 @@ impl CodeGen {
                     &right_register,
                     &left_register,
                 );
-                self.comparison_operation(comparison_operand, &false_label);
+                self.comparison_operation(
+                    comparison_operand,
+                    &false_label,
+                );
                 self.emit_code("movb", "$1", &result);
                 self.emit_code("jmp", &done_label, "");
                 self.emit_label(false_label);

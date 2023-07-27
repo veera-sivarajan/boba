@@ -301,7 +301,9 @@ impl TypeChecker {
                 ));
                 LLStmt::Error
             } else if args.len() > 5 {
-                self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
+                self.error(BobaError::PrintGotMoreThanFiveArgs(
+                    meta.clone(),
+                ));
                 LLStmt::Error
             } else {
                 let mut format = String::new();
@@ -324,10 +326,7 @@ impl TypeChecker {
                 }
                 format.push_str("\\n");
                 println!("Format: {format}");
-                LLStmt::Print {
-                    format,
-                    args,
-                }
+                LLStmt::Print { format, args }
             }
         } else {
             self.error(BobaError::ExpectFormatString(meta.clone()));

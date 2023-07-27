@@ -306,7 +306,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn print_stmt(&mut self) -> Result<Stmt, BobaError> {
-        let meta = self.consume(TokenType::LeftParen, "Expect opening parenthesis")?;
+        let meta = self
+            .consume(TokenType::LeftParen, "Expect opening parenthesis")?;
         if self.peek_check(TokenType::RightParen) {
             Err(self.error("Expected format string and arguments inside print statement."))
         } else {
@@ -315,10 +316,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 TokenType::Semicolon,
                 "Expected semicolon after print statement",
             )?;
-            Ok(Stmt::Print {
-                meta,
-                args,
-            })
+            Ok(Stmt::Print { meta, args })
         }
     }
 
