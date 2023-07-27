@@ -1,5 +1,5 @@
 * Language Documentation
-~boba~ aims to be a safe, static and implicitly typed language. The compiler supports the following language constructs:
+~boba~ aims to be a safe, static and implicitly typed language. The language is designed to be syntactically similar to Rust and semantically equivalent to C. The compiler supports the following language constructs:
 ** Primary Data Types
 1. ~str~: Static immutable string stored in the read-only memory of the binary. Equivalent to ~&'static str~ in Rust.
 2. ~i32~: 32-bit signed number data type. Equivalent to ~int~ in C.
@@ -37,24 +37,23 @@ Here, both ~a~ and ~b~ are values of type ~i32~. All comparison expressions eval
 4. Lesser Equal: ~a <= b~
 5. Equality: ~a == b~
 6. Non Equality: ~a != b~
-** Function Declaration
-The syntax for function declaration is identical to that of Rust. However, the compiler cannot handle functions with more than six parameters as I'm still figuring out how to use the stack to pass the arguments into the function.
+** Print Statement
+It is a compiler built-in function that takes a format string and the expressions to be printed as arguments. The ~{}~ s inside the format string will be replaced by the value of expressions and displayed on a newline in ~stdout~. The compiler cannot handle more than six arguments because I'm still figuring out how to use the stack to pass the arguments into a function.
+
+Internally, the format string is compiled to a C style format string and a call to libc's ~printf()~.
 #+BEGIN_SRC rust
-  fn factorial(num: i32) -> i32 {
-      if num == 0 {
-          return 1;
-      } else {
-          return num * factorial(num - 1);
-      }
+  fn is_even(num: i32) -> bool {
+      return num % 2 == 0;
   }
 
-  fn main() {
-      println(factorial(5));
-  }
+  println("Hello, world");
+
+  let name = "oxxo";
+  println("Namaskara, {}!", name);
+
+  let number = 10;
+  println("{} is even?: {}", number, is_even(number));
 #+END_SRC
-Every valid program should contain a ~main()~ function because ~main()~ is the entry point for all programs. It can explicitly specify the return type as ~i32~ or not specify the return type and let the compiler implicitly add instructions to return a ~0~.
-
-Functions can be declared in any order and can be called from any local scope in the source file.
 ** Variable Declaration
 Variables can be declared in both global and local scopes. Globally declared variables cannot be reassigned but local variables can be declared with the ~mut~ keyword to state that it can be reassigned with an other value of the same type.
 #+BEGIN_SRC rust
@@ -77,7 +76,7 @@ A ~while~ loop can be declared using the ~while~ keyword followed by a condition
 #+BEGIN_SRC rust
   let mut a = 5;
   while a > 0 {
-      println(a);
+      println("{}", a);
       a = a - 1;
   }
 #+END_SRC
@@ -85,20 +84,27 @@ A ~while~ loop can be declared using the ~while~ keyword followed by a condition
 Syntax for ~for~ loop is similar to that of C. Internally, a ~for~ loop desugars into a ~while~ loop.
 #+BEGIN_SRC rust
   for (let mut a = 5; a > 0; a = a - 1) {
-      println(a);
+      println("{}", a);
   }
 #+END_SRC
-** Print Statement
-It is a builtin function that takes an expression as argument and prints its value on a newline in ~stdout~. It compiles to a call to libc's ~printf()~ with an appropriate format specifier.
+** Function Declaration
+The syntax for function declaration is identical to that of Rust. However, the compiler cannot handle functions with more than six parameters for the same reason mentioned above.
 #+BEGIN_SRC rust
-  fn main() {
-      println("Hello, world!");
-      println(factorial(5));
+  fn factorial(num: i32) -> i32 {
+      if num == 0 {
+          return 1;
+      } else {
+          return num * factorial(num - 1);
+      }
+  }
 
-      let a = 10;
-      println(a);
+  fn main() {
+      println("{}", factorial(5));
   }
 #+END_SRC
+Every valid program should contain a ~main()~ function because ~main()~ is the entry point for all programs. It can explicitly specify the return type as ~i32~ or not specify the return type and let the compiler implicitly add instructions to return a ~0~.
+
+Functions can be declared in any order and can be called from any local scope in the source file.
 ** Return Statement
 It is used to return the value of an expression from a function. This expression's type should be the same as the return type specified in the function signature.
 #+BEGIN_SRC rust
