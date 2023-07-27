@@ -60,10 +60,9 @@ mod tests {
             .stderr(Stdio::inherit())
             .output()
             .expect("Failed to invoke gcc.");
-        let output =
-            Command::new("/home/veera/projects/boba/test/output/temp")
-                .output()
-                .expect("Failed to run the executable.");
+        let output = Command::new("/home/veera/projects/boba/test/output/temp")
+            .output()
+            .expect("Failed to run the executable.");
         let output = std::str::from_utf8(&output.stdout).unwrap().trim();
         output.trim() == expected_output.trim()
     }
@@ -91,14 +90,11 @@ mod tests {
     #[test]
     #[allow(clippy::manual_flatten)]
     fn test_all_files() {
-        if let Ok(entries) =
-            std::fs::read_dir("/home/veera/projects/boba/test")
+        if let Ok(entries) = std::fs::read_dir("/home/veera/projects/boba/test")
         {
             for entry in entries {
                 if let Ok(dir_entry) = entry {
-                    if dir_entry
-                        .file_type()
-                        .is_ok_and(|value| value.is_file())
+                    if dir_entry.file_type().is_ok_and(|value| value.is_file())
                     {
                         let entry = dir_entry.path();
                         let stem = entry

@@ -257,8 +257,7 @@ impl<'src> Lexer<'src> {
                     } else {
                         self.cursor.next();
                         let span = self.make_span(start_pos, c.len_utf8());
-                        self.tokens
-                            .push(Token::new(TokenType::Unknown, span));
+                        self.tokens.push(Token::new(TokenType::Unknown, span));
                     }
                 }
             }
@@ -329,8 +328,7 @@ impl<'src> Lexer<'src> {
         let (start_pos, c) = self.cursor.next().unwrap();
         let token = match c {
             '-' => {
-                if let Some((_, ch)) = self.cursor.next_if(|x| x.1 == '=')
-                {
+                if let Some((_, ch)) = self.cursor.next_if(|x| x.1 == '=') {
                     Token::new(
                         TokenType::SubAssign,
                         self.make_span(start_pos, ch.len_utf8()),
@@ -362,8 +360,7 @@ impl<'src> Lexer<'src> {
                 TokenType::Star,
             ),
             '/' => {
-                if let Some((_, ch)) = self.cursor.next_if(|x| x.1 == '=')
-                {
+                if let Some((_, ch)) = self.cursor.next_if(|x| x.1 == '=') {
                     Token::new(
                         TokenType::DivideAssign,
                         self.make_span(start_pos, ch.len_utf8()),
@@ -442,16 +439,13 @@ impl<'src> Lexer<'src> {
                 self.make_span(start, length),
             ))
         } else {
-            Err(BobaError::UnterminatedString(
-                self.make_span(start, length),
-            ))
+            Err(BobaError::UnterminatedString(self.make_span(start, length)))
         }
     }
 
     fn scan_number(&mut self, start_pos: usize) {
         let mut lexeme = String::new();
-        while let Some((_, num)) =
-            self.cursor.next_if(|x| x.1.is_ascii_digit())
+        while let Some((_, num)) = self.cursor.next_if(|x| x.1.is_ascii_digit())
         {
             lexeme.push(num);
         }
