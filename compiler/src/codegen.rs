@@ -403,7 +403,34 @@ impl CodeGen {
         // self.emit_code("xor", "%eax", "%eax");
         // self.emit_code("call", "printf@PLT", "");
         // self.registers.deallocate(register);
-        todo!()
+        let format_string = self.string(format);
+        self.emit_code("movq", format_string, "%rdi");
+        for (index, arg) in args.iter().enumerate() {
+            let register = self.expression(arg);
+            match arg.to_type() {
+                Type::Number => {
+                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
+                }
+                Type::String => {
+                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
+                }
+                Type::Bool => {
+                    let false_label = self.labels.create();
+                    let done_label = self.labels.create();
+                    self.emit_code("cmpb", "$1", &register);
+                    self.emit_code("jne", &false_label, "");
+                    self.emit_code("leaq", ".format_true(%rip)", ARGUMENTS[2][index + 1]);
+                    self.emit_code("jmp", &done_label, "");
+                    self.emit_label(false_label);
+                    self.emit_code("leaq", ".format_false(%rip)", ARGUMENTS[2][index + 1]);
+                    self.emit_label(done_label);
+                }
+                _ => unreachable!(),
+            }
+            self.registers.deallocate(register);
+        }
+        self.emit_code("xor", "%eax", "%eax");
+        self.emit_code("call", "printf@PLT", "");
     }
 
     fn emit_data(
