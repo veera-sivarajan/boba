@@ -16,7 +16,10 @@ pub enum Stmt {
         init: Expr,
     },
     Expression(Expr),
-    Print(Vec<Expr>),
+    Print {
+        meta: Token,
+        args: Vec<Expr>,
+    },
     If {
         condition: Expr,
         then: Box<Stmt>,
@@ -87,4 +90,5 @@ pub enum LLStmt {
         condition: LLExpr,
         body: Box<LLStmt>,
     },
+    Error,
 }

@@ -224,7 +224,7 @@ impl TypeChecker {
             Stmt::While { condition, body } => {
                 self.while_stmt(condition, body)
             }
-            Stmt::Print(args) => self.print_stmt(args),
+            Stmt::Print { meta, args } => self.print_stmt(meta, args),
             Stmt::Return { name, expr } => self.return_stmt(name, expr),
         }
     }
@@ -288,13 +288,21 @@ impl TypeChecker {
         }
     }
 
-    fn print_stmt(&mut self, args: &[Expr]) -> LLStmt {
+    fn print_stmt(&mut self, meta: &Token, args: &[Expr]) -> LLStmt {
         let mut types = args.iter().map(|expr| self.expression(expr));
         if let Some(LLExpr::String(format_string)) = types.next() {
-            if format_string.matches("{}").count() != args.len() - 1 {
-                todo!()
+            let expected = format_string.matches("{}").count();
+            let found = args.len() - 1;
+            if expected != found {
+                self.error(BobaError::FormatSpecifierCountNotEqual(
+                    meta.clone(),
+                    expected,
+                    found,
+                ));
+                LLStmt::Error
             } else if args.len() > 5 {
-                todo!()
+                self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
+                LLStmt::Error
             } else {
                 let mut format = String::new();
                 let mut arguments = Vec::with_capacity(5);
@@ -319,7 +327,8 @@ impl TypeChecker {
                 todo!()
             }
         } else {
-            todo!()
+            self.error(BobaError::ExpectFormatString(meta.clone()));
+            LLStmt::Error
         }
     }
 

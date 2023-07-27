@@ -86,12 +86,36 @@ pub enum BobaError {
     ArgumentCountNotEqual(Token, usize, usize),
     CannotPrintUnit(Token),
     MainReturnType(Token),
+    ExpectFormatString(Token),
+    FormatSpecifierCountNotEqual(Token, usize, usize),
+    PrintGotMoreThanFiveArgs(Token),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            PrintGotMoreThanFiveArgs(token) => {
+                writeln!(
+                    f,
+                    "Error: Print statement cannot handle more than five arguments at {}",
+                    token.span
+                )
+            }
+            FormatSpecifierCountNotEqual(token, expected, found) => {
+                writeln!(
+                    f,
+                    "Error: Number of format specifiers ({expected}) is not equal to number of arguments ({found}) at {}",
+                    token.span
+                )
+            }
+            ExpectFormatString(token) => {
+                writeln!(
+                    f,
+                    "Error: Expect first argument to print statement be a string at {}",
+                    token.span
+                )
+            }
             MainReturnType(token) => {
                 writeln!(
                     f,

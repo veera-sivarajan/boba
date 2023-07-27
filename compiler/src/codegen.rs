@@ -234,6 +234,7 @@ impl CodeGen {
             LLStmt::While { condition, body } => {
                 self.while_stmt(condition, body)
             }
+            LLStmt::Error => unreachable!(),
         }
     }
 
