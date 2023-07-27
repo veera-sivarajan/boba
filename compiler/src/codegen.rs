@@ -409,7 +409,7 @@ impl CodeGen {
             let register = self.expression(arg);
             match arg.to_type() {
                 Type::Number => {
-                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
+                    self.emit_code("movl", &register, ARGUMENTS[1][index + 1]);
                 }
                 Type::String => {
                     self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
