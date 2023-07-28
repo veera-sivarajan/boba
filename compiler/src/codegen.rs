@@ -43,21 +43,6 @@ struct RegisterIndex {
     size: RegisterSize,
 }
 
-// Byte:  [bl,  r10b, r11b, r12b, r13b, r14b, r15b]
-// DWord: [ebx, r10d, r11d, r12d, r13d, r14d, r15d]
-// QWord: [rbx, r10,  r11,  r12,  r13,  r14,  r15]
-const REGISTERS: [[&str; 7]; 3] = [
-    ["%bl", "%r10b", "%r11b", "%r12b", "%r13b", "%r14b", "%r15b"],
-    ["%ebx", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"],
-    ["%rbx", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"],
-];
-
-const ARGUMENTS: [[&str; 6]; 3] = [
-    ["%di", "%sil", "%dl", "%cl", "%r8b", "%r9b"],
-    ["%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"],
-    ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"],
-];
-
 fn move_for(ty_pe: Type) -> String {
     match ty_pe.as_size() {
         1 => String::from("movb"),
@@ -89,6 +74,14 @@ fn cmp_for(ty_pe: Type) -> String {
 use std::fmt;
 impl fmt::Display for RegisterIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Byte:  [bl,  r10b, r11b, r12b, r13b, r14b, r15b]
+        // DWord: [ebx, r10d, r11d, r12d, r13d, r14d, r15d]
+        // QWord: [rbx, r10,  r11,  r12,  r13,  r14,  r15]
+        static REGISTERS: [[&str; 7]; 3] = [
+            ["%bl", "%r10b", "%r11b", "%r12b", "%r13b", "%r14b", "%r15b"],
+            ["%ebx", "%r10d", "%r11d", "%r12d", "%r13d", "%r14d", "%r15d"],
+            ["%rbx", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15"],
+        ];
         write!(f, "{}", REGISTERS[self.size as usize][self.value as usize])
     }
 }
@@ -98,11 +91,11 @@ struct ScratchRegisters {
 }
 
 impl ScratchRegisters {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { table: [false; 7] }
     }
 
-    pub fn allocate(&mut self, ty_pe: Type) -> RegisterIndex {
+    fn allocate(&mut self, ty_pe: Type) -> RegisterIndex {
         for (index, in_use) in self.table.iter_mut().enumerate() {
             if !*in_use {
                 *in_use = true;
@@ -115,7 +108,7 @@ impl ScratchRegisters {
         unreachable!()
     }
 
-    pub fn deallocate(&mut self, index: RegisterIndex) {
+    fn deallocate(&mut self, index: RegisterIndex) {
         let register = self.table.get_mut(index.value as usize).unwrap();
         *register = false;
     }
@@ -140,6 +133,7 @@ pub struct CodeGen {
     registers: ScratchRegisters,
     assembly: Assembly,
     labels: Labels,
+    argument_registers: [[&'static str; 6]; 3],
 }
 
 impl CodeGen {
@@ -159,6 +153,11 @@ impl CodeGen {
                 data: ".data\n".to_string(),
             },
             labels: Labels::new(),
+            argument_registers: [
+                ["%di", "%sil", "%dl", "%cl", "%r8b", "%r9b"],
+                ["%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"],
+                ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"],
+            ],
         }
     }
 
@@ -281,7 +280,7 @@ impl CodeGen {
             size_sum += param_type.as_size();
             self.emit_code(
                 move_for(*param_type),
-                ARGUMENTS[register_size as usize][index],
+                self.argument_registers[register_size as usize][index],
                 format!("-{size_sum}(%rbp)"),
             );
         }
@@ -398,10 +397,18 @@ impl CodeGen {
         for ((index, arg), register) in args.iter().enumerate().zip(registers) {
             match arg.to_type() {
                 Type::Number => {
-                    self.emit_code("movl", &register, ARGUMENTS[1][index + 1]);
+                    self.emit_code(
+                        "movl",
+                        &register,
+                        self.argument_registers[1][index + 1],
+                    );
                 }
                 Type::String => {
-                    self.emit_code("movq", &register, ARGUMENTS[2][index + 1]);
+                    self.emit_code(
+                        "movq",
+                        &register,
+                        self.argument_registers[2][index + 1],
+                    );
                 }
                 Type::Bool => {
                     let false_label = self.labels.create();
@@ -411,14 +418,14 @@ impl CodeGen {
                     self.emit_code(
                         "leaq",
                         ".format_true(%rip)",
-                        ARGUMENTS[2][index + 1],
+                        self.argument_registers[2][index + 1],
                     );
                     self.emit_code("jmp", &done_label, "");
                     self.emit_label(false_label);
                     self.emit_code(
                         "leaq",
                         ".format_false(%rip)",
-                        ARGUMENTS[2][index + 1],
+                        self.argument_registers[2][index + 1],
                     );
                     self.emit_label(done_label);
                 }
@@ -584,7 +591,7 @@ impl CodeGen {
             self.emit_code(
                 move_for(*ty),
                 arg_value,
-                ARGUMENTS[register_index][index],
+                self.argument_registers[register_index][index],
             );
         }
         for register in arguments {
