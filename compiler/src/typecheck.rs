@@ -281,11 +281,10 @@ impl TypeChecker {
                 self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
                 LLStmt::Error
             } else {
-                let mut format = String::new();
                 let mut args = Vec::with_capacity(5);
-                for ch in format_string.chars() {
+                let mut format: String = format_string.chars().map(|ch| {
                     if ch == '{' {
-                        format.push('%');
+                        '%'
                     } else if ch == '}' {
                         let arg = types.next().unwrap();
                         let replace = match arg.to_type() {
@@ -294,11 +293,11 @@ impl TypeChecker {
                             _ => ' ',
                         };
                         args.push(arg);
-                        format.push(replace);
+                        replace
                     } else {
-                        format.push(ch);
+                        ch
                     }
-                }
+                }).collect();
                 format.push_str("\\n");
                 LLStmt::Print { format, args }
             }
