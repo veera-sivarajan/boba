@@ -89,12 +89,16 @@ pub enum BobaError {
     ExpectFormatString(Token),
     FormatSpecifierCountNotEqual(Token, usize, usize),
     PrintGotMoreThanFiveArgs(Token),
+    PrintUnitType(Token),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            PrintUnitType(token) => {
+                writeln!(f, "Error: Cannot print unit type at {}", token.span)
+            }
             PrintGotMoreThanFiveArgs(token) => {
                 writeln!(
                     f,

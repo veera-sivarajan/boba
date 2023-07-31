@@ -266,8 +266,14 @@ impl TypeChecker {
     }
 
     fn print_stmt(&mut self, meta: &Token, args: &[Expr]) -> LLStmt {
-        let mut types = args.iter().map(|expr| self.expression(expr));
-        if let Some(LLExpr::String(format_string)) = types.next() {
+        let mut values = args.iter().map(|arg| {
+            let expr = self.expression(arg);
+            if expr.to_type() == Type::Unit {
+                self.error(BobaError::PrintUnitType(arg.into()));
+            }
+            expr
+        });
+        if let Some(LLExpr::String(format_string)) = values.next() {
             let expected = format_string.matches("{}").count();
             let found = args.len() - 1;
             if expected != found {
@@ -282,22 +288,25 @@ impl TypeChecker {
                 LLStmt::Error
             } else {
                 let mut args = Vec::with_capacity(5);
-                let mut format: String = format_string.chars().map(|ch| {
-                    if ch == '{' {
-                        '%'
-                    } else if ch == '}' {
-                        let arg = types.next().unwrap();
-                        let replace = match arg.to_type() {
-                            Type::Number => 'd',
-                            Type::String | Type::Bool => 's',
-                            _ => ' ',
-                        };
-                        args.push(arg);
-                        replace
-                    } else {
-                        ch
-                    }
-                }).collect();
+                let mut format: String = format_string
+                    .chars()
+                    .map(|ch| {
+                        if ch == '{' {
+                            '%'
+                        } else if ch == '}' {
+                            let arg = values.next().unwrap();
+                            let replace = match arg.to_type() {
+                                Type::Number => 'd',
+                                Type::String | Type::Bool => 's',
+                                Type::Unit | Type::Unknown => ' ',
+                            };
+                            args.push(arg);
+                            replace
+                        } else {
+                            ch
+                        }
+                    })
+                    .collect();
                 format.push_str("\\n");
                 LLStmt::Print { format, args }
             }
