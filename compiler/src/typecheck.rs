@@ -265,6 +265,29 @@ impl TypeChecker {
         }
     }
 
+    fn replace_format(&self, input: &str, args: &[LLExpr]) -> String {
+        let mut arg_iter = args.iter();
+        let mut format: String = input
+            .chars()
+            .map(|ch| {
+                if ch == '{' {
+                    '%'
+                } else if ch == '}' {
+                    let arg = arg_iter.next().unwrap();
+                    match arg.to_type() {
+                        Type::Number => 'd',
+                        Type::String | Type::Bool => 's',
+                        Type::Unit | Type::Unknown => ' ',
+                    }
+                } else {
+                    ch
+                }
+            })
+            .collect();
+        format.push_str("\\n");
+        format
+    }
+
     fn print_stmt(&mut self, meta: &Token, args: &[Expr]) -> LLStmt {
         let mut values = args.iter().map(|arg| {
             let expr = self.expression(arg);
@@ -287,27 +310,8 @@ impl TypeChecker {
                 self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
                 LLStmt::Error
             } else {
-                let mut args = Vec::with_capacity(5);
-                let mut format: String = format_string
-                    .chars()
-                    .map(|ch| {
-                        if ch == '{' {
-                            '%'
-                        } else if ch == '}' {
-                            let arg = values.next().unwrap();
-                            let replace = match arg.to_type() {
-                                Type::Number => 'd',
-                                Type::String | Type::Bool => 's',
-                                Type::Unit | Type::Unknown => ' ',
-                            };
-                            args.push(arg);
-                            replace
-                        } else {
-                            ch
-                        }
-                    })
-                    .collect();
-                format.push_str("\\n");
+                let args: Vec<LLExpr> = values.collect();
+                let format = self.replace_format(&format_string, &args);
                 LLStmt::Print { format, args }
             }
         } else {
@@ -353,13 +357,8 @@ impl TypeChecker {
         is_mutable: bool,
     ) -> LLStmt {
         if self.variable_is_declared_in_current_scope(name) {
-            let ty_pe =
-                self.error(BobaError::VariableRedeclaration(name.clone()));
-            LLStmt::LocalVariable {
-                init: LLExpr::Number(0),
-                ty_pe,
-                variable_index: 0,
-            }
+            self.error(BobaError::VariableRedeclaration(name.clone()));
+            LLStmt::Error
         } else {
             let init = self.expression(value);
             if init.to_type() == Type::Unit {
