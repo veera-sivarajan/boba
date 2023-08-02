@@ -101,10 +101,7 @@ impl fmt::Display for BobaError {
         use BobaError::*;
         match self {
             ExpectEscapeCharacter(span) => {
-                writeln!(
-                    f,
-                    "Error: Expect an escape character at {span}"
-                )
+                writeln!(f, "Error: Expect an escape character at {span}")
             }
             CharNotAscii(span) => {
                 writeln!(

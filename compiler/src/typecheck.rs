@@ -501,8 +501,6 @@ impl TypeChecker {
         let ty_pe = if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
                 let arg_type = self.expression(arg);
-                println!("Param type: {param_type}");
-                println!("Arg type: {}", arg_type.to_type());
                 self.error_if_ne(
                     *param_type,
                     arg_type.to_type(),
