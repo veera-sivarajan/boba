@@ -154,7 +154,7 @@ impl CodeGen {
             },
             labels: Labels::new(),
             argument_registers: [
-                ["%di", "%sil", "%dl", "%cl", "%r8b", "%r9b"],
+                ["%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"],
                 ["%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"],
                 ["%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"],
             ],
