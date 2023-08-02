@@ -49,7 +49,7 @@ pub enum TokenType {
     Unknown,
     Identifier(String),
     StringLiteral(String),
-    Character(char),
+    Char(char),
     Print,
     Let,
     Mutable,
@@ -106,7 +106,7 @@ impl std::fmt::Display for TokenType {
             And => write!(f, "keyword and"),
             Or => write!(f, "keyword or"),
             Arrow => write!(f, "Arrow"),
-            Character(c) => write!(f, "Character({c})"),
+            Char(c) => write!(f, "Character({c})"),
             Mutable => write!(f, "keyword mut"),
             Colon => write!(f, ":"),
             AddAssign => write!(f, "AddAssign"),
@@ -460,7 +460,7 @@ impl<'src> Lexer<'src> {
     ) -> Result<Token, BobaError> {
         if self.cursor.next_if(|x| x.1 == '\'').is_some() {
             Ok(Token::new(
-                TokenType::Character(ch),
+                TokenType::Char(ch),
                 self.make_span(start_pos, ch.len_utf8()),
             ))
         } else {
@@ -472,7 +472,6 @@ impl<'src> Lexer<'src> {
 
     fn scan_character(&mut self) -> Result<Token, BobaError> {
         let (start_pos, _) = self.cursor.next().unwrap();
-
         if let Some((_index, ch)) = self.cursor.peek() {
             if *ch == '\\' {
                 self.scan_escaped_character()
@@ -673,6 +672,6 @@ fn factorial(num: i32) -> i32 {
 
     #[test]
     fn character_literals() {
-        assert!(test_runner("'a'", &[TokenType::Character('a')]))
+        assert!(test_runner("'a'", &[TokenType::Char('a')]))
     }
 }

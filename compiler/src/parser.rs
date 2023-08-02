@@ -432,6 +432,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn primary_expression(&mut self) -> Result<Expr, BobaError> {
         if let Some(meta) = self.cursor.next() {
             match &meta.kind {
+                TokenType::Char(value) => Ok(Expr::Char {
+                    value: *value,
+                    meta,
+                }),
                 TokenType::Number(value) => Ok(Expr::Number {
                     value: *value,
                     meta,

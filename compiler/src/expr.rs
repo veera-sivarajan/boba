@@ -8,6 +8,10 @@ pub enum Expr {
         oper: Token,
         right: Box<Expr>,
     },
+    Char {
+        value: char,
+        meta: Token,
+    },
     Number {
         value: i32,
         meta: Token,
