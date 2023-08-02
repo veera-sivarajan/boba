@@ -4,6 +4,15 @@ use std::hash::{Hash, Hasher};
 use std::iter::Peekable;
 use std::str::CharIndices;
 
+fn to_escaped_char(ch: char) -> char {
+    match ch {
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        _ => ch,
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TokenType {
     LeftParen,
@@ -406,21 +415,69 @@ impl<'src> Lexer<'src> {
         }
     }
 
+    fn is_valid(&mut self, ch: char, pos: usize) -> Result<(), BobaError> {
+        if ch == '\'' {
+            Err(BobaError::EmptyCharacter(
+                self.make_span(pos, '\''.len_utf8()),
+            ))
+        } else if !ch.is_ascii() {
+            Err(BobaError::CharNotAscii(self.make_span(pos, ch.len_utf8())))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn scan_escaped_character(&mut self) -> Result<Token, BobaError> {
+        let (start_pos, back_slash) = self.cursor.next().unwrap();
+        let escaped_chars = ['n', 'r', 't', '\\', '0', '\'', '\"'];
+        let value = if let Some((_, ch)) =
+            self.cursor.next_if(|(_, ch)| escaped_chars.contains(ch))
+        {
+            Token::new(
+                TokenType::Character(to_escaped_char(ch)),
+                self.make_span(start_pos, ch.len_utf8()),
+            )
+        } else {
+            return Err(BobaError::ExpectEscapeCharacter(
+                self.make_span(start_pos, back_slash.len_utf8()),
+            ));
+        };
+
+        if self.cursor.next_if(|x| x.1 == '\'').is_some() {
+            Ok(value)
+        } else {
+            Err(BobaError::UnterminatedCharacter(
+                self.make_span(start_pos, back_slash.len_utf8()),
+            ))
+        }
+    }
+
+    fn scan_character_helper(&mut self) -> Result<Token, BobaError> {
+        let (start_pos, ch) = self.cursor.next().unwrap();
+        self.is_valid(ch, start_pos)?;
+        if self.cursor.next_if(|x| x.1 == '\'').is_some() {
+            Ok(Token::new(
+                TokenType::Character(ch),
+                self.make_span(start_pos, ch.len_utf8()),
+            ))
+        } else {
+            Err(BobaError::UnterminatedCharacter(
+                self.make_span(start_pos, ch.len_utf8()),
+            ))
+        }
+    }
+
     fn scan_character(&mut self) -> Result<Token, BobaError> {
-        let (start_pos, _) = self.cursor.next().unwrap(); // consume the starting single quote
-        if let Some((_end_pos, character)) = self.cursor.next() {
-            if self.cursor.next_if(|x| x.1 == '\'').is_some() {
-                Ok(Token::new(
-                    TokenType::Character(character),
-                    self.make_span(start_pos, character.len_utf8()),
-                ))
+        let (start_pos, _) = self.cursor.next().unwrap();
+
+        if let Some((_index, ch)) = self.cursor.peek() {
+            if *ch == '\\' {
+                self.scan_escaped_character()
             } else {
-                Err(BobaError::UnterminatedCharacter(
-                    self.make_span(start_pos, character.len_utf8()),
-                ))
+                self.scan_character_helper()
             }
         } else {
-            Err(BobaError::EmptyCharacter(self.make_span(start_pos, 1)))
+            Err(BobaError::ExpectCharacter(self.make_span(start_pos, 1)))
         }
     }
 

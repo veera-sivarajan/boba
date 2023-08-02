@@ -61,9 +61,11 @@ impl fmt::Display for TypeError {
 
 #[derive(Debug, Clone)]
 pub enum BobaError {
+    EmptyCharacter(Span),
     UnterminatedString(Span),
     UnterminatedCharacter(Span),
-    EmptyCharacter(Span),
+    ExpectCharacter(Span),
+    ExpectEscapeCharacter(Span),
     Unexpected { msg: Box<str>, span: Option<Span> },
     General(Box<str>),
     Compiler { msg: Box<str>, span: Span },
@@ -90,12 +92,31 @@ pub enum BobaError {
     FormatSpecifierCountNotEqual(Token, usize, usize),
     PrintGotMoreThanFiveArgs(Token),
     PrintUnitType(Token),
+    CharNotAscii(Span),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            ExpectEscapeCharacter(span) => {
+                writeln!(
+                    f,
+                    "Error: Expect an escape character at {span}"
+                )
+            }
+            CharNotAscii(span) => {
+                writeln!(
+                    f,
+                    "Error: Expect character to be an ASCII value at {span}"
+                )
+            }
+            EmptyCharacter(span) => {
+                writeln!(
+                    f,
+                    "Error: Character constant cannot be empty at {span}"
+                )
+            }
             PrintUnitType(token) => {
                 writeln!(f, "Error: Cannot print unit type at {}", token.span)
             }
@@ -162,7 +183,7 @@ impl fmt::Display for BobaError {
                     "Syntax Error: Unterminated string literal at {span}."
                 )
             }
-            EmptyCharacter(span) => {
+            ExpectCharacter(span) => {
                 writeln!(
                     f,
                     "Syntax Error: Reached end of file but expected character literal at {span}."
