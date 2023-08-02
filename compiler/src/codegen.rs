@@ -386,6 +386,62 @@ impl CodeGen {
         }
     }
 
+    fn print_arg(
+        &mut self,
+        ty_pe: Type,
+        register_index: usize,
+        register: &RegisterIndex,
+    ) {
+        let size_index = if ty_pe == Type::Bool {
+            RegisterSize::from(Type::String) as usize
+        } else {
+            RegisterSize::from(ty_pe) as usize
+        };
+        match ty_pe {
+            Type::Char => {
+                self.emit_code(
+                    "movb",
+                    register,
+                    self.argument_registers[size_index][register_index],
+                );
+            }
+            Type::Number => {
+                self.emit_code(
+                    "movl",
+                    register,
+                    self.argument_registers[size_index][register_index],
+                );
+            }
+            Type::String => {
+                self.emit_code(
+                    "movq",
+                    register,
+                    self.argument_registers[size_index][register_index],
+                );
+            }
+            Type::Bool => {
+                let false_label = self.labels.create();
+                let done_label = self.labels.create();
+                self.emit_code("cmpb", "$1", register);
+                self.emit_code("jne", &false_label, "");
+                self.emit_code(
+                    "leaq",
+                    ".format_true(%rip)",
+                    self.argument_registers[size_index][register_index],
+                );
+                self.emit_code("jmp", &done_label, "");
+                self.emit_label(false_label);
+                self.emit_code(
+                    "leaq",
+                    ".format_false(%rip)",
+                    self.argument_registers[size_index][register_index],
+                );
+                self.emit_label(done_label);
+            }
+            Type::Unit | Type::Unknown => unreachable!(),
+        }
+    }
+
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
         let registers = args
             .iter()
@@ -395,49 +451,7 @@ impl CodeGen {
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
         for ((index, arg), register) in args.iter().enumerate().zip(registers) {
-            match arg.to_type() {
-                Type::Char => {
-                    self.emit_code(
-                        "movb",
-                        &register,
-                        self.argument_registers[0][index + 1],
-                    );
-                }
-                Type::Number => {
-                    self.emit_code(
-                        "movl",
-                        &register,
-                        self.argument_registers[1][index + 1],
-                    );
-                }
-                Type::String => {
-                    self.emit_code(
-                        "movq",
-                        &register,
-                        self.argument_registers[2][index + 1],
-                    );
-                }
-                Type::Bool => {
-                    let false_label = self.labels.create();
-                    let done_label = self.labels.create();
-                    self.emit_code("cmpb", "$1", &register);
-                    self.emit_code("jne", &false_label, "");
-                    self.emit_code(
-                        "leaq",
-                        ".format_true(%rip)",
-                        self.argument_registers[2][index + 1],
-                    );
-                    self.emit_code("jmp", &done_label, "");
-                    self.emit_label(false_label);
-                    self.emit_code(
-                        "leaq",
-                        ".format_false(%rip)",
-                        self.argument_registers[2][index + 1],
-                    );
-                    self.emit_label(done_label);
-                }
-                Type::Unit | Type::Unknown => unreachable!(),
-            }
+            self.print_arg(arg.to_type(), index + 1, &register);
             self.registers.deallocate(register);
         }
         self.emit_code("xor", "%eax", "%eax");
