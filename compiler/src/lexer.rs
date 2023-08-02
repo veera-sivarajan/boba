@@ -415,7 +415,11 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn is_valid(&mut self, ch: char, pos: usize) -> Result<(), BobaError> {
+    fn check_if_valid(
+        &mut self,
+        ch: char,
+        pos: usize,
+    ) -> Result<(), BobaError> {
         if ch == '\'' {
             Err(BobaError::EmptyCharacter(
                 self.make_span(pos, '\''.len_utf8()),
@@ -428,33 +432,32 @@ impl<'src> Lexer<'src> {
     }
 
     fn scan_escaped_character(&mut self) -> Result<Token, BobaError> {
-        let (start_pos, back_slash) = self.cursor.next().unwrap();
+        let (start_pos, _back_slash) = self.cursor.next().unwrap();
         let escaped_chars = ['n', 'r', 't', '\\', '0', '\'', '\"'];
         let value = if let Some((_, ch)) =
             self.cursor.next_if(|(_, ch)| escaped_chars.contains(ch))
         {
-            Token::new(
-                TokenType::Character(to_escaped_char(ch)),
-                self.make_span(start_pos, ch.len_utf8()),
-            )
+            to_escaped_char(ch)
         } else {
             return Err(BobaError::ExpectEscapeCharacter(
-                self.make_span(start_pos, back_slash.len_utf8()),
+                self.make_span(start_pos, 2),
             ));
         };
-
-        if self.cursor.next_if(|x| x.1 == '\'').is_some() {
-            Ok(value)
-        } else {
-            Err(BobaError::UnterminatedCharacter(
-                self.make_span(start_pos, back_slash.len_utf8()),
-            ))
-        }
+        self.finish_scanning_character(start_pos, value, 2)
     }
 
     fn scan_character_helper(&mut self) -> Result<Token, BobaError> {
         let (start_pos, ch) = self.cursor.next().unwrap();
-        self.is_valid(ch, start_pos)?;
+        self.check_if_valid(ch, start_pos)?;
+        self.finish_scanning_character(start_pos, ch, ch.len_utf8())
+    }
+
+    fn finish_scanning_character(
+        &mut self,
+        start_pos: usize,
+        ch: char,
+        end_pos: usize,
+    ) -> Result<Token, BobaError> {
         if self.cursor.next_if(|x| x.1 == '\'').is_some() {
             Ok(Token::new(
                 TokenType::Character(ch),
@@ -462,7 +465,7 @@ impl<'src> Lexer<'src> {
             ))
         } else {
             Err(BobaError::UnterminatedCharacter(
-                self.make_span(start_pos, ch.len_utf8()),
+                self.make_span(start_pos, end_pos),
             ))
         }
     }
