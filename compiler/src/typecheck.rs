@@ -9,8 +9,9 @@ pub enum Type {
     Number,
     String,
     Bool,
-    Unknown,
+    Char,
     Unit,
+    Unknown,
 }
 
 impl Type {
@@ -18,7 +19,7 @@ impl Type {
         match self {
             Type::Number => 4,
             Type::String => 8,
-            Type::Bool => 1,
+            Type::Bool | Type::Char => 1,
             Type::Unknown | Type::Unit => 0,
         }
     }
@@ -275,6 +276,7 @@ impl TypeChecker {
                 } else if ch == '}' {
                     let arg = arg_iter.next().unwrap();
                     match arg.to_type() {
+                        Type::Char => 'c',
                         Type::Number => 'd',
                         Type::String | Type::Bool => 's',
                         Type::Unit | Type::Unknown => ' ',
@@ -461,6 +463,7 @@ impl TypeChecker {
 
     fn expression(&mut self, expr: &Expr) -> LLExpr {
         match expr {
+            Expr::Char { value, .. } => LLExpr::Char(*value),
             Expr::Number { value, .. } => LLExpr::Number(*value),
             Expr::Boolean { value, .. } => LLExpr::Boolean(*value),
             Expr::String { value, .. } => LLExpr::String(value.clone()),
@@ -492,17 +495,14 @@ impl TypeChecker {
             ..
         }) = self.function_is_defined(function_name)
         else {
-            let ty_pe = self
-                .error(BobaError::UndeclaredFunction(function_name.clone()));
-            return LLExpr::Call {
-                ty_pe,
-                callee: String::new(),
-                args: vec![],
-            };
+            self.error(BobaError::UndeclaredFunction(function_name.clone()));
+            return LLExpr::Error;
         };
         let ty_pe = if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
                 let arg_type = self.expression(arg);
+                println!("Param type: {param_type}");
+                println!("Arg type: {}", arg_type.to_type());
                 self.error_if_ne(
                     *param_type,
                     arg_type.to_type(),

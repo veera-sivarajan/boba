@@ -58,6 +58,7 @@ impl From<&Expr> for Token {
             Expr::Assign { value, .. } => Token::from(value.as_ref()),
             Expr::Group(expr) => Token::from(expr.as_ref()),
             Expr::Number { meta, .. } => meta.clone(),
+            Expr::Char { meta, .. } => meta.clone(),
             Expr::String { meta, .. } => meta.clone(),
             Expr::Boolean { meta, .. } => meta.clone(),
             Expr::Unary { oper, .. } => oper.clone(),
@@ -174,6 +175,7 @@ pub enum LLExpr {
         ty_pe: Type,
     },
     Number(i32),
+    Char(char),
     Variable {
         name: String,
         ty_pe: Type,
@@ -201,11 +203,13 @@ pub enum LLExpr {
         value: Box<LLExpr>,
         ty_pe: Type,
     },
+    Error,
 }
 
 impl LLExpr {
     pub fn to_type(&self) -> Type {
         match self {
+            LLExpr::Char(_) => Type::Char,
             LLExpr::Number(_) => Type::Number,
             LLExpr::String(_) => Type::String,
             LLExpr::Boolean(_) => Type::Bool,
@@ -215,6 +219,7 @@ impl LLExpr {
             LLExpr::Unary { ty_pe, .. } => *ty_pe,
             LLExpr::Group { ty_pe, .. } => *ty_pe,
             LLExpr::Binary { ty_pe, .. } => *ty_pe,
+            LLExpr::Error => unreachable!(),
         }
     }
 }
@@ -223,6 +228,8 @@ impl LLExpr {
 impl std::fmt::Debug for LLExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            LLExpr::Error => write!(f, "LLExpr::Error"),
+            LLExpr::Char(value) => write!(f, "{value}"),
             LLExpr::Number(value) => write!(f, "{value}"),
             LLExpr::String(value) => write!(f, "{value}"),
             LLExpr::Boolean(value) => {

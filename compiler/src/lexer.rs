@@ -549,6 +549,7 @@ impl<'src> Lexer<'src> {
             "str" => TokenType::Type(typecheck::Type::String),
             "i32" => TokenType::Type(typecheck::Type::Number),
             "bool" => TokenType::Type(typecheck::Type::Bool),
+            "char" => TokenType::Type(typecheck::Type::Char),
             _ => TokenType::Identifier(lexeme),
         };
         let span = self.make_span(start_pos, len);

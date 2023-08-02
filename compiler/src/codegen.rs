@@ -30,10 +30,10 @@ enum RegisterSize {
 impl From<Type> for RegisterSize {
     fn from(value: Type) -> RegisterSize {
         match value {
-            Type::Bool => RegisterSize::Byte,
+            Type::Bool | Type::Char => RegisterSize::Byte,
             Type::Number => RegisterSize::DWord,
             Type::String => RegisterSize::QWord,
-            _ => unreachable!(),
+            Type::Unknown | Type::Unit => unreachable!(),
         }
     }
 }
@@ -396,6 +396,13 @@ impl CodeGen {
         self.registers.deallocate(format_string);
         for ((index, arg), register) in args.iter().enumerate().zip(registers) {
             match arg.to_type() {
+                Type::Char => {
+                    self.emit_code(
+                        "movb",
+                        &register,
+                        self.argument_registers[0][index + 1],
+                    );
+                }
                 Type::Number => {
                     self.emit_code(
                         "movl",
@@ -429,7 +436,7 @@ impl CodeGen {
                     );
                     self.emit_label(done_label);
                 }
-                _ => unreachable!(),
+                Type::Unit | Type::Unknown => unreachable!(),
             }
             self.registers.deallocate(register);
         }
@@ -508,6 +515,7 @@ impl CodeGen {
                 ty_pe,
             } => self.binary(left, oper, right, *ty_pe),
             LLExpr::Number(num) => self.number(*num),
+            LLExpr::Char(value) => self.character(*value),
             LLExpr::Variable {
                 name, ty_pe, kind, ..
             } => self.variable(name, *ty_pe, kind),
@@ -525,6 +533,7 @@ impl CodeGen {
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
+            LLExpr::Error => unreachable!(),
         }
     }
 
@@ -710,6 +719,12 @@ impl CodeGen {
     fn number(&mut self, value: i32) -> RegisterIndex {
         let register = self.registers.allocate(Type::Number);
         self.emit_code("movl", format!("${}", value).as_str(), &register);
+        register
+    }
+
+    fn character(&mut self, value: char) -> RegisterIndex {
+        let register = self.registers.allocate(Type::Char);
+        self.emit_code("movb", format!("${}", value as u8).as_str(), &register);
         register
     }
 }
