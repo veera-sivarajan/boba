@@ -3,9 +3,9 @@ use crate::typecheck::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
-    Array {
-        elements: Vec<Expr>,
-    },
+    // Array {
+    //     elements: Vec<Expr>,
+    // },
     Binary {
         left: Box<Expr>,
         oper: Token,

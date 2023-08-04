@@ -33,7 +33,7 @@ impl From<Type> for RegisterSize {
             Type::Bool | Type::Char => RegisterSize::Byte,
             Type::Number => RegisterSize::DWord,
             Type::String => RegisterSize::QWord,
-            Type::Unknown | Type::Unit => unreachable!(),
+            Type::Unit => unreachable!(),
         }
     }
 }
@@ -438,7 +438,7 @@ impl CodeGen {
                 );
                 self.emit_label(done_label);
             }
-            Type::Unit | Type::Unknown => unreachable!(),
+            Type::Unit => unreachable!(),
         }
     }
 

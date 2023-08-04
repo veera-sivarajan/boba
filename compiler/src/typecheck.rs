@@ -11,7 +11,6 @@ pub enum Type {
     Bool,
     Char,
     Unit,
-    Unknown,
 }
 
 impl Type {
@@ -20,7 +19,7 @@ impl Type {
             Type::Number => 4,
             Type::String => 8,
             Type::Bool | Type::Char => 1,
-            Type::Unknown | Type::Unit => 0,
+            Type::Unit => 0,
         }
     }
 }
@@ -279,7 +278,7 @@ impl TypeChecker {
                         Type::Char => 'c',
                         Type::Number => 'd',
                         Type::String | Type::Bool => 's',
-                        Type::Unit | Type::Unknown => ' ',
+                        Type::Unit => ' ',
                     }
                 } else {
                     ch
@@ -426,10 +425,6 @@ impl TypeChecker {
     }
 
     fn error_if_ne(&mut self, expected: Type, found: Type, span: Span) {
-        if found == Type::Unknown || expected == Type::Unknown {
-            return;
-        }
-
         if expected != found {
             self.errors
                 .push(BobaError::TypeCheck(TypeError::Mismatched {
@@ -593,7 +588,7 @@ impl TypeChecker {
 
     fn error(&mut self, error: BobaError) -> Type {
         self.errors.push(error);
-        Type::Unknown
+        Type::Unit
     }
 
     fn variable(&mut self, token: &Token) -> LLExpr {
