@@ -25,6 +25,8 @@ pub enum TokenType {
     Semicolon,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
     Comma,
     Percent,
     Colon,
@@ -71,6 +73,8 @@ impl std::fmt::Display for TokenType {
         match self {
             LeftParen => write!(f, "("),
             RightParen => write!(f, ")"),
+            LeftBracket => write!(f, "["),
+            RightBracket => write!(f, "]"),
             Dot => write!(f, "."),
             Minus => write!(f, "-"),
             Plus => write!(f, "+"),
@@ -237,7 +241,7 @@ impl<'src> Lexer<'src> {
     pub fn scan(&mut self) -> Result<Vec<Token>, BobaError> {
         while let Some(&(start_pos, c)) = self.cursor.peek() {
             match c {
-                '(' | ')' | '.' | ';' | '{' | '}' | ',' | '%' | ':' => {
+                '[' | ']' | '(' | ')' | '.' | ';' | '{' | '}' | ',' | '%' | ':' => {
                     self.scan_single_token()
                 }
                 '!' | '=' | '>' | '<' | '-' | '+' | '*' | '/' => {
@@ -286,6 +290,8 @@ impl<'src> Lexer<'src> {
             ',' => TokenType::Comma,
             '%' => TokenType::Percent,
             ':' => TokenType::Colon,
+            '[' => TokenType::LeftBracket,
+            ']' => TokenType::RightBracket,
             _ => unreachable!(),
         };
         let span = self.make_span(start_pos, c.len_utf8());
