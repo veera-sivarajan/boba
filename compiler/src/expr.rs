@@ -3,9 +3,10 @@ use crate::typecheck::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
-    // Array {
-    //     elements: Vec<Expr>,
-    // },
+    Array {
+        elements: Vec<Expr>,
+        meta: Token,
+    },
     Binary {
         left: Box<Expr>,
         oper: Token,
@@ -65,6 +66,7 @@ impl From<&Expr> for Token {
             Expr::String { meta, .. } => meta.clone(),
             Expr::Boolean { meta, .. } => meta.clone(),
             Expr::Unary { oper, .. } => oper.clone(),
+            Expr::Array { meta, .. } => meta.clone(),
         }
     }
 }

@@ -476,7 +476,13 @@ impl TypeChecker {
             }
             Expr::Unary { oper, right } => self.unary(oper, right),
             Expr::Call { callee, args } => self.function_call(callee, args),
+            Expr::Array { meta, elements } => self.array(meta, elements),
         }
+    }
+
+    fn array(&mut self, meta: &Token, elements: &[Expr]) -> LLExpr {
+        eprintln!("Array: {elements:#?}");
+        todo!()
     }
 
     fn function_call(
