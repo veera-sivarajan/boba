@@ -268,11 +268,7 @@ impl CodeGen {
         self.emit_label(name);
         self.emit_code("pushq", "%rbp", "");
         self.emit_code("movq", "%rsp", "%rbp");
-        let locals_space = if space_for_locals == 0 {
-            String::from("$8")
-        } else {
-            format!("${}", ((((40 + space_for_locals) - 1) | 15) + 1) - 40)
-        };
+        let locals_space = format!("${}", space_for_locals);
         self.emit_code("subq", &locals_space, "%rsp");
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {

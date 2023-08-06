@@ -240,10 +240,15 @@ impl TypeChecker {
         };
         let param_types: Vec<Type> =
             params.iter().map(|param| param.1).collect();
+        let space_for_locals = if self.space_for_locals == 0 {
+            8
+        } else {
+            ((((40 + self.space_for_locals) - 1) | 15) + 1) - 40
+        };
         LLStmt::Function {
             name: name.to_string(),
             param_types,
-            space_for_locals: self.space_for_locals,
+            space_for_locals,
             body,
             return_type,
         }
