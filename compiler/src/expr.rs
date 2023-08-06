@@ -1,11 +1,11 @@
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{Token, TokenType, Span};
 use crate::typecheck::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
     Array {
         elements: Vec<Expr>,
-        meta: Token,
+        span: Span,
     },
     Binary {
         left: Box<Expr>,

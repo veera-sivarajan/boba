@@ -157,8 +157,8 @@ pub struct Span {
 
 #[derive(Default, Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Position {
-    pub line_number: u16,
-    pub column_number: u16,
+    pub line: u16,
+    pub column: u16,
 }
 
 impl Token {
@@ -216,13 +216,13 @@ impl<'src> Lexer<'src> {
         let end_column = self.column(end);
 
         let start = Position {
-            line_number: self.line,
-            column_number: start_column,
+            line: self.line,
+            column: start_column,
         };
 
         let end = Position {
-            line_number: self.line,
-            column_number: end_column,
+            line: self.line,
+            column: end_column,
         };
 
         Span { start, end }

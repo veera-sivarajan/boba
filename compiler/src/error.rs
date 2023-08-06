@@ -7,7 +7,7 @@ impl fmt::Display for Position {
         write!(
             f,
             "line {}, column {}",
-            self.line_number, self.column_number
+            self.line, self.column
         )
     }
 }
@@ -17,9 +17,9 @@ impl fmt::Display for Span {
         write!(
             f,
             "line {}, columns {} - {}",
-            self.start.line_number,
-            self.start.column_number,
-            self.end.column_number
+            self.start.line,
+            self.start.column,
+            self.end.column
         )
     }
 }

@@ -1,6 +1,6 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{Token, TokenType, Span};
 use crate::stmt::{Parameter, Stmt};
 use crate::typecheck::Type;
 use std::iter::Peekable;
@@ -429,7 +429,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
-    fn array(&mut self) -> Result<Expr, BobaError> {
+    fn array(&mut self, start: Token) -> Result<Expr, BobaError> {
         let mut elements = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightBracket) {
             elements.push(self.expression()?);
@@ -437,10 +437,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 elements.push(self.expression()?);
             }
         }
-        let meta = self.consume(TokenType::RightBracket, "Expect closing ']'.")?;
+        let end = self.consume(TokenType::RightBracket, "Expect closing ']'.")?;
         Ok(Expr::Array {
             elements,
-            meta,
+            span: Span {
+                start: start.span.start,
+                end: end.span.end,
+            },
         })
     }
 
@@ -464,7 +467,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     value: value.to_string(),
                     meta,
                 }),
-                TokenType::LeftBracket => self.array(),
+                TokenType::LeftBracket => self.array(meta),
                 TokenType::LeftParen => {
                     let expr = self.expression()?;
                     self.consume(
