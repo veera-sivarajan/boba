@@ -66,7 +66,7 @@ impl From<&Expr> for Token {
             Expr::String { meta, .. } => meta.clone(),
             Expr::Boolean { meta, .. } => meta.clone(),
             Expr::Unary { oper, .. } => oper.clone(),
-            Expr::Array { meta, .. } => meta.clone(),
+            Expr::Array { .. } => unreachable!(),
         }
     }
 }
@@ -224,7 +224,7 @@ impl LLExpr {
             LLExpr::Unary { ty_pe, .. } => *ty_pe,
             LLExpr::Group { ty_pe, .. } => *ty_pe,
             LLExpr::Binary { ty_pe, .. } => *ty_pe,
-            LLExpr::Error => unreachable!(),
+            LLExpr::Error => Type::Unit,
         }
     }
 }

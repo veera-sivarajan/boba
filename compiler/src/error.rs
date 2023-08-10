@@ -93,12 +93,16 @@ pub enum BobaError {
     PrintGotMoreThanFiveArgs(Token),
     PrintUnitType(Token),
     CharNotAscii(Span),
+    HetroArray(Span),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            HetroArray(span) => {
+                writeln!(f, "Type Error: Expect all elements in an array to be of same type at {span}.")
+            }
             ExpectEscapeCharacter(span) => {
                 writeln!(f, "Error: Expect an escape character at {span}")
             }

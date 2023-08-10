@@ -481,13 +481,19 @@ impl TypeChecker {
             }
             Expr::Unary { oper, right } => self.unary(oper, right),
             Expr::Call { callee, args } => self.function_call(callee, args),
-            Expr::Array { meta, elements } => self.array(meta, elements),
+            Expr::Array { span, elements } => self.array(span, elements),
         }
     }
 
-    fn array(&mut self, meta: &Token, elements: &[Expr]) -> LLExpr {
-        eprintln!("Array: {elements:#?}");
-        todo!()
+    fn array(&mut self, meta: &Span, elements: &[Expr]) -> LLExpr {
+        let values: Vec<LLExpr> = elements.iter().map(|expr| self.expression(expr)).collect();
+        if values.windows(2).all(|w| w[0] == w[1]) {
+            // All types are same
+            todo!()
+        } else {
+            self.error(BobaError::HetroArray(meta.clone()));
+            LLExpr::Error
+        }
     }
 
     fn function_call(
