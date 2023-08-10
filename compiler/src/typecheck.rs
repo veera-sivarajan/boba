@@ -4,13 +4,17 @@ use crate::lexer::{Span, Token, TokenType};
 use crate::stmt::{LLStmt, Parameter, Stmt};
 use std::collections::HashMap;
 
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+#[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum Type {
     Number,
     String,
     Bool,
     Char,
     Unit,
+    Array {
+        ty_pe: Box<Type>,
+        len: u16,
+    }
 }
 
 impl Type {
