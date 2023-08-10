@@ -4,6 +4,7 @@
 1. ~str~: Static immutable string stored in the read-only memory of the binary. Equivalent to ~&'static str~ in Rust.
 2. ~i32~: 32-bit signed number data type. Equivalent to ~int~ in C.
 3. ~bool~: 8-bit boolean data type used to denote either ~true~ or ~false~. Internally, ~true~ is stored as ~1~ and ~false~ is ~0~.
+4. ~char~: 8-bit ASCII character.
 ** Unary Expressions
 *** Negation
 The symbol ~-~ followed by a value of type ~i32~ is an unary negation expression. It will evaluate to a value of type ~i32~.
