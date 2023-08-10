@@ -486,12 +486,22 @@ impl TypeChecker {
     }
 
     fn array(&mut self, meta: &Span, elements: &[Expr]) -> LLExpr {
-        let values: Vec<LLExpr> = elements.iter().map(|expr| self.expression(expr)).collect();
+        let values: Vec<LLExpr> =
+            elements.iter().map(|expr| self.expression(expr)).collect();
         if values.windows(2).all(|w| w[0] == w[1]) {
-            // All types are same
-            todo!()
+            if values.is_empty() {
+                LLExpr::Array {
+                    ty_pe: Type::Unit,
+                    elements: vec![],
+                }
+            } else {
+                LLExpr::Array {
+                    ty_pe: values.first().unwrap().to_type(),
+                    elements: values,
+                }
+            }
         } else {
-            self.error(BobaError::HetroArray(meta.clone()));
+            self.error(BobaError::HetroArray(*meta));
             LLExpr::Error
         }
     }
