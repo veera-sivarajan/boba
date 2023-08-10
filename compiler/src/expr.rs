@@ -208,23 +208,31 @@ pub enum LLExpr {
         value: Box<LLExpr>,
         ty_pe: Type,
     },
+    Array {
+        ty_pe: Type,
+        elements: Vec<LLExpr>,
+    },
     Error,
 }
 
 impl LLExpr {
-    pub fn to_type(&self) -> Type {
+    pub fn to_type(&self) -> impl AsRef<Type> {
         match self {
             LLExpr::Char(_) => Type::Char,
             LLExpr::Number(_) => Type::Number,
             LLExpr::String(_) => Type::String,
             LLExpr::Boolean(_) => Type::Bool,
-            LLExpr::Variable { ty_pe, .. } => *ty_pe,
-            LLExpr::Call { ty_pe, .. } => *ty_pe,
-            LLExpr::Assign { ty_pe, .. } => *ty_pe,
-            LLExpr::Unary { ty_pe, .. } => *ty_pe,
-            LLExpr::Group { ty_pe, .. } => *ty_pe,
-            LLExpr::Binary { ty_pe, .. } => *ty_pe,
             LLExpr::Error => Type::Unit,
+            LLExpr::Variable { ty_pe, .. } => ty_pe,
+            LLExpr::Call { ty_pe, .. } => ty_pe,
+            LLExpr::Assign { ty_pe, .. } => ty_pe,
+            LLExpr::Unary { ty_pe, .. } => ty_pe,
+            LLExpr::Group { ty_pe, .. } => ty_pe,
+            LLExpr::Binary { ty_pe, .. } => ty_pe,
+            LLExpr::Array { ty_pe, elements } => Type::Array {
+                ty_pe: Box::new(*ty_pe),
+                len: elements.len() as u16,
+            }
         }
     }
 }

@@ -17,13 +17,20 @@ pub enum Type {
     }
 }
 
+impl AsRef<Type> for Type {
+    fn as_ref(&self) -> &Type {
+        self
+    }
+}
+
 impl Type {
-    pub fn as_size(self) -> u16 {
+    pub fn as_size(&self) -> u16 {
         match self {
             Type::Number => 4,
             Type::String => 8,
             Type::Bool | Type::Char => 1,
             Type::Unit => 0,
+            Type::Array { ty_pe, len } => ty_pe.as_size() * len
         }
     }
 }
