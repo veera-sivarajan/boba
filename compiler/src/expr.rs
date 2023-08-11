@@ -212,7 +212,6 @@ pub enum LLExpr {
         ty_pe: Type,
         elements: Vec<LLExpr>,
     },
-    Error,
 }
 
 impl LLExpr {
@@ -222,7 +221,6 @@ impl LLExpr {
             LLExpr::Number(_) => Type::Number,
             LLExpr::String(_) => Type::String,
             LLExpr::Boolean(_) => Type::Bool,
-            LLExpr::Error => Type::Unit,
             LLExpr::Variable { ty_pe, .. } => ty_pe.clone(),
             LLExpr::Call { ty_pe, .. } => ty_pe.clone(),
             LLExpr::Assign { ty_pe, .. } => ty_pe.clone(),
@@ -241,7 +239,6 @@ impl LLExpr {
 impl std::fmt::Debug for LLExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LLExpr::Error => write!(f, "LLExpr::Error"),
             LLExpr::Char(value) => write!(f, "{value}"),
             LLExpr::Number(value) => write!(f, "{value}"),
             LLExpr::String(value) => write!(f, "{value}"),

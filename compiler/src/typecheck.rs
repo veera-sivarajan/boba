@@ -24,7 +24,7 @@ impl Type {
             Type::String => 8,
             Type::Bool | Type::Char => 1,
             Type::Unit => 0,
-            Type::Array { ty_pe, len } => ty_pe.as_size() * len
+            Type::Array { ty_pe, len } => ty_pe.as_size() * len,
         }
     }
 }
@@ -494,7 +494,7 @@ impl TypeChecker {
     fn array(&mut self, meta: &Span, elements: &[Expr]) -> LLExpr {
         let values: Vec<LLExpr> =
             elements.iter().map(|expr| self.expression(expr)).collect();
-        if values.windows(2).all(|w| w[0] == w[1]) {
+        if values.windows(2).all(|w| w[0].to_type() == w[1].to_type()) {
             if values.is_empty() {
                 LLExpr::Array {
                     ty_pe: Type::Unit,
@@ -508,7 +508,10 @@ impl TypeChecker {
             }
         } else {
             self.error(BobaError::HetroArray(*meta));
-            LLExpr::Error
+            LLExpr::Array {
+                ty_pe: Type::Unit,
+                elements: vec![],
+            }
         }
     }
 
@@ -524,7 +527,11 @@ impl TypeChecker {
         }) = self.function_is_defined(function_name)
         else {
             self.error(BobaError::UndeclaredFunction(function_name.clone()));
-            return LLExpr::Error;
+            return LLExpr::Call {
+                callee: String::from(""),
+                args: vec![],
+                ty_pe: Type::Unit,
+            };
         };
         let ty_pe = if params.len() == args.len() {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {

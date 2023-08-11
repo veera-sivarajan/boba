@@ -545,7 +545,6 @@ impl CodeGen {
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
             LLExpr::Array { .. } => todo!(),
-            LLExpr::Error => unreachable!(),
         }
     }
 
