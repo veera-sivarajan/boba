@@ -241,9 +241,8 @@ impl<'src> Lexer<'src> {
     pub fn scan(&mut self) -> Result<Vec<Token>, BobaError> {
         while let Some(&(start_pos, c)) = self.cursor.peek() {
             match c {
-                '[' | ']' | '(' | ')' | '.' | ';' | '{' | '}' | ',' | '%' | ':' => {
-                    self.scan_single_token()
-                }
+                '[' | ']' | '(' | ')' | '.' | ';' | '{' | '}' | ',' | '%'
+                | ':' => self.scan_single_token(),
                 '!' | '=' | '>' | '<' | '-' | '+' | '*' | '/' => {
                     self.scan_double_token()
                 }

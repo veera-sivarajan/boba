@@ -11,10 +11,7 @@ pub enum Type {
     Bool,
     Char,
     Unit,
-    Array {
-        ty_pe: Box<Type>,
-        len: u16,
-    }
+    Array { ty_pe: Box<Type>, len: u16 },
 }
 
 impl Type {

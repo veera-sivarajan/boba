@@ -1,4 +1,4 @@
-use crate::lexer::{Token, TokenType, Span};
+use crate::lexer::{Span, Token, TokenType};
 use crate::typecheck::{Kind, Type};
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -228,10 +228,12 @@ impl LLExpr {
             LLExpr::Unary { ty_pe, .. } => ty_pe.clone(),
             LLExpr::Group { ty_pe, .. } => ty_pe.clone(),
             LLExpr::Binary { ty_pe, .. } => ty_pe.clone(),
-            LLExpr::Array { ty_pe, elements, .. } => Type::Array {
+            LLExpr::Array {
+                ty_pe, elements, ..
+            } => Type::Array {
                 ty_pe: Box::new(ty_pe.clone()),
                 len: elements.len() as u16,
-            }
+            },
         }
     }
 }

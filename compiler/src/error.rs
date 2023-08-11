@@ -4,11 +4,7 @@ use std::fmt;
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "line {}, column {}",
-            self.line, self.column
-        )
+        write!(f, "line {}, column {}", self.line, self.column)
     }
 }
 
@@ -17,9 +13,7 @@ impl fmt::Display for Span {
         write!(
             f,
             "line {}, columns {} - {}",
-            self.start.line,
-            self.start.column,
-            self.end.column
+            self.start.line, self.start.column, self.end.column
         )
     }
 }

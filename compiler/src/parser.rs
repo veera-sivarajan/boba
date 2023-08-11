@@ -1,6 +1,6 @@
 use crate::error::BobaError;
 use crate::expr::Expr;
-use crate::lexer::{Token, TokenType, Span};
+use crate::lexer::{Span, Token, TokenType};
 use crate::stmt::{Parameter, Stmt};
 use crate::typecheck::Type;
 use std::iter::Peekable;
@@ -437,7 +437,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 elements.push(self.expression()?);
             }
         }
-        let end = self.consume(TokenType::RightBracket, "Expect closing ']'.")?;
+        let end =
+            self.consume(TokenType::RightBracket, "Expect closing ']'.")?;
         Ok(Expr::Array {
             elements,
             span: Span {

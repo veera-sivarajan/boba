@@ -240,7 +240,11 @@ impl CodeGen {
     fn return_stmt(&mut self, name: &str, expr: &LLExpr) {
         let return_type = expr.to_type();
         let register = self.expression(expr);
-        self.emit_code(move_for(&return_type), &register, rax_for(&return_type));
+        self.emit_code(
+            move_for(&return_type),
+            &register,
+            rax_for(&return_type),
+        );
         self.emit_code("jmp", format!(".{name}_epilogue"), "");
         self.registers.deallocate(register);
     }
@@ -391,45 +395,26 @@ impl CodeGen {
         } else {
             RegisterSize::from(ty_pe) as usize
         };
+        let result = self.argument_registers[size_index][register_index];
         match ty_pe {
             Type::Char => {
-                self.emit_code(
-                    "movb",
-                    register,
-                    self.argument_registers[size_index][register_index],
-                );
+                self.emit_code("movb", register, result);
             }
             Type::Number => {
-                self.emit_code(
-                    "movl",
-                    register,
-                    self.argument_registers[size_index][register_index],
-                );
+                self.emit_code("movl", register, result);
             }
             Type::String => {
-                self.emit_code(
-                    "movq",
-                    register,
-                    self.argument_registers[size_index][register_index],
-                );
+                self.emit_code("movq", register, result);
             }
             Type::Bool => {
                 let false_label = self.labels.create();
                 let done_label = self.labels.create();
                 self.emit_code("cmpb", "$1", register);
                 self.emit_code("jne", &false_label, "");
-                self.emit_code(
-                    "leaq",
-                    ".format_true(%rip)",
-                    self.argument_registers[size_index][register_index],
-                );
+                self.emit_code("leaq", ".format_true(%rip)", result);
                 self.emit_code("jmp", &done_label, "");
                 self.emit_label(false_label);
-                self.emit_code(
-                    "leaq",
-                    ".format_false(%rip)",
-                    self.argument_registers[size_index][register_index],
-                );
+                self.emit_code("leaq", ".format_false(%rip)", result);
                 self.emit_label(done_label);
             }
             Type::Unit => unreachable!(),
@@ -542,7 +527,11 @@ impl CodeGen {
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
-            LLExpr::Array { ty_pe, elements, index } => self.array(ty_pe, elements, *index),
+            LLExpr::Array {
+                ty_pe,
+                elements,
+                index,
+            } => self.array(ty_pe, elements, *index),
         }
     }
 
@@ -555,12 +544,17 @@ impl CodeGen {
             .expect("Unable to emit string.");
     }
 
-    fn array(&mut self, ty_pe: &Type, elements: &[LLExpr], index: u16) -> RegisterIndex {
+    fn array(
+        &mut self,
+        ty_pe: &Type,
+        elements: &[LLExpr],
+        index: u16,
+    ) -> RegisterIndex {
         let mut start = index;
         let size = ty_pe.as_size();
         for ele in elements {
             let value = self.expression(ele);
-            self.emit_code(move_for(ty_pe), value, &format!("-{start}(%rbp)")); 
+            self.emit_code(move_for(ty_pe), value, &format!("-{start}(%rbp)"));
             start += size;
         }
         let register = self.registers.allocate(&Type::String);
