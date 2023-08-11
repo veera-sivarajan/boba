@@ -175,8 +175,8 @@ impl Token {
     }
 
     pub fn to_type(&self) -> Option<typecheck::Type> {
-        if let TokenType::Type(ty) = self.kind {
-            Some(ty)
+        if let TokenType::Type(ty) = &self.kind {
+            Some(ty.clone())
         } else {
             None
         }

@@ -216,21 +216,21 @@ pub enum LLExpr {
 }
 
 impl LLExpr {
-    pub fn to_type(&self) -> impl AsRef<Type> {
+    pub fn to_type(&self) -> Type {
         match self {
             LLExpr::Char(_) => Type::Char,
             LLExpr::Number(_) => Type::Number,
             LLExpr::String(_) => Type::String,
             LLExpr::Boolean(_) => Type::Bool,
             LLExpr::Error => Type::Unit,
-            LLExpr::Variable { ty_pe, .. } => ty_pe,
-            LLExpr::Call { ty_pe, .. } => ty_pe,
-            LLExpr::Assign { ty_pe, .. } => ty_pe,
-            LLExpr::Unary { ty_pe, .. } => ty_pe,
-            LLExpr::Group { ty_pe, .. } => ty_pe,
-            LLExpr::Binary { ty_pe, .. } => ty_pe,
+            LLExpr::Variable { ty_pe, .. } => ty_pe.clone(),
+            LLExpr::Call { ty_pe, .. } => ty_pe.clone(),
+            LLExpr::Assign { ty_pe, .. } => ty_pe.clone(),
+            LLExpr::Unary { ty_pe, .. } => ty_pe.clone(),
+            LLExpr::Group { ty_pe, .. } => ty_pe.clone(),
+            LLExpr::Binary { ty_pe, .. } => ty_pe.clone(),
             LLExpr::Array { ty_pe, elements } => Type::Array {
-                ty_pe: Box::new(*ty_pe),
+                ty_pe: Box::new(ty_pe.clone()),
                 len: elements.len() as u16,
             }
         }
@@ -264,6 +264,13 @@ impl std::fmt::Debug for LLExpr {
             LLExpr::Assign { value, .. } => write!(f, "{value:?}"),
             LLExpr::Group { value, .. } => write!(f, "{value:?}"),
             LLExpr::Unary { right, .. } => write!(f, "{right:?}"),
+            LLExpr::Array { elements, .. } => {
+                writeln!(f, "[")?;
+                for ele in elements {
+                    write!(f, " {ele:?} ")?;
+                }
+                write!(f, "]")
+            }
         }
     }
 }

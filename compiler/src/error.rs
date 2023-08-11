@@ -41,6 +41,7 @@ impl fmt::Display for Type {
             Type::String => write!(f, "String"),
             Type::Bool => write!(f, "bool"),
             Type::Unit => write!(f, "()"),
+            Type::Array { ty_pe, len } => write!(f, "[{ty_pe}; {len}]"),
         }
     }
 }

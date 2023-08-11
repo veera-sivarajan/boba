@@ -17,12 +17,6 @@ pub enum Type {
     }
 }
 
-impl AsRef<Type> for Type {
-    fn as_ref(&self) -> &Type {
-        self
-    }
-}
-
 impl Type {
     pub fn as_size(&self) -> u16 {
         match self {
@@ -118,12 +112,12 @@ impl TypeChecker {
         &mut self,
         name: &Token,
         params: &[Parameter],
-        return_type: Type,
+        return_type: &Type,
     ) {
         self.functions.push(FunctionData::new(
             name.clone(),
             params.to_vec(),
-            return_type,
+            return_type.clone(),
         ));
     }
 
@@ -184,7 +178,7 @@ impl TypeChecker {
                         {
                             self.error(BobaError::MainReturnType(name.clone()));
                         };
-                        self.add_function(name, params, *return_type);
+                        self.add_function(name, params, return_type);
                     }
                 }
                 _ => continue,
@@ -208,7 +202,7 @@ impl TypeChecker {
                 body,
                 params,
                 return_type,
-            } => self.function_decl(name, body, params, *return_type),
+            } => self.function_decl(name, body, params, return_type),
             Stmt::Block(stmts) => self.block(stmts, None),
             Stmt::LocalVariable {
                 name,
@@ -242,15 +236,15 @@ impl TypeChecker {
         name: &Token,
         body: &[Stmt],
         params: &[Parameter],
-        return_type: Type,
+        return_type: &Type,
     ) -> LLStmt {
         self.init_function_checker();
         let body = Box::new(self.block(body, Some(params)));
-        if return_type != Type::Unit && !self.return_stmt_verified {
+        if return_type != &Type::Unit && !self.return_stmt_verified {
             self.error(BobaError::ReturnTypeNotFound(name.clone()));
         };
         let param_types: Vec<Type> =
-            params.iter().map(|param| param.1).collect();
+            params.iter().map(|param| param.1.clone()).collect();
         let space_for_locals = if self.space_for_locals == 0 {
             8
         } else {
@@ -261,7 +255,7 @@ impl TypeChecker {
             param_types,
             space_for_locals,
             body,
-            return_type,
+            return_type: return_type.clone(),
         }
     }
 
@@ -295,6 +289,7 @@ impl TypeChecker {
                         Type::Number => 'd',
                         Type::String | Type::Bool => 's',
                         Type::Unit => ' ',
+                        Type::Array { .. } => todo!(),
                     }
                 } else {
                     ch
@@ -362,7 +357,7 @@ impl TypeChecker {
             .contains_key(name)
     }
 
-    fn update_space_for_locals(&mut self, ty_pe: Type) -> u16 {
+    fn update_space_for_locals(&mut self, ty_pe: &Type) -> u16 {
         self.space_for_locals += ty_pe.as_size();
         self.space_for_locals
     }
@@ -381,7 +376,7 @@ impl TypeChecker {
             if init.to_type() == Type::Unit {
                 self.error(BobaError::AssigningUnitType(value.into()));
             };
-            let variable_index = self.update_space_for_locals(init.to_type());
+            let variable_index = self.update_space_for_locals(&init.to_type());
             self.add_variable(
                 name.clone(),
                 Info::new(
@@ -412,11 +407,11 @@ impl TypeChecker {
             if self.variable_is_declared_in_current_scope(&param_token) {
                 self.error(BobaError::VariableRedeclaration(param_token));
             } else {
-                let parameter_index = self.update_space_for_locals(*param_type);
+                let parameter_index = self.update_space_for_locals(param_type);
                 self.add_variable(
                     param_token,
                     Info::new(
-                        *param_type,
+                        param_type.clone(),
                         false,
                         Kind::Parameter(parameter_index),
                     ),
@@ -535,7 +530,7 @@ impl TypeChecker {
             for ((_, param_type), arg) in params.iter().zip(args.iter()) {
                 let arg_type = self.expression(arg);
                 self.error_if_ne(
-                    *param_type,
+                    param_type.clone(),
                     arg_type.to_type(),
                     Token::from(arg).span,
                 );
@@ -587,7 +582,7 @@ impl TypeChecker {
                 {
                     if is_mutable {
                         let value_ty = self.expression(value).to_type();
-                        self.error_if_ne(ty_pe, value_ty, token.span);
+                        self.error_if_ne(ty_pe, value_ty.clone(), token.span);
                         (value_ty, index)
                     } else {
                         (
