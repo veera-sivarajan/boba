@@ -26,6 +26,26 @@ impl Type {
     }
 }
 
+
+fn format_type(value: &Type) -> String {
+    match value {
+        Type::Char => String::from("%c"),
+        Type::Number => String::from("%d"),
+        Type::String | Type::Bool => String::from("%s"),
+        Type::Unit => String::from(" "),
+        Type::Array { ty_pe, len } => {
+            let mut result = String::from("[");
+            for _ in 0..len - 1 {
+                result.push_str(&format_type(ty_pe));
+                result.push_str(", ");
+            }
+            result.push_str(&format_type(ty_pe));
+            result.push(']');
+            result
+        }
+    }
+}
+
 #[derive(Clone)]
 struct FunctionData {
     name: Token,
@@ -272,20 +292,15 @@ impl TypeChecker {
         }
     }
 
+
     fn replace_format(&self, input: &str, args: &[LLExpr]) -> String {
         let mut format = String::new();
         let mut arg_iter = args.iter();
         for lexeme in input.split("{}") {
             format.push_str(lexeme);
             if let Some(arg) = arg_iter.next() {
-                let specifier = match arg.to_type() {
-                    Type::Char => "%c",
-                    Type::Number => "%d",
-                    Type::String | Type::Bool => "%s",
-                    Type::Unit => " ",
-                    Type::Array { .. } => todo!(),
-                };
-                format.push_str(specifier);
+                let specifier = format_type(&arg.to_type());
+                format.push_str(&specifier);
             }
         }
         format.push_str("\\n");
