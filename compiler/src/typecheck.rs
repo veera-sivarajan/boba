@@ -276,26 +276,21 @@ impl TypeChecker {
     }
 
     fn replace_format(&self, input: &str, args: &[LLExpr]) -> String {
+        let mut format = String::new();
         let mut arg_iter = args.iter();
-        let mut format: String = input
-            .chars()
-            .map(|ch| {
-                if ch == '{' {
-                    '%'
-                } else if ch == '}' {
-                    let arg = arg_iter.next().unwrap();
-                    match arg.to_type() {
-                        Type::Char => 'c',
-                        Type::Number => 'd',
-                        Type::String | Type::Bool => 's',
-                        Type::Unit => ' ',
-                        Type::Array { .. } => todo!(),
-                    }
-                } else {
-                    ch
-                }
-            })
-            .collect();
+        for lexeme in input.split("{}") {
+            format.push_str(lexeme);
+            if let Some(arg) = arg_iter.next() {
+                let specifier = match arg.to_type() {
+                    Type::Char => "%c",
+                    Type::Number => "%d",
+                    Type::String | Type::Bool => "%s",
+                    Type::Unit => " ",
+                    Type::Array { .. } => todo!(),
+                };
+                format.push_str(specifier);
+            }
+        }
         format.push_str("\\n");
         format
     }
