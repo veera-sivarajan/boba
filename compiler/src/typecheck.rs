@@ -357,7 +357,18 @@ impl TypeChecker {
             .contains_key(name)
     }
 
+    fn align_stack_for(&mut self, ty_pe: &Type) {
+        let align = ty_pe.as_size();
+        let remainder = self.space_for_locals % align;
+        self.space_for_locals = if remainder == 0 {
+            self.space_for_locals
+        } else {
+            self.space_for_locals + (align - remainder)
+        };
+    }
+
     fn update_space_for_locals(&mut self, ty_pe: &Type) -> u16 {
+        self.align_stack_for(ty_pe);
         self.space_for_locals += ty_pe.as_size();
         self.space_for_locals
     }
