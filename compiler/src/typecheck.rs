@@ -510,10 +510,13 @@ impl TypeChecker {
                 LLExpr::Array {
                     ty_pe: Type::Unit,
                     elements: vec![],
+                    index: self.update_space_for_locals(&Type::Unit),
                 }
             } else {
+                let ty_pe = values.first().unwrap().to_type();
                 LLExpr::Array {
-                    ty_pe: values.first().unwrap().to_type(),
+                    index: self.update_space_for_locals(&ty_pe),
+                    ty_pe,
                     elements: values,
                 }
             }
@@ -522,6 +525,7 @@ impl TypeChecker {
             LLExpr::Array {
                 ty_pe: Type::Unit,
                 elements: vec![],
+                index: 0,
             }
         }
     }

@@ -44,28 +44,26 @@ struct RegisterIndex {
 }
 
 fn move_for(ty_pe: &Type) -> String {
-    match ty_pe.as_size() {
-        1 => String::from("movb"),
-        4 => String::from("movl"),
-        8 => String::from("movq"),
-        _ => unreachable!(),
+    match RegisterSize::from(ty_pe) {
+        RegisterSize::Byte => String::from("movb"),
+        RegisterSize::DWord => String::from("movl"),
+        RegisterSize::QWord => String::from("movq"),
     }
 }
 
 fn rax_for(ty_pe: &Type) -> String {
-    match ty_pe.as_size() {
-        1 => String::from("%al"),
-        4 => String::from("%eax"),
-        8 => String::from("%rax"),
-        _ => unreachable!(),
+    match RegisterSize::from(ty_pe) {
+        RegisterSize::Byte => String::from("%al"),
+        RegisterSize::DWord => String::from("%eax"),
+        RegisterSize::QWord => String::from("%rax"),
     }
 }
 
 fn cmp_for(ty_pe: &Type) -> String {
-    match ty_pe.as_size() {
-        1 => String::from("cmpb"),
-        4 => String::from("cmpl"),
-        _ => unreachable!(
+    match RegisterSize::from(ty_pe) {
+        RegisterSize::Byte => String::from("cmpb"),
+        RegisterSize::DWord => String::from("cmpl"),
+        RegisterSize::QWord => unreachable!(
             "Cannot compare these types. Typechecker should reject it."
         ),
     }
@@ -544,7 +542,7 @@ impl CodeGen {
             LLExpr::Unary { oper, right, .. } => self.unary(oper, right),
             LLExpr::Group { value, .. } => self.expression(value),
             LLExpr::String(literal) => self.string(literal),
-            LLExpr::Array { .. } => todo!(),
+            LLExpr::Array { ty_pe, elements, index } => self.array(ty_pe, elements, *index),
         }
     }
 
@@ -555,6 +553,19 @@ impl CodeGen {
             .expect("Unable to emit string.");
         writeln!(&mut self.assembly.header, "{:8}.text", " ")
             .expect("Unable to emit string.");
+    }
+
+    fn array(&mut self, ty_pe: &Type, elements: &[LLExpr], index: u16) -> RegisterIndex {
+        let mut start = index;
+        let size = ty_pe.as_size();
+        for ele in elements {
+            let value = self.expression(ele);
+            self.emit_code(move_for(ty_pe), value, &format!("-{start}(%rbp)")); 
+            start += size;
+        }
+        let register = self.registers.allocate(&Type::String);
+        self.emit_code("leaq", &format!("-{index}(%rbp)"), &register);
+        register
     }
 
     fn string(&mut self, literal: &str) -> RegisterIndex {
