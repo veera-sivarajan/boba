@@ -574,8 +574,6 @@ impl CodeGen {
         let operand = self.expression(right);
         match oper {
             UnaryOperand::LogicalNot => {
-                // FIXME: Find a better way to implement logical not
-                // using test and sete
                 self.emit_code("not", &operand, "");
                 self.emit_code("inc", &operand, "");
                 self.emit_code("inc", &operand, "");

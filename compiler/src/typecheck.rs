@@ -26,7 +26,6 @@ impl Type {
     }
 }
 
-
 fn format_type(value: &Type) -> String {
     match value {
         Type::Char => String::from("%c"),
@@ -291,7 +290,6 @@ impl TypeChecker {
             value,
         }
     }
-
 
     fn replace_format(&self, input: &str, args: &[LLExpr]) -> String {
         let mut format = String::new();
