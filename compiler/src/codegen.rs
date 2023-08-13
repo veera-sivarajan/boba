@@ -8,15 +8,42 @@ struct Labels {
     count: u16,
 }
 
+#[derive(Clone)]
+struct Label(Box<str>);
+
+impl From<String> for Label {
+    fn from(value: String) -> Label {
+        Label(value.into_boxed_str())
+    }
+}
+
+impl From<&str> for Label {
+    fn from(value: &str) -> Label {
+        Label((*value).into())
+    }
+}
+
+impl From<&Label> for Label {
+    fn from(value: &Label) -> Label {
+        value.clone()
+    }
+}
+
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl Labels {
     fn new() -> Self {
         Labels::default()
     }
 
-    fn create(&mut self) -> Box<str> {
+    fn create(&mut self) -> Label {
         let label = format!(".L{}", self.count);
         self.count += 1;
-        label.into()
+        Label(label.into())
     }
 }
 
@@ -230,10 +257,10 @@ impl CodeGen {
     fn while_stmt(&mut self, condition: &LLExpr, body: &LLStmt) {
         let loop_begin = self.labels.create();
         let loop_end = self.labels.create();
-        self.emit_label(loop_begin.clone());
+        self.emit_label(&loop_begin);
         self.boolean_expression(condition, &loop_end);
         self.codegen(body);
-        self.emit_code("jmp", &loop_begin, "");
+        self.emit_code("jmp", loop_begin, "");
         self.emit_label(loop_end);
     }
 
@@ -341,7 +368,7 @@ impl CodeGen {
         self.emit_label(done_label);
     }
 
-    fn boolean_expression(&mut self, condition: &LLExpr, false_label: &str) {
+    fn boolean_expression(&mut self, condition: &LLExpr, false_label: &Label) {
         if let LLExpr::Binary {
             left,
             oper: BinaryOperand::Compare(operator),
@@ -366,7 +393,7 @@ impl CodeGen {
     fn comparison_operation(
         &mut self,
         operation: &Comparison,
-        false_label: &str,
+        false_label: &Label,
     ) {
         match operation {
             Comparison::Less => self.emit_code("jnl", false_label, ""),
@@ -491,7 +518,7 @@ impl CodeGen {
         self.code_writer(instruction, first_operand, second_operand);
     }
 
-    fn emit_label<S: Into<String>>(&mut self, label: S) {
+    fn emit_label<L: Into<Label> + fmt::Display>(&mut self, label: L) {
         writeln!(&mut self.assembly.code, "{}:", label.into())
             .expect("Unable to write label.");
     }
@@ -535,7 +562,7 @@ impl CodeGen {
         }
     }
 
-    fn emit_string(&mut self, label: &str, literal: &str) {
+    fn emit_string(&mut self, label: &Label, literal: &str) {
         writeln!(&mut self.assembly.header, "{label}:")
             .expect("Unable to emit string.");
         writeln!(&mut self.assembly.header, "{:8}.string \"{literal}\"", " ")
