@@ -13,13 +13,13 @@ struct Label(Box<str>);
 
 impl From<String> for Label {
     fn from(value: String) -> Label {
-        Label(value.into_boxed_str())
+        Label(value.into())
     }
 }
 
 impl From<&str> for Label {
     fn from(value: &str) -> Label {
-        Label((*value).into())
+        Label(value.into())
     }
 }
 
@@ -471,22 +471,13 @@ impl CodeGen {
         size: &str,
         value: impl std::fmt::Debug,
     ) {
-        self.data_writer(symbol_name, size, value);
-    }
-
-    fn data_writer(
-        &mut self,
-        symbol_name: &str,
-        size: &str,
-        value: impl std::fmt::Debug,
-    ) {
         writeln!(&mut self.assembly.data, "{symbol_name}:")
             .expect("Unable to write into data.");
         writeln!(&mut self.assembly.data, "{:8}.{size} {value:?}", " ")
             .expect("Unable to write into data.");
     }
 
-    fn code_writer(
+    fn emit_code(
         &mut self,
         instruction: impl fmt::Display,
         first_operand: impl fmt::Display,
@@ -507,15 +498,6 @@ impl CodeGen {
                 .expect("Unable to write code.");
         }
         writeln!(&mut self.assembly.code).expect("Unable to write code.");
-    }
-
-    fn emit_code(
-        &mut self,
-        instruction: impl fmt::Display,
-        first_operand: impl fmt::Display,
-        second_operand: impl fmt::Display,
-    ) {
-        self.code_writer(instruction, first_operand, second_operand);
     }
 
     fn emit_label<L: Into<Label> + fmt::Display>(&mut self, label: L) {
