@@ -474,7 +474,11 @@ impl CodeGen {
                 result.extend(values);
                 index += arg_type.as_size();
             } else {
-                result.push((arg_type.clone(), format!("{index}({base_register})")));
+                if index == 0 {
+                    result.push((arg_type.clone(), format!("{index}({base_register})")));
+                } else {
+                    result.push((arg_type.clone(), format!("-{index}({base_register})")));
+                }
                 index += arg_type.as_size();
             }
         }
