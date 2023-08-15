@@ -226,7 +226,10 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print { format, args } => self.print_stmt(format, args),
+            LLStmt::Print {
+                format,
+                args,
+            } => self.print_stmt(format, args),
             LLStmt::If {
                 condition,
                 then,
@@ -411,7 +414,7 @@ impl CodeGen {
         }
     }
 
-    fn print_arg(
+    fn place_arg_at_register(
         &mut self,
         ty_pe: &Type,
         register_index: usize,
@@ -445,22 +448,66 @@ impl CodeGen {
                 self.emit_label(done_label);
             }
             Type::Unit => unreachable!(),
-            Type::Array { .. } => todo!(),
+            Type::Array { ty_pe, len } => todo!(),
         }
     }
 
+    // fn move_args_to_register(&mut self, args: &[(Type, String)]) {
+    //     for (index, (kind, register)) in args.iter().enumerate() {
+    //         self.place_arg_at_register(
+    //     }
+    // }
+
+    fn flatten_array(
+        &self,
+        base_register: &RegisterIndex,
+        len: u16,
+        arg_type: &Type,
+        base_index: u16,
+    ) -> Vec<(Type, String)> {
+        let mut result = vec![];
+        let mut index = base_index;
+        for _ in 0..len {
+            if let Type::Array { ty_pe, len } = arg_type {
+                let values =
+                    self.flatten_array(base_register, *len, ty_pe, index);
+                result.extend(values);
+                index += arg_type.as_size();
+            } else {
+                result.push((arg_type.clone(), format!("{index}({base_register})")));
+                index += arg_type.as_size();
+            }
+        }
+        result
+    }
+
+    fn flatten_print_args(&mut self, args: &[LLExpr]) -> Vec<(Type, String)> {
+        let mut result = vec![];
+        let registers: Vec<RegisterIndex> =
+            args.iter().map(|arg| self.expression(arg)).collect();
+        for (arg, register) in args.iter().zip(registers) {
+            let kind = arg.to_type();
+            if let Type::Array { ty_pe, len } = kind {
+                let values = self.flatten_array(&register, len, &ty_pe, 0);
+                result.extend(values);
+                self.registers.deallocate(register);
+            } else {
+                result.push((kind, register.to_string()));
+                self.registers.deallocate(register);
+            }
+        }
+        result
+    }
+
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
-        let registers = args
-            .iter()
-            .map(|expr| self.expression(expr))
-            .collect::<Vec<RegisterIndex>>();
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
-        for ((index, arg), register) in args.iter().enumerate().zip(registers) {
-            self.print_arg(&arg.to_type(), index + 1, &register);
-            self.registers.deallocate(register);
-        }
+        let args = self.flatten_print_args(args);
+        println!("Args: {args:?}");
+        panic!();
+        // self.move_args_to_register(&args[..5]);
+        // self.push_args_to_stack(stack_args);
         self.emit_code("xor", "%eax", "%eax");
         self.emit_code("call", "printf@PLT", "");
     }
@@ -500,7 +547,7 @@ impl CodeGen {
         writeln!(&mut self.assembly.code).expect("Unable to write code.");
     }
 
-    fn emit_label<L: Into<Label> + fmt::Display>(&mut self, label: L) {
+    fn emit_label<L: Into<Label>>(&mut self, label: L) {
         writeln!(&mut self.assembly.code, "{}:", label.into())
             .expect("Unable to write label.");
     }

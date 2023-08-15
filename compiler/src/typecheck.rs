@@ -45,6 +45,17 @@ fn format_type(value: &Type) -> String {
     }
 }
 
+fn count_args(args: &[LLExpr]) -> u16 {
+    let mut count = 0;
+    for arg in args {
+        match arg.to_type() {
+            Type::Array { len, .. } => count += len,
+            _ => count += 1,
+        }
+    }
+    count
+}
+
 #[derive(Clone)]
 struct FunctionData {
     name: Token,
@@ -291,7 +302,7 @@ impl TypeChecker {
         }
     }
 
-    fn replace_format(&self, input: &str, args: &[LLExpr]) -> String {
+    fn replace_format(input: &str, args: &[LLExpr]) -> String {
         let mut format = String::new();
         let mut arg_iter = args.iter();
         for lexeme in input.split("{}") {
@@ -323,12 +334,12 @@ impl TypeChecker {
                     found,
                 ));
                 LLStmt::Error
-            } else if args.len() > 5 {
-                self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
-                LLStmt::Error
+            // } else if args.len() > 5 {
+            //     self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
+            //     LLStmt::Error
             } else {
                 let args: Vec<LLExpr> = values.collect();
-                let format = self.replace_format(&format_string, &args);
+                let format = TypeChecker::replace_format(&format_string, &args);
                 LLStmt::Print { format, args }
             }
         } else {
