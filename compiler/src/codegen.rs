@@ -418,7 +418,7 @@ impl CodeGen {
         &mut self,
         ty_pe: &Type,
         register_index: usize,
-        register: &RegisterIndex,
+        register: &str,
     ) {
         let size_index = if ty_pe == &Type::Bool {
             RegisterSize::from(&Type::String) as usize
@@ -447,16 +447,16 @@ impl CodeGen {
                 self.emit_code("leaq", ".format_false(%rip)", result);
                 self.emit_label(done_label);
             }
-            Type::Unit => unreachable!(),
-            Type::Array { ty_pe, len } => todo!(),
+            Type::Unit | Type::Array { .. } => unreachable!(),
+       
         }
     }
 
-    // fn move_args_to_register(&mut self, args: &[(Type, String)]) {
-    //     for (index, (kind, register)) in args.iter().enumerate() {
-    //         self.place_arg_at_register(
-    //     }
-    // }
+    fn move_args_to_register(&mut self, args: &[(Type, String)]) {
+        for (index, (kind, register)) in args.iter().enumerate() {
+            self.place_arg_at_register(kind, index + 1, register);
+        }
+    }
 
     fn flatten_array(
         &self,
@@ -499,16 +499,43 @@ impl CodeGen {
         result
     }
 
+    fn push_args_to_stack(&mut self, args: &[(Type, String)]) -> Option<u16> {
+        let mut allocated_space = 0;
+        for (kind, register) in args.iter().rev() {
+            allocated_space += kind.as_size();
+            self.emit_code("pushq", register, "");
+        }
+
+        let align = 16;
+        let remainder = allocated_space % align;
+        allocated_space = if remainder == 0 {
+            allocated_space
+        } else {
+            let increment = align - remainder;
+            self.emit_code("subq", format!("${increment}"), "%rsp");
+            allocated_space + increment
+        };
+
+        if allocated_space == 0 {
+            None
+        } else {
+            Some(allocated_space)
+        }
+    }
+
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
         let args = self.flatten_print_args(args);
         let limit = std::cmp::min(args.len(), 5);
         self.move_args_to_register(&args[..limit]);
-        // self.push_args_to_stack(stack_args);
+        let alignment = self.push_args_to_stack(&args[limit..]);
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
         self.emit_code("xor", "%eax", "%eax");
         self.emit_code("call", "printf@PLT", "");
+        if let Some(value) = alignment {
+            self.emit_code("addq", format!("${value}"), "%rsp");
+        }
     }
 
     fn emit_data(
