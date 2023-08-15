@@ -504,12 +504,7 @@ impl CodeGen {
     }
 
     fn push_args_to_stack(&mut self, args: &[(Type, String)]) -> Option<u16> {
-        let mut allocated_space = 0;
-        for (kind, register) in args.iter().rev() {
-            allocated_space += kind.as_size();
-            self.emit_code("pushq", register, "");
-        }
-
+        let mut allocated_space = args.len() * 8;
         let align = 16;
         let remainder = allocated_space % align;
         allocated_space = if remainder == 0 {
@@ -519,11 +514,15 @@ impl CodeGen {
             self.emit_code("subq", format!("${increment}"), "%rsp");
             allocated_space + increment
         };
+        
+        for (kind, register) in args.iter().rev() {
+            self.emit_code("pushq", register, "");
+        }
 
         if allocated_space == 0 {
             None
         } else {
-            Some(allocated_space)
+            Some(allocated_space as u16)
         }
     }
 
