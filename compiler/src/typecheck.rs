@@ -334,9 +334,6 @@ impl TypeChecker {
                     found,
                 ));
                 LLStmt::Error
-            // } else if args.len() > 5 {
-            //     self.error(BobaError::PrintGotMoreThanFiveArgs(meta.clone()));
-            //     LLStmt::Error
             } else {
                 let args: Vec<LLExpr> = values.collect();
                 let format = TypeChecker::replace_format(&format_string, &args);

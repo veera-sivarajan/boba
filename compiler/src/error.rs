@@ -85,7 +85,6 @@ pub enum BobaError {
     MainReturnType(Token),
     ExpectFormatString(Token),
     FormatSpecifierCountNotEqual(Token, usize, usize),
-    PrintGotMoreThanFiveArgs(Token),
     PrintUnitType(Token),
     CharNotAscii(Span),
     HetroArray(Span),
@@ -115,13 +114,6 @@ impl fmt::Display for BobaError {
             }
             PrintUnitType(token) => {
                 writeln!(f, "Error: Cannot print unit type at {}", token.span)
-            }
-            PrintGotMoreThanFiveArgs(token) => {
-                writeln!(
-                    f,
-                    "Error: Print statement cannot handle more than five arguments at {}",
-                    token.span
-                )
             }
             FormatSpecifierCountNotEqual(token, expected, found) => {
                 writeln!(

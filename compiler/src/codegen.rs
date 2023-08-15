@@ -517,17 +517,6 @@ impl CodeGen {
         
         for (kind, register) in args.iter().rev() {
             self.emit_code("subq", "$8", "%rsp");
-            // match RegisterSize::from(kind) {
-            //     RegisterSize::Byte => {
-            //         self.emit_code("movb", register, "(%rsp)");
-            //     }
-            //     RegisterSize::DWord => {
-            //         self.emit_code("movl", register, "(%esp)");
-            //     }
-            //     RegisterSize::QWord => {
-            //         self.emit_code("movq", register, "(%rsp)");
-            //     }
-            // }
             match kind {
                 Type::Char => {
                     self.emit_code("movb", register, "(%rsp)");
