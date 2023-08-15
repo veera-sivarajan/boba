@@ -500,14 +500,13 @@ impl CodeGen {
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
+        let args = self.flatten_print_args(args);
+        let limit = std::cmp::min(args.len(), 5);
+        self.move_args_to_register(&args[..limit]);
+        // self.push_args_to_stack(stack_args);
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
-        let args = self.flatten_print_args(args);
-        println!("Args: {args:?}");
-        panic!();
-        // self.move_args_to_register(&args[..5]);
-        // self.push_args_to_stack(stack_args);
         self.emit_code("xor", "%eax", "%eax");
         self.emit_code("call", "printf@PLT", "");
     }
