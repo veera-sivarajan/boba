@@ -517,16 +517,42 @@ impl CodeGen {
         
         for (kind, register) in args.iter().rev() {
             self.emit_code("subq", "$8", "%rsp");
-            match RegisterSize::from(kind) {
-                RegisterSize::Byte => {
-                    self.emit_code("movzbl", register, "(%rsp)");
+            // match RegisterSize::from(kind) {
+            //     RegisterSize::Byte => {
+            //         self.emit_code("movb", register, "(%rsp)");
+            //     }
+            //     RegisterSize::DWord => {
+            //         self.emit_code("movl", register, "(%esp)");
+            //     }
+            //     RegisterSize::QWord => {
+            //         self.emit_code("movq", register, "(%rsp)");
+            //     }
+            // }
+            match kind {
+                Type::Char => {
+                    self.emit_code("movb", register, "(%rsp)");
                 }
-                RegisterSize::DWord => {
-                    self.emit_code("movl", register, "(%esp)");
+                Type::Number => {
+                    self.emit_code("movl", register, "(%rsp)");
                 }
-                RegisterSize::QWord => {
+                Type::String => {
                     self.emit_code("movq", register, "(%rsp)");
                 }
+                Type::Bool => {
+                    let result = self.registers.allocate(&Type::String);
+                    let false_label = self.labels.create();
+                    let done_label = self.labels.create();
+                    self.emit_code("cmpb", "$1", register);
+                    self.emit_code("jne", &false_label, "");
+                    self.emit_code("leaq", ".format_true(%rip)", &result);
+                    self.emit_code("jmp", &done_label, "");
+                    self.emit_label(false_label);
+                    self.emit_code("leaq", ".format_false(%rip)", &result); 
+                    self.emit_label(done_label);
+                    self.emit_code("movq", &result, "(%rsp)");
+                    self.registers.deallocate(result);
+                }
+                Type::Unit | Type::Array { .. } => unreachable!(),
             }
         }
 
