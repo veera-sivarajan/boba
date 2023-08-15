@@ -226,10 +226,7 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print {
-                format,
-                args,
-            } => self.print_stmt(format, args),
+            LLStmt::Print { format, args } => self.print_stmt(format, args),
             LLStmt::If {
                 condition,
                 then,
@@ -448,7 +445,6 @@ impl CodeGen {
                 self.emit_label(done_label);
             }
             Type::Unit | Type::Array { .. } => unreachable!(),
-       
         }
     }
 
@@ -463,7 +459,7 @@ impl CodeGen {
         base_register: &RegisterIndex,
         len: u16,
         arg_type: &Type,
-        base_index: u16,
+        base_index: i16,
     ) -> Vec<(Type, String)> {
         let mut result = vec![];
         let mut index = base_index;
@@ -472,14 +468,13 @@ impl CodeGen {
                 let values =
                     self.flatten_array(base_register, *len, ty_pe, index);
                 result.extend(values);
-                index += arg_type.as_size();
+                index -= arg_type.as_size() as i16;
             } else {
-                if index == 0 {
-                    result.push((arg_type.clone(), format!("{index}({base_register})")));
-                } else {
-                    result.push((arg_type.clone(), format!("-{index}({base_register})")));
-                }
-                index += arg_type.as_size();
+                result.push((
+                    arg_type.clone(),
+                    format!("{index}({base_register})"),
+                ));
+                index -= arg_type.as_size() as i16;
             }
         }
         result
@@ -514,15 +509,21 @@ impl CodeGen {
             self.emit_code("subq", format!("${increment}"), "%rsp");
             allocated_space + increment
         };
-        
+
         for (kind, register) in args.iter().rev() {
             self.emit_code("subq", "$8", "%rsp");
             match kind {
                 Type::Char => {
-                    self.emit_code("movb", register, "(%rsp)");
+                    let result = self.registers.allocate(&Type::Char);
+                    self.emit_code("movb", register, &result);
+                    self.emit_code("movb", &result, "(%rsp)");
+                    self.registers.deallocate(result);
                 }
                 Type::Number => {
-                    self.emit_code("movl", register, "(%rsp)");
+                    let result = self.registers.allocate(&Type::Number);
+                    self.emit_code("movl", register, &result);
+                    self.emit_code("movl", &result, "(%rsp)");
+                    self.registers.deallocate(result);
                 }
                 Type::String => {
                     self.emit_code("movq", register, "(%rsp)");
@@ -536,7 +537,7 @@ impl CodeGen {
                     self.emit_code("leaq", ".format_true(%rip)", &result);
                     self.emit_code("jmp", &done_label, "");
                     self.emit_label(false_label);
-                    self.emit_code("leaq", ".format_false(%rip)", &result); 
+                    self.emit_code("leaq", ".format_false(%rip)", &result);
                     self.emit_label(done_label);
                     self.emit_code("movq", &result, "(%rsp)");
                     self.registers.deallocate(result);
@@ -665,7 +666,8 @@ impl CodeGen {
         let size = ty_pe.as_size();
         for ele in elements {
             let value = self.expression(ele);
-            self.emit_code(move_for(ty_pe), value, &format!("-{start}(%rbp)"));
+            self.emit_code(move_for(ty_pe), &value, &format!("-{start}(%rbp)"));
+            self.registers.deallocate(value);
             start += size;
         }
         let register = self.registers.allocate(&Type::String);
