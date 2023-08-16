@@ -70,6 +70,13 @@ struct RegisterIndex {
     size: RegisterSize,
 }
 
+impl RegisterIndex {
+    fn size(mut self, size: RegisterSize) -> Self {
+        self.size = size;
+        self
+    }
+}
+
 fn move_for(ty_pe: &Type) -> String {
     match RegisterSize::from(ty_pe) {
         RegisterSize::Byte => String::from("movb"),
@@ -480,19 +487,15 @@ impl CodeGen {
         result
     }
 
-    fn flatten_print_args(&mut self, args: &[LLExpr]) -> Vec<(Type, String)> {
+    fn flatten_print_args(&mut self, args: &[LLExpr], registers: &[RegisterIndex]) -> Vec<(Type, String)> {
         let mut result = vec![];
-        let registers: Vec<RegisterIndex> =
-            args.iter().map(|arg| self.expression(arg)).collect();
         for (arg, register) in args.iter().zip(registers) {
             let kind = arg.to_type();
             if let Type::Array { ty_pe, len } = kind {
-                let values = self.flatten_array(&register, len, &ty_pe, 0);
+                let values = self.flatten_array(register, len, &ty_pe, 0);
                 result.extend(values);
-                self.registers.deallocate(register);
             } else {
                 result.push((kind, register.to_string()));
-                self.registers.deallocate(register);
             }
         }
         result
@@ -511,22 +514,23 @@ impl CodeGen {
         };
 
         for (kind, register) in args.iter().rev() {
-            self.emit_code("subq", "$8", "%rsp");
             match kind {
                 Type::Char => {
                     let result = self.registers.allocate(&Type::Char);
                     self.emit_code("movb", register, &result);
-                    self.emit_code("movb", &result, "(%rsp)");
+                    let result = result.size(RegisterSize::QWord);
+                    self.emit_code("pushq", &result, "");
                     self.registers.deallocate(result);
                 }
                 Type::Number => {
                     let result = self.registers.allocate(&Type::Number);
                     self.emit_code("movl", register, &result);
-                    self.emit_code("movl", &result, "(%rsp)");
+                    let result = result.size(RegisterSize::QWord);
+                    self.emit_code("pushq", &result, "");
                     self.registers.deallocate(result);
                 }
                 Type::String => {
-                    self.emit_code("movq", register, "(%rsp)");
+                    self.emit_code("pushq", register, "");
                 }
                 Type::Bool => {
                     let result = self.registers.allocate(&Type::String);
@@ -539,7 +543,7 @@ impl CodeGen {
                     self.emit_label(false_label);
                     self.emit_code("leaq", ".format_false(%rip)", &result);
                     self.emit_label(done_label);
-                    self.emit_code("movq", &result, "(%rsp)");
+                    self.emit_code("pushq", &result, "");
                     self.registers.deallocate(result);
                 }
                 Type::Unit | Type::Array { .. } => unreachable!(),
@@ -554,10 +558,14 @@ impl CodeGen {
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
-        let args = self.flatten_print_args(args);
+        let registers: Vec<RegisterIndex> = args.iter().map(|arg| self.expression(arg)).collect();
+        let args = self.flatten_print_args(args, &registers);
         let limit = std::cmp::min(args.len(), 5);
         self.move_args_to_register(&args[..limit]);
         let alignment = self.push_args_to_stack(&args[limit..]);
+        for register in registers {
+            self.registers.deallocate(register);
+        }
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
