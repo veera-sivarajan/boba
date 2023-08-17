@@ -137,7 +137,7 @@ impl ScratchRegisters {
                 };
             }
         }
-        unreachable!()
+        unreachable!("Cannot allocate scratch register.")
     }
 
     fn deallocate(&mut self, index: RegisterIndex) {
