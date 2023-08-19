@@ -535,8 +535,13 @@ impl TypeChecker {
                 }
             } else {
                 let ty_pe = values.first().unwrap().to_type();
+                let index = self.update_space_for_locals(&ty_pe); 
+                self.update_space_for_locals(&Type::Array {
+                    len: values.len() as u16,
+                    ty_pe: Box::new(ty_pe.clone()),
+                });
                 LLExpr::Array {
-                    index: self.update_space_for_locals(&ty_pe),
+                    index,
                     ty_pe,
                     elements: values,
                 }
