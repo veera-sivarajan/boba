@@ -96,7 +96,11 @@ impl fmt::Display for BobaError {
         use BobaError::*;
         match self {
             PrintGotMoreThanFiveArgs(token) => {
-                writeln!(f, "Error: Cannot print more than five arguments at {}", token.span)
+                writeln!(
+                    f,
+                    "Error: Cannot print more than five arguments at {}",
+                    token.span
+                )
             }
             HetroArray(span) => {
                 writeln!(f, "Type Error: Expect all elements in an array to be of same type at {span}.")

@@ -3,7 +3,6 @@ use crate::stmt::LLStmt;
 use crate::typecheck::{Kind, Type};
 use std::fmt::Write;
 
-
 fn flatten_array(
     base_register: &RegisterIndex,
     len: u16,
@@ -18,10 +17,8 @@ fn flatten_array(
             result.extend(values);
             index -= arg_type.as_size() as i16;
         } else {
-            result.push((
-                arg_type.clone(),
-                format!("{index}({base_register})"),
-            ));
+            result
+                .push((arg_type.clone(), format!("{index}({base_register})")));
             index -= arg_type.as_size() as i16;
         }
     }
@@ -486,8 +483,11 @@ impl CodeGen {
         }
     }
 
-
-    fn flatten_print_args(&mut self, args: &[LLExpr], registers: &[RegisterIndex]) -> Vec<(Type, String)> {
+    fn flatten_print_args(
+        &mut self,
+        args: &[LLExpr],
+        registers: &[RegisterIndex],
+    ) -> Vec<(Type, String)> {
         let mut result = vec![];
         for (arg, register) in args.iter().zip(registers) {
             let kind = arg.to_type();
@@ -558,7 +558,8 @@ impl CodeGen {
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
-        let registers: Vec<RegisterIndex> = args.iter().map(|arg| self.expression(arg)).collect();
+        let registers: Vec<RegisterIndex> =
+            args.iter().map(|arg| self.expression(arg)).collect();
         let args = self.flatten_print_args(args, &registers);
         let limit = std::cmp::min(args.len(), 5);
         self.move_args_to_register(&args[..limit]);
