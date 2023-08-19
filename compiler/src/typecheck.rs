@@ -385,7 +385,11 @@ impl TypeChecker {
 
     fn update_space_for_locals(&mut self, ty_pe: &Type) -> u16 {
         self.align_stack_for(ty_pe);
-        self.space_for_locals += ty_pe.as_size();
+        self.space_for_locals += if matches!(ty_pe, &Type::Array { .. }) {
+            8
+        } else {
+            ty_pe.as_size()
+        };
         self.space_for_locals
     }
 
@@ -404,6 +408,7 @@ impl TypeChecker {
                 self.error(BobaError::AssigningUnitType(value.into()));
             };
             let variable_index = self.update_space_for_locals(&init.to_type());
+            println!("Storing variable at {variable_index}");
             self.add_variable(
                 name.clone(),
                 Info::new(
