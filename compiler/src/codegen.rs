@@ -3,6 +3,31 @@ use crate::stmt::LLStmt;
 use crate::typecheck::{Kind, Type};
 use std::fmt::Write;
 
+
+fn flatten_array(
+    base_register: &RegisterIndex,
+    len: u16,
+    arg_type: &Type,
+    base_index: i16,
+) -> Vec<(Type, String)> {
+    let mut result = vec![];
+    let mut index = base_index;
+    for _ in 0..len {
+        if let Type::Array { ty_pe, len } = arg_type {
+            let values = flatten_array(base_register, *len, ty_pe, index);
+            result.extend(values);
+            index -= arg_type.as_size() as i16;
+        } else {
+            result.push((
+                arg_type.clone(),
+                format!("{index}({base_register})"),
+            ));
+            index -= arg_type.as_size() as i16;
+        }
+    }
+    result
+}
+
 #[derive(Default)]
 struct Labels {
     count: u16,
@@ -461,38 +486,13 @@ impl CodeGen {
         }
     }
 
-    fn flatten_array(
-        &self,
-        base_register: &RegisterIndex,
-        len: u16,
-        arg_type: &Type,
-        base_index: i16,
-    ) -> Vec<(Type, String)> {
-        let mut result = vec![];
-        let mut index = base_index;
-        for _ in 0..len {
-            if let Type::Array { ty_pe, len } = arg_type {
-                let values =
-                    self.flatten_array(base_register, *len, ty_pe, index);
-                result.extend(values);
-                index -= arg_type.as_size() as i16;
-            } else {
-                result.push((
-                    arg_type.clone(),
-                    format!("{index}({base_register})"),
-                ));
-                index -= arg_type.as_size() as i16;
-            }
-        }
-        result
-    }
 
     fn flatten_print_args(&mut self, args: &[LLExpr], registers: &[RegisterIndex]) -> Vec<(Type, String)> {
         let mut result = vec![];
         for (arg, register) in args.iter().zip(registers) {
             let kind = arg.to_type();
             if let Type::Array { ty_pe, len } = kind {
-                let values = self.flatten_array(register, len, &ty_pe, 0);
+                let values = flatten_array(register, len, &ty_pe, 0);
                 result.extend(values);
             } else {
                 result.push((kind, register.to_string()));
