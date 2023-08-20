@@ -372,7 +372,11 @@ impl TypeChecker {
 
     fn align_stack_for(&mut self, ty_pe: &Type) {
         let align = ty_pe.as_size();
-        let remainder = self.space_for_locals % align;
+        let remainder = if align == 0 {
+            align
+        } else {
+            self.space_for_locals % align
+        };
         self.space_for_locals = if remainder == 0 {
             self.space_for_locals
         } else {
