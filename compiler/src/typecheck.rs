@@ -24,6 +24,10 @@ impl Type {
             Type::Array { ty_pe, len } => ty_pe.as_size() * len,
         }
     }
+
+    pub fn is_array(&self) -> bool {
+        matches!(self, Type::Array { .. })
+    }
 }
 
 fn format_type(value: &Type) -> String {
@@ -43,17 +47,6 @@ fn format_type(value: &Type) -> String {
             result
         }
     }
-}
-
-fn count_args(args: &[LLExpr]) -> u16 {
-    let mut count = 0;
-    for arg in args {
-        match arg.to_type() {
-            Type::Array { len, .. } => count += len,
-            _ => count += 1,
-        }
-    }
-    count
 }
 
 #[derive(Clone)]
@@ -385,11 +378,11 @@ impl TypeChecker {
 
     fn update_space_for_locals(&mut self, ty_pe: &Type) -> u16 {
         self.align_stack_for(ty_pe);
-        self.space_for_locals += if matches!(ty_pe, &Type::Array { .. }) {
-            8
-        } else {
-            ty_pe.as_size()
-        };
+        self.allocate_stack_space(ty_pe.as_size())
+    }
+
+    fn allocate_stack_space(&mut self, size: u16) -> u16 {
+        self.space_for_locals += size;
         self.space_for_locals
     }
 
@@ -404,21 +397,26 @@ impl TypeChecker {
             LLStmt::Error
         } else {
             let init = self.expression(value);
-            if init.to_type() == Type::Unit {
+            let variable_type = init.to_type();
+            if variable_type == Type::Unit {
                 self.error(BobaError::AssigningUnitType(value.into()));
             };
-            let variable_index = self.update_space_for_locals(&init.to_type());
-            println!("Storing variable at {variable_index}");
+            let variable_index = if variable_type.is_array() {
+                // arrays decay to 8 byte pointers
+                self.update_space_for_locals(&Type::String)
+            } else {
+                self.update_space_for_locals(&variable_type)
+            };
             self.add_variable(
                 name.clone(),
                 Info::new(
-                    init.to_type(),
+                    variable_type.clone(),
                     is_mutable,
                     Kind::LocalVariable(variable_index),
                 ),
             );
             LLStmt::LocalVariable {
-                ty_pe: init.to_type(),
+                ty_pe: variable_type,
                 init,
                 variable_index,
             }
@@ -535,11 +533,10 @@ impl TypeChecker {
                 }
             } else {
                 let ty_pe = values.first().unwrap().to_type();
-                let index = self.update_space_for_locals(&ty_pe); 
-                self.update_space_for_locals(&Type::Array {
-                    len: values.len() as u16,
-                    ty_pe: Box::new(ty_pe.clone()),
-                });
+                let index = self.update_space_for_locals(&ty_pe);
+                // Subtract 1 because space is updated for first element
+                let array_size = ty_pe.as_size() * (values.len() - 1) as u16;
+                self.allocate_stack_space(array_size);
                 LLExpr::Array {
                     index,
                     ty_pe,
