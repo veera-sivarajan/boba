@@ -37,14 +37,18 @@ fn format_type(value: &Type) -> String {
         Type::String | Type::Bool => String::from("%s"),
         Type::Unit => String::from(" "),
         Type::Array { ty_pe, len } => {
-            let mut result = String::from("[");
-            for _ in 0..len - 1 {
+            if *len == 0 {
+                String::from("[]")
+            } else {
+                let mut result = String::from("[");
+                for _ in 0..len - 1 {
+                    result.push_str(&format_type(ty_pe));
+                    result.push_str(", ");
+                }
                 result.push_str(&format_type(ty_pe));
-                result.push_str(", ");
+                result.push(']');
+                result
             }
-            result.push_str(&format_type(ty_pe));
-            result.push(']');
-            result
         }
     }
 }
