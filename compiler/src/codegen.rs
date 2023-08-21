@@ -701,7 +701,7 @@ impl CodeGen {
         } else {
             Some(16 - remainder)
         };
-        let mut arg_index = 1;
+        let mut arg_index = arg_count + 1;
         for arg in args {
             let register = self.expression(arg);
             let kind = arg.to_type();
