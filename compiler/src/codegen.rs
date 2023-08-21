@@ -3,28 +3,6 @@ use crate::stmt::LLStmt;
 use crate::typecheck::{Kind, Type};
 use std::fmt::Write;
 
-fn flatten_array(
-    base_register: &RegisterIndex,
-    len: u16,
-    arg_type: &Type,
-    base_index: i16,
-) -> Vec<(Type, String)> {
-    let mut result = vec![];
-    let mut index = base_index;
-    for _ in 0..len {
-        if let Type::Array { ty_pe, len } = arg_type {
-            let values = flatten_array(base_register, *len, ty_pe, index);
-            result.extend(values);
-            index -= arg_type.as_size() as i16;
-        } else {
-            result
-                .push((arg_type.clone(), format!("{index}({base_register})")));
-            index -= arg_type.as_size() as i16;
-        }
-    }
-    result
-}
-
 #[derive(Default)]
 struct Labels {
     count: u16,
@@ -309,7 +287,7 @@ impl CodeGen {
         self.registers.deallocate(register);
     }
 
-    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: &Type, index: u16) {
+    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: &Type, index: usize) {
         let register = self.expression(init);
         self.emit_code(move_for(ty_pe), &register, format!("-{index}(%rbp)"));
         self.registers.deallocate(register);
@@ -323,7 +301,7 @@ impl CodeGen {
         &mut self,
         name: &str,
         callee_saved_registers: &[&str; 5],
-        space_for_locals: u16,
+        space_for_locals: usize,
         param_types: &[Type],
     ) {
         self.add_global_name(name);
@@ -351,7 +329,7 @@ impl CodeGen {
         &mut self,
         name: &str,
         param_types: &[Type],
-        space_for_locals: u16,
+        space_for_locals: usize,
         body: &LLStmt,
         return_type: &Type,
     ) {
@@ -444,67 +422,6 @@ impl CodeGen {
         }
     }
 
-    // fn place_arg_at_register(
-    //     &mut self,
-    //     ty_pe: &Type,
-    //     register_index: usize,
-    //     register: &str,
-    // ) {
-    //     let size_index = if ty_pe == &Type::Bool {
-    //         RegisterSize::from(&Type::String) as usize
-    //     } else {
-    //         RegisterSize::from(ty_pe) as usize
-    //     };
-    //     let result = self.argument_registers[size_index][register_index];
-    //     match ty_pe {
-    //         Type::Char => {
-    //             self.emit_code("movb", register, result);
-    //         }
-    //         Type::Number => {
-    //             self.emit_code("movl", register, result);
-    //         }
-    //         Type::String => {
-    //             self.emit_code("movq", register, result);
-    //         }
-    //         Type::Bool => {
-    //             let false_label = self.labels.create();
-    //             let done_label = self.labels.create();
-    //             self.emit_code("cmpb", "$1", register);
-    //             self.emit_code("jne", &false_label, "");
-    //             self.emit_code("leaq", ".format_true(%rip)", result);
-    //             self.emit_code("jmp", &done_label, "");
-    //             self.emit_label(false_label);
-    //             self.emit_code("leaq", ".format_false(%rip)", result);
-    //             self.emit_label(done_label);
-    //         }
-    //         Type::Unit | Type::Array { .. } => unreachable!(),
-    //     }
-    // }
-
-    // fn move_args_to_register(&mut self, args: &[(Type, String)]) {
-    //     for (index, (kind, register)) in args.iter().enumerate() {
-    //         self.place_arg_at_register(kind, index + 1, register);
-    //     }
-    // }
-
-    // fn flatten_print_args(
-    //     &mut self,
-    //     args: &[LLExpr],
-    //     registers: &[RegisterIndex],
-    // ) -> Vec<(Type, String)> {
-    //     let mut result = vec![];
-    //     for (arg, register) in args.iter().zip(registers) {
-    //         let kind = arg.to_type();
-    //         if let Type::Array { ty_pe, len } = kind {
-    //             let values = flatten_array(register, len, &ty_pe, 0);
-    //             result.extend(values);
-    //         } else {
-    //             result.push((kind, register.to_string()));
-    //         }
-    //     }
-    //     result
-    // }
-
     fn push_arg_to_stack(&mut self, kind: &Type, register: &str) {
         match kind {
             Type::Char => {
@@ -553,8 +470,6 @@ impl CodeGen {
         } else {
             RegisterSize::from(kind)
         } as usize;
-
-        println!("Indexing: {register_index}");
         let result = self.argument_registers[size_index][register_index];
         match kind {
             Type::Char | Type::Number | Type::String => {
@@ -577,37 +492,23 @@ impl CodeGen {
 
     fn store_print_argument(
         &mut self,
-        arg_index: i16,
+        arg_index: usize,
         register: &str,
         kind: &Type,
-        increment: Option<u16>,
     ) {
-        use std::cmp::Ordering;
-        match arg_index.cmp(&6) {
-            Ordering::Less => {
-                // place it on register
-                self.place_arg_at_register(kind, arg_index as usize, register);
-            }
-            Ordering::Equal => {
-                // align stack and place it on stack
-                // if let Some(value) = increment {
-                //     self.emit_code("subq", &format!("${value}"), "%rsp");
-                // }
-                self.push_arg_to_stack(kind, register);
-            }
-            Ordering::Greater => {
-                self.push_arg_to_stack(kind, register);
-            }
+        if arg_index < 6 {
+            self.place_arg_at_register(kind, arg_index, register);
+        } else {
+            self.push_arg_to_stack(kind, register);
         }
     }
 
     fn flatten_array(
         &mut self,
         base_register: RegisterIndex,
-        array_len: u16,
+        array_len: usize,
         element_type: &Type,
-        arg_index: i16,
-        increment: Option<u16>,
+        arg_index: usize,
     ) {
         if let Type::Array { len, ty_pe } = element_type {
             let element_size = ty_pe.as_size() * *len;
@@ -615,38 +516,31 @@ impl CodeGen {
             for index in (0..array_len).rev() {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
-                    0_i16
+                    0_isize
                 } else {
-                    -((index * element_size) as i16)
+                    -(index as isize * element_size as isize)
                 };
                 self.emit_code(
                     "movq",
                     &format!("{offset}({base_register})"),
                     &first_ele,
                 );
-                self.flatten_array(
-                    first_ele,
-                    *len,
-                    ty_pe,
-                    argument_count,
-                    increment,
-                );
-                argument_count -= *len as i16;
+                self.flatten_array(first_ele, *len, ty_pe, argument_count);
+                argument_count -= *len;
             }
             self.registers.deallocate(base_register);
         } else {
             let element_size = element_type.as_size();
             for (count, index) in (0..array_len).rev().enumerate() {
                 let offset = if index == 0 {
-                    0_i16
+                    0_isize
                 } else {
-                    -((index * element_size) as i16)
+                    -(index as isize * element_size as isize)
                 };
                 self.store_print_argument(
-                    arg_index - count as i16,
+                    arg_index - count,
                     &format!("{offset}({base_register})"),
                     element_type,
-                    increment,
                 );
             }
             self.registers.deallocate(base_register);
@@ -655,22 +549,14 @@ impl CodeGen {
 
     fn format_print_argument(
         &mut self,
-        arg_index: i16,
+        arg_index: usize,
         register: RegisterIndex,
         kind: &Type,
-        increment: Option<u16>,
     ) {
         if let Type::Array { len, ty_pe } = kind {
-            println!("Arg index for array: {arg_index}");
-            self.flatten_array(register, *len, ty_pe, arg_index, increment);
+            self.flatten_array(register, *len, ty_pe, arg_index);
         } else {
-            println!("Arg index for element: {arg_index}");
-            self.store_print_argument(
-                arg_index,
-                &register.to_string(),
-                kind,
-                increment,
-            );
+            self.store_print_argument(arg_index, &register.to_string(), kind);
             self.registers.deallocate(register);
         }
     }
@@ -678,21 +564,10 @@ impl CodeGen {
     fn format_print_args(
         &mut self,
         args: &[LLExpr],
-        arg_count: u16,
-    ) -> Option<u16> {
-        // for (index, arg) in args.iter().enumerate() {
-        //     let register = self.expression(arg);
-        //     let arg_type = arg.to_type();
-        //     if arg_type.is_array() {
-        //         todo!()
-        //     } else {
-        //         self.place_arg_at_register(&arg_type, index + 1, &register);
-        //         self.registers.deallocate(register);
-        //     }
-        // }
-        let difference: i16 = arg_count as i16 - 5;
-        let stack_space = if difference > 0 {
-            difference as u16 * 8
+        arg_count: usize,
+    ) -> Option<usize> {
+        let stack_space = if let Some(difference) = arg_count.checked_sub(5) {
+            difference * 8
         } else {
             0
         };
@@ -706,28 +581,18 @@ impl CodeGen {
         if let Some(value) = increment {
             self.emit_code("subq", &format!("${value}"), "%rsp");
         }
-        let mut arg_index = arg_count as i16;
+        let mut arg_index = arg_count;
         for arg in args.iter().rev() {
             let register = self.expression(arg);
             let kind = arg.to_type();
-            self.format_print_argument(arg_index, register, &kind, increment);
-            arg_index -= kind.count_elements() as i16;
-            println!("After updating: {arg_index}");
+            self.format_print_argument(arg_index, register, &kind);
+            arg_index -= kind.count_elements();
         }
 
         increment.map(|value| value + stack_space)
     }
 
-    fn print_stmt(&mut self, format: &str, args: &[LLExpr], arg_count: u16) {
-        // let registers: Vec<RegisterIndex> =
-        //     args.iter().map(|arg| self.expression(arg)).collect();
-        // let args = self.flatten_print_args(args, &registers);
-        // let limit = std::cmp::min(args.len(), 5);
-        // self.move_args_to_register(&args[..limit]);
-        // let alignment = self.push_args_to_stack(&args[limit..]);
-        // for register in registers {
-        //     self.registers.deallocate(register);
-        // }
+    fn print_stmt(&mut self, format: &str, args: &[LLExpr], arg_count: usize) {
         let alignment = self.format_print_args(args, arg_count);
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
@@ -831,7 +696,7 @@ impl CodeGen {
         &mut self,
         ty_pe: &Type,
         elements: &[LLExpr],
-        index: u16,
+        index: usize,
     ) -> RegisterIndex {
         let mut start = index;
         let size = ty_pe.as_size();
@@ -870,7 +735,7 @@ impl CodeGen {
     fn assignment(
         &mut self,
         value: &LLExpr,
-        index: u16,
+        index: usize,
         ty_pe: &Type,
     ) -> RegisterIndex {
         let value = self.expression(value);

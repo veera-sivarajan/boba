@@ -11,11 +11,11 @@ pub enum Type {
     Bool,
     Char,
     Unit,
-    Array { ty_pe: Box<Type>, len: u16 },
+    Array { ty_pe: Box<Type>, len: usize },
 }
 
 impl Type {
-    pub fn as_size(&self) -> u16 {
+    pub fn as_size(&self) -> usize {
         match self {
             Type::Number => 4,
             Type::String => 8,
@@ -25,7 +25,7 @@ impl Type {
         }
     }
 
-    pub fn count_elements(&self) -> u16 {
+    pub fn count_elements(&self) -> usize {
         if let Type::Array { ty_pe, len } = self {
             ty_pe.count_elements() * len
         } else {
@@ -38,9 +38,8 @@ impl Type {
     }
 }
 
-fn count_args(args: &[LLExpr]) -> u16 {
-    let value = args.iter().map(|arg| arg.to_type().count_elements()).sum();
-    value
+fn count_args(args: &[LLExpr]) -> usize {
+    args.iter().map(|arg| arg.to_type().count_elements()).sum()
 }
 
 fn format_type(value: &Type) -> String {
@@ -87,7 +86,7 @@ pub struct TypeChecker {
     type_table: Vec<HashMap<Token, Info>>,
     functions: Vec<FunctionData>,
     errors: Vec<BobaError>,
-    space_for_locals: u16,
+    space_for_locals: usize,
     statements: Vec<LLStmt>,
     return_stmt_verified: bool,
 }
@@ -95,8 +94,8 @@ pub struct TypeChecker {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Kind {
     GlobalVariable,
-    LocalVariable(u16),
-    Parameter(u16),
+    LocalVariable(usize),
+    Parameter(usize),
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -399,12 +398,12 @@ impl TypeChecker {
         };
     }
 
-    fn update_space_for_locals(&mut self, ty_pe: &Type) -> u16 {
+    fn update_space_for_locals(&mut self, ty_pe: &Type) -> usize {
         self.align_stack_for(ty_pe);
         self.allocate_stack_space(ty_pe.as_size())
     }
 
-    fn allocate_stack_space(&mut self, size: u16) -> u16 {
+    fn allocate_stack_space(&mut self, size: usize) -> usize {
         self.space_for_locals += size;
         self.space_for_locals
     }
@@ -558,7 +557,7 @@ impl TypeChecker {
                 let ty_pe = values.first().unwrap().to_type();
                 let index = self.update_space_for_locals(&ty_pe);
                 // Subtract 1 because space is updated for first element
-                let array_size = ty_pe.as_size() * (values.len() - 1) as u16;
+                let array_size = ty_pe.as_size() * (values.len() - 1);
                 self.allocate_stack_space(array_size);
                 LLExpr::Array {
                     index,

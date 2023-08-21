@@ -42,23 +42,12 @@ pub enum Stmt {
     },
 }
 
-// impl From<&Stmt> for Token {
-//     fn from(stmt: &Stmt) -> Token {
-//         match stmt {
-//             Stmt::LocalVariable { name, .. } => name.clone(),
-//             Stmt::GlobalVariable { name, .. } => name.clone(),
-//             Stmt::Function { name, .. } => name.clone(),
-//             _ => panic!("Cannot turn stmt into token."),
-//         }
-//     }
-// }
-
 #[derive(Clone, Debug)]
 pub enum LLStmt {
     LocalVariable {
         init: LLExpr,
         ty_pe: Type,
-        variable_index: u16,
+        variable_index: usize,
     },
     GlobalVariable {
         name: String,
@@ -68,7 +57,7 @@ pub enum LLStmt {
     Print {
         format: String,
         args: Vec<LLExpr>,
-        arg_count: u16,
+        arg_count: usize,
     },
     Block(Vec<LLStmt>),
     If {
@@ -79,7 +68,7 @@ pub enum LLStmt {
     Function {
         name: String,
         param_types: Vec<Type>,
-        space_for_locals: u16,
+        space_for_locals: usize,
         body: Box<LLStmt>,
         return_type: Type,
     },

@@ -196,7 +196,7 @@ pub enum LLExpr {
     },
     Assign {
         value: Box<LLExpr>,
-        index: u16,
+        index: usize,
         ty_pe: Type,
     },
     Unary {
@@ -211,7 +211,7 @@ pub enum LLExpr {
     Array {
         ty_pe: Type,
         elements: Vec<LLExpr>,
-        index: u16,
+        index: usize,
     },
 }
 
@@ -232,7 +232,7 @@ impl LLExpr {
                 ty_pe, elements, ..
             } => Type::Array {
                 ty_pe: Box::new(ty_pe.clone()),
-                len: elements.len() as u16,
+                len: elements.len(),
             },
         }
     }
