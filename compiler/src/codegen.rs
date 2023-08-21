@@ -554,6 +554,7 @@ impl CodeGen {
             RegisterSize::from(kind)
         } as usize;
 
+        println!("Indexing: {register_index}");
         let result = self.argument_registers[size_index][register_index];
         match kind {
             Type::Char | Type::Number | Type::String => {
@@ -589,9 +590,9 @@ impl CodeGen {
             }
             Ordering::Equal => {
                 // align stack and place it on stack
-                if let Some(value) = increment {
-                    self.emit_code("subq", &format!("${value}"), "%rsp");
-                }
+                // if let Some(value) = increment {
+                //     self.emit_code("subq", &format!("${value}"), "%rsp");
+                // }
                 self.push_arg_to_stack(kind, register);
             }
             Ordering::Greater => {
@@ -611,7 +612,7 @@ impl CodeGen {
         if let Type::Array { len, ty_pe } = element_type {
             let element_size = ty_pe.as_size() * *len;
             let mut argument_count = arg_index;
-            for index in array_len..=0 {
+            for index in (0..array_len).rev() {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
                     0_i16
@@ -635,14 +636,14 @@ impl CodeGen {
             self.registers.deallocate(base_register);
         } else {
             let element_size = element_type.as_size();
-            for index in array_len..=0 {
+            for (count, index) in (0..array_len).rev().enumerate() {
                 let offset = if index == 0 {
                     0_i16
                 } else {
                     -((index * element_size) as i16)
                 };
                 self.store_print_argument(
-                    arg_index - index as i16,
+                    arg_index - count as i16,
                     &format!("{offset}({base_register})"),
                     element_type,
                     increment,
@@ -660,8 +661,10 @@ impl CodeGen {
         increment: Option<u16>,
     ) {
         if let Type::Array { len, ty_pe } = kind {
+            println!("Arg index for array: {arg_index}");
             self.flatten_array(register, *len, ty_pe, arg_index, increment);
         } else {
+            println!("Arg index for element: {arg_index}");
             self.store_print_argument(
                 arg_index,
                 &register.to_string(),
@@ -700,12 +703,16 @@ impl CodeGen {
         } else {
             Some(16 - remainder)
         };
+        if let Some(value) = increment {
+            self.emit_code("subq", &format!("${value}"), "%rsp");
+        }
         let mut arg_index = arg_count as i16;
         for arg in args.iter().rev() {
             let register = self.expression(arg);
             let kind = arg.to_type();
             self.format_print_argument(arg_index, register, &kind, increment);
-            arg_index -= 1;
+            arg_index -= kind.count_elements() as i16;
+            println!("After updating: {arg_index}");
         }
 
         increment.map(|value| value + stack_space)

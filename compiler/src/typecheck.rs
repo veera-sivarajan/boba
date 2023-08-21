@@ -40,7 +40,6 @@ impl Type {
 
 fn count_args(args: &[LLExpr]) -> u16 {
     let value = args.iter().map(|arg| arg.to_type().count_elements()).sum();
-    println!("Count args: {value}");
     value
 }
 
