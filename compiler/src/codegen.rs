@@ -255,7 +255,7 @@ impl CodeGen {
                 let register = self.expression(expr);
                 self.registers.deallocate(register);
             }
-            LLStmt::Print { format, args } => self.print_stmt(format, args),
+            LLStmt::Print { format, args, arg_count } => self.print_stmt(format, args, *arg_count),
             LLStmt::If {
                 condition,
                 then,
@@ -477,7 +477,69 @@ impl CodeGen {
     //     }
     // }
 
-    fn place_arg_at_register(&mut self, kind: &Type, register_index: usize, register: &RegisterIndex) {
+
+    // fn move_args_to_register(&mut self, args: &[(Type, String)]) {
+    //     for (index, (kind, register)) in args.iter().enumerate() {
+    //         self.place_arg_at_register(kind, index + 1, register);
+    //     }
+    // }
+
+    // fn flatten_print_args(
+    //     &mut self,
+    //     args: &[LLExpr],
+    //     registers: &[RegisterIndex],
+    // ) -> Vec<(Type, String)> {
+    //     let mut result = vec![];
+    //     for (arg, register) in args.iter().zip(registers) {
+    //         let kind = arg.to_type();
+    //         if let Type::Array { ty_pe, len } = kind {
+    //             let values = flatten_array(register, len, &ty_pe, 0);
+    //             result.extend(values);
+    //         } else {
+    //             result.push((kind, register.to_string()));
+    //         }
+    //     }
+    //     result
+    // }
+
+    fn push_arg_to_stack(&mut self, kind: &Type, register: &str) {
+        match kind {
+            Type::Char => {
+                let result = self.registers.allocate(&Type::Char);
+                self.emit_code("movb", register, &result);
+                let result = result.size(RegisterSize::QWord);
+                self.emit_code("pushq", &result, "");
+                self.registers.deallocate(result);
+            }
+            Type::Number => {
+                let result = self.registers.allocate(&Type::Number);
+                self.emit_code("movl", register, &result);
+                let result = result.size(RegisterSize::QWord);
+                self.emit_code("pushq", &result, "");
+                self.registers.deallocate(result);
+            }
+            Type::String => {
+                self.emit_code("pushq", register, "");
+            }
+            Type::Bool => {
+                let result = self.registers.allocate(&Type::String);
+                let false_label = self.labels.create();
+                let done_label = self.labels.create();
+                self.emit_code("cmpb", "$1", register);
+                self.emit_code("jne", &false_label, "");
+                self.emit_code("leaq", ".format_true(%rip)", &result);
+                self.emit_code("jmp", &done_label, "");
+                self.emit_label(false_label);
+                self.emit_code("leaq", ".format_false(%rip)", &result);
+                self.emit_label(done_label);
+                self.emit_code("pushq", &result, "");
+                self.registers.deallocate(result);
+            }
+            Type::Unit | Type::Array { .. } => unreachable!(),
+        }
+    }
+
+    fn place_arg_at_register(&mut self, kind: &Type, register_index: usize, register: &str) {
         let size_index = if kind == &Type::Bool {
             RegisterSize::from(&Type::String)
         } else {
@@ -504,100 +566,99 @@ impl CodeGen {
         }
     }
 
-    // fn move_args_to_register(&mut self, args: &[(Type, String)]) {
-    //     for (index, (kind, register)) in args.iter().enumerate() {
-    //         self.place_arg_at_register(kind, index + 1, register);
-    //     }
-    // }
-
-    // fn flatten_print_args(
-    //     &mut self,
-    //     args: &[LLExpr],
-    //     registers: &[RegisterIndex],
-    // ) -> Vec<(Type, String)> {
-    //     let mut result = vec![];
-    //     for (arg, register) in args.iter().zip(registers) {
-    //         let kind = arg.to_type();
-    //         if let Type::Array { ty_pe, len } = kind {
-    //             let values = flatten_array(register, len, &ty_pe, 0);
-    //             result.extend(values);
-    //         } else {
-    //             result.push((kind, register.to_string()));
-    //         }
-    //     }
-    //     result
-    // }
-
-    // fn push_args_to_stack(&mut self, args: &[(Type, String)]) -> Option<u16> {
-    //     let mut allocated_space = args.len() * 8;
-    //     let align = 16;
-    //     let remainder = allocated_space % align;
-    //     allocated_space = if remainder == 0 {
-    //         allocated_space
-    //     } else {
-    //         let increment = align - remainder;
-    //         self.emit_code("subq", format!("${increment}"), "%rsp");
-    //         allocated_space + increment
-    //     };
-
-    //     for (kind, register) in args.iter().rev() {
-    //         match kind {
-    //             Type::Char => {
-    //                 let result = self.registers.allocate(&Type::Char);
-    //                 self.emit_code("movb", register, &result);
-    //                 let result = result.size(RegisterSize::QWord);
-    //                 self.emit_code("pushq", &result, "");
-    //                 self.registers.deallocate(result);
-    //             }
-    //             Type::Number => {
-    //                 let result = self.registers.allocate(&Type::Number);
-    //                 self.emit_code("movl", register, &result);
-    //                 let result = result.size(RegisterSize::QWord);
-    //                 self.emit_code("pushq", &result, "");
-    //                 self.registers.deallocate(result);
-    //             }
-    //             Type::String => {
-    //                 self.emit_code("pushq", register, "");
-    //             }
-    //             Type::Bool => {
-    //                 let result = self.registers.allocate(&Type::String);
-    //                 let false_label = self.labels.create();
-    //                 let done_label = self.labels.create();
-    //                 self.emit_code("cmpb", "$1", register);
-    //                 self.emit_code("jne", &false_label, "");
-    //                 self.emit_code("leaq", ".format_true(%rip)", &result);
-    //                 self.emit_code("jmp", &done_label, "");
-    //                 self.emit_label(false_label);
-    //                 self.emit_code("leaq", ".format_false(%rip)", &result);
-    //                 self.emit_label(done_label);
-    //                 self.emit_code("pushq", &result, "");
-    //                 self.registers.deallocate(result);
-    //             }
-    //             Type::Unit | Type::Array { .. } => unreachable!(),
-    //         }
-    //     }
-
-    //     if allocated_space == 0 {
-    //         None
-    //     } else {
-    //         Some(allocated_space as u16)
-    //     }
-    // }
-
-    fn format_print_args(&mut self, args: &[LLExpr]) {
-        for (index, arg) in args.iter().enumerate() {
-            let register = self.expression(arg);
-            let arg_type = arg.to_type();
-            if arg_type.is_array() {
-                todo!()
-            } else {
-                self.place_arg_at_register(&arg_type, index + 1, &register);
-                self.registers.deallocate(register);
+    fn store_print_argument(&mut self, arg_index: u16, register: &str, kind: &Type, increment: Option<u16>) {
+        use std::cmp::Ordering;
+        match arg_index.cmp(&6) {
+            Ordering::Less => {
+                // place it on register
+                self.place_arg_at_register(kind, arg_index as usize, register);
+            }
+            Ordering::Equal => {
+                // align stack and place it on stack
+                if let Some(value) = increment {
+                    self.emit_code("subq", &format!("${value}"), "%rsp");
+                }
+                self.push_arg_to_stack(kind, register);
+            }
+            Ordering::Greater => {
+                // place it on stack
+                self.push_arg_to_stack(kind, register);
             }
         }
     }
 
-    fn print_stmt(&mut self, format: &str, args: &[LLExpr]) {
+    fn flatten_array(&mut self, base_register: RegisterIndex, array_len: u16, element_type: &Type, arg_index: u16, increment: Option<u16>) {
+        if let Type::Array { len, ty_pe } = element_type {
+            let element_size = ty_pe.as_size();
+            for index in 0..*len {
+                let first_ele = self.registers.allocate(&Type::String);
+                let offset = if index == 0 {
+                    0_i16
+                } else {
+                    -((index * element_size) as i16)
+                };
+                self.emit_code("movq", &format!("{offset}({base_register})"), &first_ele);
+                self.flatten_array(first_ele, *len, ty_pe, arg_index, increment);
+            }
+        } else {
+            let element_size = element_type.as_size();
+            for index in 0..array_len {
+                let offset = if index == 0 {
+                    0_i16
+                } else {
+                    -((index * element_size) as i16)
+                };
+                self.store_print_argument(arg_index + index + 1, &format!("{offset}({base_register})"), element_type, increment);
+            }
+            self.registers.deallocate(base_register);
+        }
+    }
+
+    fn format_print_argument(&mut self, arg_index: u16, register: RegisterIndex, kind: &Type, increment: Option<u16>) {
+        if let Type::Array { len, ty_pe } = kind {
+            self.flatten_array(register, *len, ty_pe, arg_index, increment);
+        } else {
+            self.store_print_argument(arg_index, &register.to_string(), kind, increment);
+            self.registers.deallocate(register);
+        }
+    }
+
+    fn format_print_args(&mut self, args: &[LLExpr], arg_count: u16) -> Option<u16> {
+        // for (index, arg) in args.iter().enumerate() {
+        //     let register = self.expression(arg);
+        //     let arg_type = arg.to_type();
+        //     if arg_type.is_array() {
+        //         todo!()
+        //     } else {
+        //         self.place_arg_at_register(&arg_type, index + 1, &register);
+        //         self.registers.deallocate(register);
+        //     }
+        // }
+        let difference: i16 = arg_count as i16 - 40;
+        let stack_space = if difference > 0 {
+            difference as u16
+        } else {
+            0
+        };
+        let align = 16;
+        let remainder = stack_space % align;
+        let increment = if remainder == 0 {
+            None
+        } else {
+            Some(16 - remainder)
+        };
+        let mut arg_index = 1;
+        for arg in args {
+            let register = self.expression(arg);
+            let kind = arg.to_type();
+            self.format_print_argument(arg_index, register, &kind, increment);
+            arg_index += 1;
+        }
+
+        increment.map(|value| value + stack_space)
+    }
+
+    fn print_stmt(&mut self, format: &str, args: &[LLExpr], arg_count: u16) {
         // let registers: Vec<RegisterIndex> =
         //     args.iter().map(|arg| self.expression(arg)).collect();
         // let args = self.flatten_print_args(args, &registers);
@@ -607,15 +668,15 @@ impl CodeGen {
         // for register in registers {
         //     self.registers.deallocate(register);
         // }
-        self.format_print_args(args);
+        let alignment = self.format_print_args(args, arg_count);
         let format_string = self.string(format);
         self.emit_code("movq", &format_string, "%rdi");
         self.registers.deallocate(format_string);
         self.emit_code("xor", "%eax", "%eax");
         self.emit_code("call", "printf@PLT", "");
-        // if let Some(value) = alignment {
-        //     self.emit_code("addq", format!("${value}"), "%rsp");
-        // }
+        if let Some(value) = alignment {
+            self.emit_code("addq", format!("${value}"), "%rsp");
+        }
     }
 
     fn emit_data(

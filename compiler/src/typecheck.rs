@@ -30,6 +30,15 @@ impl Type {
     }
 }
 
+fn count_args(args: &[LLExpr]) -> u16 {
+    // let mut count = 0;
+    // for arg in args {
+    //     count += arg.to_type().as_size();
+    // }
+    // count
+    args.iter().map(|arg| arg.to_type().as_size()).sum()
+}
+
 fn format_type(value: &Type) -> String {
     match value {
         Type::Char => String::from("%c"),
@@ -337,7 +346,8 @@ impl TypeChecker {
             } else {
                 let args: Vec<LLExpr> = values.collect();
                 let format = TypeChecker::replace_format(&format_string, &args);
-                LLStmt::Print { format, args }
+                let arg_count = count_args(&args);
+                LLStmt::Print { format, args, arg_count }
             }
         } else {
             self.error(BobaError::ExpectFormatString(meta.clone()));

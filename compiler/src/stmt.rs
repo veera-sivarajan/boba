@@ -68,6 +68,7 @@ pub enum LLStmt {
     Print {
         format: String,
         args: Vec<LLExpr>,
+        arg_count: u16,
     },
     Block(Vec<LLStmt>),
     If {
