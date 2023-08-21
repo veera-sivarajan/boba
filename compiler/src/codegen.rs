@@ -287,7 +287,12 @@ impl CodeGen {
         self.registers.deallocate(register);
     }
 
-    fn local_variable_decl(&mut self, init: &LLExpr, ty_pe: &Type, index: usize) {
+    fn local_variable_decl(
+        &mut self,
+        init: &LLExpr,
+        ty_pe: &Type,
+        index: usize,
+    ) {
         let register = self.expression(init);
         self.emit_code(move_for(ty_pe), &register, format!("-{index}(%rbp)"));
         self.registers.deallocate(register);
@@ -561,26 +566,27 @@ impl CodeGen {
         }
     }
 
+    fn align_print_args(&mut self, arg_count: usize) -> Option<usize> {
+        arg_count.checked_sub(5).map(|difference| {
+            let stack_allocated_space = difference * 8;
+            let align = 16;
+            let remainder = stack_allocated_space % align;
+            if remainder == 0 {
+                stack_allocated_space
+            } else {
+                let increment = align - remainder;
+                self.emit_code("subq", &format!("${increment}"), "%rsp");
+                increment + stack_allocated_space
+            }
+        })
+    }
+
     fn format_print_args(
         &mut self,
         args: &[LLExpr],
         arg_count: usize,
     ) -> Option<usize> {
-        let stack_space = if let Some(difference) = arg_count.checked_sub(5) {
-            difference * 8
-        } else {
-            0
-        };
-        let align = 16;
-        let remainder = stack_space % align;
-        let increment = if remainder == 0 {
-            None
-        } else {
-            Some(16 - remainder)
-        };
-        if let Some(value) = increment {
-            self.emit_code("subq", &format!("${value}"), "%rsp");
-        }
+        let alignment = self.align_print_args(arg_count);
         let mut arg_index = arg_count;
         for arg in args.iter().rev() {
             let register = self.expression(arg);
@@ -588,8 +594,7 @@ impl CodeGen {
             self.format_print_argument(arg_index, register, &kind);
             arg_index -= kind.count_elements();
         }
-
-        increment.map(|value| value + stack_space)
+        alignment
     }
 
     fn print_stmt(&mut self, format: &str, args: &[LLExpr], arg_count: usize) {
