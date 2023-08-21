@@ -31,12 +31,14 @@ impl Type {
 }
 
 fn count_args(args: &[LLExpr]) -> u16 {
-    // let mut count = 0;
-    // for arg in args {
-    //     count += arg.to_type().as_size();
-    // }
-    // count
-    args.iter().map(|arg| arg.to_type().as_size()).sum()
+    let mut count = 0;
+    for arg in args {
+        match arg.to_type() {
+            Type::Array { len, .. } => count += len * 8,
+            _ => count += 8,
+        }
+    }
+    count
 }
 
 fn format_type(value: &Type) -> String {
