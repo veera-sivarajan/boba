@@ -39,9 +39,7 @@ impl Type {
 }
 
 fn count_args(args: &[LLExpr]) -> u16 {
-    let value = args.iter().map(|arg| {
-        arg.to_type().count_elements()
-    }).sum();
+    let value = args.iter().map(|arg| arg.to_type().count_elements()).sum();
     println!("Count args: {value}");
     value
 }
@@ -354,7 +352,11 @@ impl TypeChecker {
                 let args: Vec<LLExpr> = values.collect();
                 let format = TypeChecker::replace_format(&format_string, &args);
                 let arg_count = count_args(&args);
-                LLStmt::Print { format, args, arg_count }
+                LLStmt::Print {
+                    format,
+                    args,
+                    arg_count,
+                }
             }
         } else {
             self.error(BobaError::ExpectFormatString(meta.clone()));
