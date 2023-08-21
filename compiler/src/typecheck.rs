@@ -25,20 +25,25 @@ impl Type {
         }
     }
 
+    pub fn count_elements(&self) -> u16 {
+        if let Type::Array { ty_pe, len } = self {
+            ty_pe.count_elements() * len
+        } else {
+            1
+        }
+    }
+
     pub fn is_array(&self) -> bool {
         matches!(self, Type::Array { .. })
     }
 }
 
 fn count_args(args: &[LLExpr]) -> u16 {
-    let mut count = 0;
-    for arg in args {
-        match arg.to_type() {
-            Type::Array { len, .. } => count += len * 8,
-            _ => count += 8,
-        }
-    }
-    count
+    let value = args.iter().map(|arg| {
+        arg.to_type().count_elements()
+    }).sum();
+    println!("Count args: {value}");
+    value
 }
 
 fn format_type(value: &Type) -> String {

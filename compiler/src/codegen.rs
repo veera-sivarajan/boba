@@ -591,7 +591,7 @@ impl CodeGen {
         if let Type::Array { len, ty_pe } = element_type {
             let element_size = ty_pe.as_size() * *len;
             let mut argument_count = arg_index;
-            for index in 0..*len {
+            for index in 0..array_len {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
                     0_i16
@@ -636,12 +636,14 @@ impl CodeGen {
         //         self.registers.deallocate(register);
         //     }
         // }
-        let difference: i16 = arg_count as i16 - 40;
+        println!("Arg count: {}", arg_count);
+        let difference: i16 = arg_count as i16 - 5;
         let stack_space = if difference > 0 {
-            difference as u16
+            difference as u16 * 8
         } else {
             0
         };
+        println!("Stack space: {stack_space}");
         let align = 16;
         let remainder = stack_space % align;
         let increment = if remainder == 0 {
