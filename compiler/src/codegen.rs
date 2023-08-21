@@ -608,7 +608,7 @@ impl CodeGen {
                 } else {
                     -((index * element_size) as i16)
                 };
-                self.store_print_argument(arg_index + index + 1, &format!("{offset}({base_register})"), element_type, increment);
+                self.store_print_argument(arg_index + index, &format!("{offset}({base_register})"), element_type, increment);
             }
             self.registers.deallocate(base_register);
         }
