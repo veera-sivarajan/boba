@@ -576,7 +576,7 @@ impl CodeGen {
 
     fn store_print_argument(
         &mut self,
-        arg_index: u16,
+        arg_index: i16,
         register: &str,
         kind: &Type,
         increment: Option<u16>,
@@ -595,7 +595,6 @@ impl CodeGen {
                 self.push_arg_to_stack(kind, register);
             }
             Ordering::Greater => {
-                // place it on stack
                 self.push_arg_to_stack(kind, register);
             }
         }
@@ -606,13 +605,13 @@ impl CodeGen {
         base_register: RegisterIndex,
         array_len: u16,
         element_type: &Type,
-        arg_index: u16,
+        arg_index: i16,
         increment: Option<u16>,
     ) {
         if let Type::Array { len, ty_pe } = element_type {
             let element_size = ty_pe.as_size() * *len;
             let mut argument_count = arg_index;
-            for index in 0..array_len {
+            for index in array_len..=0 {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
                     0_i16
@@ -631,19 +630,19 @@ impl CodeGen {
                     argument_count,
                     increment,
                 );
-                argument_count += *len;
+                argument_count -= *len as i16;
             }
             self.registers.deallocate(base_register);
         } else {
             let element_size = element_type.as_size();
-            for index in 0..array_len {
+            for index in array_len..=0 {
                 let offset = if index == 0 {
                     0_i16
                 } else {
                     -((index * element_size) as i16)
                 };
                 self.store_print_argument(
-                    arg_index + index,
+                    arg_index - index as i16,
                     &format!("{offset}({base_register})"),
                     element_type,
                     increment,
@@ -655,7 +654,7 @@ impl CodeGen {
 
     fn format_print_argument(
         &mut self,
-        arg_index: u16,
+        arg_index: i16,
         register: RegisterIndex,
         kind: &Type,
         increment: Option<u16>,
@@ -701,12 +700,12 @@ impl CodeGen {
         } else {
             Some(16 - remainder)
         };
-        let mut arg_index = arg_count + 1;
-        for arg in args {
+        let mut arg_index = arg_count as i16 - 1;
+        for arg in args.iter().rev() {
             let register = self.expression(arg);
             let kind = arg.to_type();
             self.format_print_argument(arg_index, register, &kind, increment);
-            arg_index += 1;
+            arg_index -= 1;
         }
 
         increment.map(|value| value + stack_space)
