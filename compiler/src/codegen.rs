@@ -589,7 +589,8 @@ impl CodeGen {
 
     fn flatten_array(&mut self, base_register: RegisterIndex, array_len: u16, element_type: &Type, arg_index: u16, increment: Option<u16>) {
         if let Type::Array { len, ty_pe } = element_type {
-            let element_size = ty_pe.as_size();
+            let element_size = ty_pe.as_size() * *len;
+            let mut argument_count = arg_index;
             for index in 0..*len {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
@@ -598,7 +599,8 @@ impl CodeGen {
                     -((index * element_size) as i16)
                 };
                 self.emit_code("movq", &format!("{offset}({base_register})"), &first_ele);
-                self.flatten_array(first_ele, *len, ty_pe, arg_index, increment);
+                self.flatten_array(first_ele, *len, ty_pe, argument_count, increment);
+                argument_count += *len;
             }
         } else {
             let element_size = element_type.as_size();
