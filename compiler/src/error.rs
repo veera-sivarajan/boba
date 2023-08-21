@@ -86,7 +86,6 @@ pub enum BobaError {
     ExpectFormatString(Token),
     FormatSpecifierCountNotEqual(Token, usize, usize),
     PrintUnitType(Token),
-    PrintGotMoreThanFiveArgs(Token),
     CharNotAscii(Span),
     HetroArray(Span),
 }
@@ -95,13 +94,6 @@ impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
-            PrintGotMoreThanFiveArgs(token) => {
-                writeln!(
-                    f,
-                    "Error: Cannot print more than five arguments at {}",
-                    token.span
-                )
-            }
             HetroArray(span) => {
                 writeln!(f, "Type Error: Expect all elements in an array to be of same type at {span}.")
             }
