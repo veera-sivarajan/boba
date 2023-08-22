@@ -513,11 +513,10 @@ impl CodeGen {
         base_register: RegisterIndex,
         array_len: usize,
         element_type: &Type,
-        arg_index: usize,
+        mut arg_index: usize,
     ) {
         if let Type::Array { len, ty_pe } = element_type {
             let element_size = ty_pe.as_size() * *len;
-            let mut argument_count = arg_index;
             for index in (0..array_len).rev() {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
@@ -530,8 +529,8 @@ impl CodeGen {
                     &format!("{offset}({base_register})"),
                     &first_ele,
                 );
-                self.flatten_array(first_ele, *len, ty_pe, argument_count);
-                argument_count -= *len;
+                self.flatten_array(first_ele, *len, ty_pe, arg_index);
+                arg_index -= *len;
             }
             self.registers.deallocate(base_register);
         } else {
@@ -584,15 +583,14 @@ impl CodeGen {
     fn format_print_args(
         &mut self,
         args: &[LLExpr],
-        arg_count: usize,
+        mut arg_count: usize,
     ) -> Option<usize> {
         let alignment = self.align_print_args(arg_count);
-        let mut arg_index = arg_count;
         for arg in args.iter().rev() {
             let register = self.expression(arg);
             let kind = arg.to_type();
-            self.format_print_argument(arg_index, register, &kind);
-            arg_index -= kind.count_elements();
+            self.format_print_argument(arg_count, register, &kind);
+            arg_count -= kind.count_elements();
         }
         alignment
     }
