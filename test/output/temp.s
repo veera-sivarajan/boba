@@ -20,9 +20,9 @@ main:
         movl  $5, %ebx
         movl  %ebx, -4(%rbp)
         movl  -4(%rbp), %ebx
-        leaq  .L0(%rip), %r10
-        movq  %r10, %rdi
         movl  %ebx, %esi
+        leaq  .L0(%rip), %rbx
+        movq  %rbx, %rdi
         xor   %eax, %eax
         call  printf@PLT
         movl  $0, %eax
