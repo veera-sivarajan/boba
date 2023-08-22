@@ -427,6 +427,18 @@ impl CodeGen {
         }
     }
 
+    fn print_boolean(&mut self, register: &str, result: &str) {
+        let false_label = self.labels.create();
+        let done_label = self.labels.create();
+        self.emit_code("cmpb", "$1", register);
+        self.emit_code("jne", &false_label, "");
+        self.emit_code("leaq", ".format_true(%rip)", result);
+        self.emit_code("jmp", &done_label, "");
+        self.emit_label(false_label);
+        self.emit_code("leaq", ".format_false(%rip)", result);
+        self.emit_label(done_label);
+    }
+
     fn push_arg_to_stack(&mut self, kind: &Type, register: &str) {
         match kind {
             Type::Char => {
@@ -448,15 +460,7 @@ impl CodeGen {
             }
             Type::Bool => {
                 let result = self.registers.allocate(&Type::String);
-                let false_label = self.labels.create();
-                let done_label = self.labels.create();
-                self.emit_code("cmpb", "$1", register);
-                self.emit_code("jne", &false_label, "");
-                self.emit_code("leaq", ".format_true(%rip)", &result);
-                self.emit_code("jmp", &done_label, "");
-                self.emit_label(false_label);
-                self.emit_code("leaq", ".format_false(%rip)", &result);
-                self.emit_label(done_label);
+                self.print_boolean(register, &result.to_string());
                 self.emit_code("pushq", &result, "");
                 self.registers.deallocate(result);
             }
@@ -481,15 +485,7 @@ impl CodeGen {
                 self.emit_code(move_for(kind), register, result);
             }
             Type::Bool => {
-                let false_label = self.labels.create();
-                let done_label = self.labels.create();
-                self.emit_code("cmpb", "$1", register);
-                self.emit_code("jne", &false_label, "");
-                self.emit_code("leaq", ".format_true(%rip)", result);
-                self.emit_code("jmp", &done_label, "");
-                self.emit_label(false_label);
-                self.emit_code("leaq", ".format_false(%rip)", result);
-                self.emit_label(done_label);
+                self.print_boolean(register, result);
             }
             Type::Unit | Type::Array { .. } => unreachable!(),
         }
