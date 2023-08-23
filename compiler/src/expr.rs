@@ -66,7 +66,7 @@ impl From<&Expr> for Token {
             Expr::String { meta, .. } => meta.clone(),
             Expr::Boolean { meta, .. } => meta.clone(),
             Expr::Unary { oper, .. } => oper.clone(),
-            Expr::Array { .. } => unreachable!(),
+            Expr::Array { span, .. } => Token::new(TokenType::Unknown, *span),
         }
     }
 }

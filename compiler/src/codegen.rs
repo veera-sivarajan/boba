@@ -455,7 +455,7 @@ impl CodeGen {
                 self.emit_code("pushq", &result, "");
                 self.registers.deallocate(result);
             }
-            Type::String => {
+            Type::String | Type::Array { .. } => {
                 self.emit_code("pushq", register, "");
             }
             Type::Bool => {
@@ -464,7 +464,7 @@ impl CodeGen {
                 self.emit_code("pushq", &result, "");
                 self.registers.deallocate(result);
             }
-            Type::Unit | Type::Array { .. } => unreachable!(),
+            Type::Unit => unreachable!(),
         }
     }
 
@@ -481,13 +481,13 @@ impl CodeGen {
         } as usize;
         let result = self.argument_registers[size_index][register_index];
         match kind {
-            Type::Char | Type::Number | Type::String => {
+            Type::Char | Type::Number | Type::String | Type::Array { .. } => {
                 self.emit_code(move_for(kind), register, result);
             }
             Type::Bool => {
                 self.print_boolean(register, result);
             }
-            Type::Unit | Type::Array { .. } => unreachable!(),
+            Type::Unit => unreachable!(),
         }
     }
 

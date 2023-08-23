@@ -71,7 +71,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let element_type = self.consume_type(error_msg)?;
         self.consume(
             TokenType::Semicolon,
-            "Expect semicolon before array length.",
+            "Expect semicolon before specifying array length.",
         )?;
         let TokenType::Number(array_len) = self.cursor.next_if(|token| matches!(token.kind, TokenType::Number(_))).ok_or(self.error("Expected array length."))?.kind else {
             unreachable!()
