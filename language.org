@@ -1,6 +1,6 @@
 * Language Documentation
 ~boba~ aims to be a safe, static and implicitly typed language. The language is designed to be syntactically similar to Rust and semantically equivalent to C. The compiler supports the following language constructs:
-** Primary Data Types
+** Data Types
 1. ~str~: Static immutable string stored in the read-only memory of the binary. Equivalent to ~&'static str~ in Rust.
 2. ~i32~: 32-bit signed number data type. Equivalent to ~int~ in C.
 3. ~bool~: 8-bit boolean data type used to denote either ~true~ or ~false~. Internally, ~true~ is stored as ~1~ and ~false~ is ~0~.
@@ -39,7 +39,9 @@ Here, both ~a~ and ~b~ are values of type ~i32~. All comparison expressions eval
 5. Equality: ~a == b~
 6. Non Equality: ~a != b~
 ** Print Statement
-It is a compiler built-in function that takes a format string and the expressions to be printed as arguments. The ~{}~ s inside the format string will be replaced by the value of expressions and displayed on a newline in ~stdout~. The compiler cannot handle more than six arguments because I'm still figuring out how to use the stack to pass the arguments into a function.
+It is a compiler built-in function that takes a format string and the expressions to be printed as arguments. The ~{}~ s inside the format string will be replaced by the value of expressions and displayed on a newline in ~stdout~.
+
+*Note:* Arguments will be evaluated from right-to-left in order to push arguments onto the stack in correct order.
 
 Internally, the format string is compiled to a C style format string and a call to libc's ~printf()~.
 #+BEGIN_SRC rust
