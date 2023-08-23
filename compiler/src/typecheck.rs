@@ -459,7 +459,12 @@ impl TypeChecker {
             if self.variable_is_declared_in_current_scope(&param_token) {
                 self.error(BobaError::VariableRedeclaration(param_token));
             } else {
-                let parameter_index = self.update_space_for_locals(param_type);
+                let parameter_index = if param_type.is_array() {
+                    // arrays decay to 8 byte pointers
+                    self.update_space_for_locals(&Type::String)
+                } else {
+                    self.update_space_for_locals(param_type)
+                };
                 self.add_variable(
                     param_token,
                     Info::new(

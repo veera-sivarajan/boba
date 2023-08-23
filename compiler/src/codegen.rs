@@ -318,7 +318,11 @@ impl CodeGen {
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(param_type);
-            size_sum += param_type.as_size();
+            size_sum += if param_type.is_array() {
+                8
+            } else {
+                param_type.as_size()
+            };
             self.emit_code(
                 move_for(param_type),
                 self.argument_registers[register_size as usize][index],
