@@ -491,7 +491,7 @@ impl CodeGen {
         }
     }
 
-    fn store_print_argument(
+    fn store_argument(
         &mut self,
         arg_index: usize,
         register: &str,
@@ -537,7 +537,7 @@ impl CodeGen {
                 } else {
                     -(index as isize * element_size as isize)
                 };
-                self.store_print_argument(
+                self.store_argument(
                     arg_index - count,
                     &format!("{offset}({base_register})"),
                     element_type,
@@ -556,12 +556,12 @@ impl CodeGen {
         if let Type::Array { len, ty_pe } = kind {
             self.flatten_array(register, *len, ty_pe, arg_index);
         } else {
-            self.store_print_argument(arg_index, &register.to_string(), kind);
+            self.store_argument(arg_index, &register.to_string(), kind);
             self.registers.deallocate(register);
         }
     }
 
-    fn align_print_args(&mut self, arg_count: usize) -> Option<usize> {
+    fn align_arguments(&mut self, arg_count: usize) -> Option<usize> {
         arg_count.checked_sub(5).map(|difference| {
             let stack_allocated_space = difference * 8;
             let align = 16;
@@ -581,7 +581,7 @@ impl CodeGen {
         args: &[LLExpr],
         mut arg_count: usize,
     ) -> Option<usize> {
-        let alignment = self.align_print_args(arg_count);
+        let alignment = self.align_arguments(arg_count);
         for arg in args.iter().rev() {
             let register = self.expression(arg);
             let kind = arg.to_type();
@@ -742,37 +742,36 @@ impl CodeGen {
         value
     }
 
+    fn emit_arguments(&mut self, args: &[LLExpr]) -> Option<usize> {
+        let alignment = self.align_arguments(args.len());
+        for (arg_index, arg) in args.iter().enumerate().rev() {
+            let register = self.expression(arg);
+            let kind = arg.to_type();
+            self.store_argument(arg_index, &register.to_string(), &kind);
+            self.registers.deallocate(register);
+        }
+        alignment 
+    }
+
     fn function_call(
         &mut self,
         callee: &str,
         args: &[LLExpr],
         ty_pe: &Type,
     ) -> RegisterIndex {
-        let arguments = args
-            .iter()
-            .map(|arg| self.expression(arg))
-            .collect::<Vec<RegisterIndex>>();
-        let arg_types: Vec<Type> =
-            args.iter().map(|arg| arg.to_type()).collect();
-        for (index, ty) in arg_types.iter().enumerate() {
-            let register_index = RegisterSize::from(ty) as usize;
-            // SAFETY: Typechecker rejects functions with more than six
-            // paramters
-            let arg_value = unsafe { arguments.get_unchecked(index) };
-            self.emit_code(
-                move_for(ty),
-                arg_value,
-                self.argument_registers[register_index][index],
-            );
-        }
-        for register in arguments {
-            self.registers.deallocate(register);
-        }
+        let alignment = self.emit_arguments(args);
         self.emit_code("pushq", "%r10", "");
         self.emit_code("pushq", "%r11", "");
         self.emit_code("call", callee, "");
         self.emit_code("popq", "%r11", "");
         self.emit_code("popq", "%r10", "");
+        if let Some(value) = alignment {
+            self.emit_code("addq", format!("${value}"), "%rsp");
+        }
+        self.move_return_value(ty_pe)
+    }
+
+    fn move_return_value(&mut self, ty_pe: &Type) -> RegisterIndex {
         if ty_pe != &Type::Unit {
             let result = self.registers.allocate(ty_pe);
             self.emit_code(move_for(ty_pe), rax_for(ty_pe), &result);
