@@ -318,6 +318,7 @@ impl CodeGen {
         let mut size_sum = 0;
         for (index, param_type) in param_types.iter().enumerate() {
             let register_size = RegisterSize::from(param_type);
+            // This is a temporary hack. Fix it once pointers are implemented
             size_sum += if param_type.is_array() {
                 8
             } else {

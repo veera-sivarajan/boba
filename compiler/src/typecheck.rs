@@ -423,6 +423,7 @@ impl TypeChecker {
             if variable_type == Type::Unit {
                 self.error(BobaError::AssigningUnitType(value.into()));
             };
+            // FIXME: This is a temporary hack. Fix it once pointers are implemented
             let variable_index = if variable_type.is_array() {
                 // arrays decay to 8 byte pointers
                 self.update_space_for_locals(&Type::String)
@@ -459,6 +460,7 @@ impl TypeChecker {
             if self.variable_is_declared_in_current_scope(&param_token) {
                 self.error(BobaError::VariableRedeclaration(param_token));
             } else {
+                // This a temporary hack. Fix it once pointers are implemented.
                 let parameter_index = if param_type.is_array() {
                     // arrays decay to 8 byte pointers
                     self.update_space_for_locals(&Type::String)
