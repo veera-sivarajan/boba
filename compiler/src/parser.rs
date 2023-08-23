@@ -63,11 +63,39 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             .ok_or(self.error(error_msg))
     }
 
+    fn consume_array_type(
+        &mut self,
+        error_msg: &str,
+    ) -> Result<Type, BobaError> {
+        self.consume(TokenType::LeftBracket, "Expect array type.")?;
+        let element_type = self.consume_type(error_msg)?;
+        self.consume(
+            TokenType::Semicolon,
+            "Expect semicolon before array length.",
+        )?;
+        let TokenType::Number(array_len) = self.cursor.next_if(|token| matches!(token.kind, TokenType::Number(_))).ok_or(self.error("Expected array length."))?.kind else {
+            unreachable!()
+        };
+        let result = Type::Array {
+            ty_pe: Box::new(element_type),
+            len: array_len as usize,
+        };
+        self.consume(
+            TokenType::RightBracket,
+            "Expect right bracket for closing arrray type.",
+        )?;
+        Ok(result)
+    }
+
     fn consume_type(&mut self, error_msg: &str) -> Result<Type, BobaError> {
-        self.cursor
-            .next_if(|token| token.is_type())
-            .and_then(|token| token.to_type())
-            .ok_or(self.error(error_msg))
+        if self.peek_check(TokenType::LeftBracket) {
+            self.consume_array_type(error_msg)
+        } else {
+            self.cursor
+                .next_if(|token| token.is_type())
+                .and_then(|token| token.to_type())
+                .ok_or(self.error(error_msg))
+        }
     }
 
     fn global_variable_decl(&mut self) -> Result<Stmt, BobaError> {
@@ -202,10 +230,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn parse_parameter_and_type(&mut self) -> Result<Parameter, BobaError> {
-        let identifier = self.consume_identifier("Expect parameter name.")?;
+        let parameter = self.consume_identifier("Expect parameter name.")?;
         self.consume(TokenType::Colon, "Expect ':' after paramter name.")?;
-        let id_type = self.consume_type("Expect parameter type.")?;
-        Ok((Expr::Variable(identifier), id_type))
+        let paramter_type = self.consume_type("Expect parameter type.")?;
+        Ok((Expr::Variable(parameter), paramter_type))
     }
 
     fn function_decl(&mut self) -> Result<Stmt, BobaError> {
