@@ -432,7 +432,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn finish_subscript(&mut self, name: Expr) -> Result<Expr, BobaError> {
         let index = Box::new(self.equality()?);
-        self.consume(TokenType::RightBracket, "Expect ']' after array index.");
+        self.consume(TokenType::RightBracket, "Expect ']' after array index.")?;
         Ok(Expr::Subscript {
             name: Box::new(name),
             index,

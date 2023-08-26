@@ -547,7 +547,23 @@ impl TypeChecker {
             Expr::Unary { oper, right } => self.unary(oper, right),
             Expr::Call { callee, args } => self.function_call(callee, args),
             Expr::Array { span, elements } => self.array(span, elements),
+            Expr::Subscript { name, index } => self.subscript(name, index),
         }
+    }
+
+    fn subscript(&mut self, name: &Expr, position: &Expr) -> LLExpr {
+        let array = self.expression(name);
+        let index = self.expression(position);
+
+        let array_type = array.to_type();
+        let index_type = index.to_type();
+
+        if !array_type.is_array() {
+            self.error(BobaError::CannotIndex(array_type, Token::from(name).span));
+        } else if index_type != Type::Number {
+            self.error(BobaError::UnexpectedIndexType(index_type, Token::from(position).span));
+        }
+        todo!()
     }
 
     fn array(&mut self, meta: &Span, elements: &[Expr]) -> LLExpr {

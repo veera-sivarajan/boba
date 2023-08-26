@@ -88,12 +88,20 @@ pub enum BobaError {
     PrintUnitType(Token),
     CharNotAscii(Span),
     HetroArray(Span),
+    CannotIndex(Type, Span),
+    UnexpectedIndexType(Type, Span),
 }
 
 impl fmt::Display for BobaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BobaError::*;
         match self {
+            CannotIndex(ty_pe, span) => {
+                writeln!(f, "Type Error: Cannot index into a value of type {ty_pe} at {span}.")
+            }
+            UnexpectedIndexType(ty_pe, span) => {
+                writeln!(f, "Type Error: Expect array index to be a value of i32 but found {ty_pe} at {span}.")
+            }
             HetroArray(span) => {
                 writeln!(f, "Type Error: Expect all elements in an array to be of same type at {span}.")
             }
