@@ -219,7 +219,7 @@ pub enum LLExpr {
         index: usize,
     },
     Subscript {
-        array: Box<LLExpr>,
+        base: Box<LLExpr>,
         ty_pe: Type,
         index: usize,
     },
@@ -282,8 +282,8 @@ impl std::fmt::Debug for LLExpr {
                 }
                 write!(f, "]")
             }
-            LLExpr::Subscript { array, index, .. } => {
-                write!(f, "{array:?}[{index}]")
+            LLExpr::Subscript { base: array, index, .. } => {
+                write!(f, "{array:?}[{index:?}]")
             }
         }
     }

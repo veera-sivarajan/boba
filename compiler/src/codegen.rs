@@ -684,8 +684,17 @@ impl CodeGen {
                 elements,
                 index,
             } => self.array(ty_pe, elements, *index),
-            LLExpr::Subscript { .. } => todo!(),
+            LLExpr::Subscript { base, ty_pe, index} => self.subscript(base, ty_pe, *index),
         }
+    }
+
+    fn subscript(&mut self, base: &LLExpr, ty_pe: &Type, index: usize) -> RegisterIndex {
+        let array = self.expression(base);
+        let element_size = ty_pe.as_size();
+        let value = -(element_size as isize * index as isize);
+        let result = self.registers.allocate(ty_pe);
+        self.emit_code(move_for(ty_pe), format!("{value}({array})"), &result);
+        result
     }
 
     fn emit_string(&mut self, label: &Label, literal: &str) {

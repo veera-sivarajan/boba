@@ -578,7 +578,7 @@ impl TypeChecker {
                 unreachable!()
             };
             LLExpr::Subscript {
-                array: Box::new(array),
+                base: Box::new(array),
                 index: index as usize,
                 ty_pe: *ty_pe,
             }
