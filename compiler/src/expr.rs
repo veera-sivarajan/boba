@@ -71,6 +71,7 @@ impl From<&Expr> for Token {
             Expr::Boolean { meta, .. } => meta.clone(),
             Expr::Unary { oper, .. } => oper.clone(),
             Expr::Array { span, .. } => Token::new(TokenType::Unknown, *span),
+            Expr::Subscript { name, .. } => Token::from(name.as_ref()),
         }
     }
 }

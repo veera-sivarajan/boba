@@ -414,8 +414,29 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             let right = Box::new(self.unary()?);
             Ok(Expr::Unary { oper, right })
         } else {
-            self.call()
+            self.subscript()
         }
+    }
+
+    fn subscript(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.call()?;
+        loop {
+            if self.next_eq(TokenType::LeftBracket) {
+                expr = self.finish_subscript(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
+    }
+
+    fn finish_subscript(&mut self, name: Expr) -> Result<Expr, BobaError> {
+        let index = Box::new(self.equality()?);
+        self.consume(TokenType::RightBracket, "Expect ']' after array index.");
+        Ok(Expr::Subscript {
+            name: Box::new(name),
+            index,
+        })
     }
 
     fn call(&mut self) -> Result<Expr, BobaError> {
@@ -456,7 +477,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
         Ok(args)
     }
-
 
     fn array(&mut self, start: Token) -> Result<Expr, BobaError> {
         let mut elements = Vec::with_capacity(255);
