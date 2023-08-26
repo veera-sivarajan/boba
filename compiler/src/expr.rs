@@ -42,6 +42,10 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Group(Box<Expr>),
+    Subscript {
+        name: Box<Expr>,
+        index: Box<Expr>,
+    }
 }
 
 impl Expr {
