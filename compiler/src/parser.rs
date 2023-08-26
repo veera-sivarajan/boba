@@ -430,18 +430,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Ok(expr)
     }
 
-    fn parse_arguments(&mut self) -> Result<Vec<Expr>, BobaError> {
-        let mut args = Vec::with_capacity(255);
-        if !self.peek_check(TokenType::RightParen) {
-            args.push(self.expression()?);
-            while self.next_eq(TokenType::Comma) {
-                args.push(self.expression()?);
-            }
-        }
-        self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
-        Ok(args)
-    }
-
     fn finish_call(&mut self, callee: &Expr) -> Result<Expr, BobaError> {
         let args = self.parse_arguments()?;
         if let Expr::Variable(name) = callee {
@@ -456,6 +444,19 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             ))
         }
     }
+
+    fn parse_arguments(&mut self) -> Result<Vec<Expr>, BobaError> {
+        let mut args = Vec::with_capacity(255);
+        if !self.peek_check(TokenType::RightParen) {
+            args.push(self.expression()?);
+            while self.next_eq(TokenType::Comma) {
+                args.push(self.expression()?);
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(args)
+    }
+
 
     fn array(&mut self, start: Token) -> Result<Expr, BobaError> {
         let mut elements = Vec::with_capacity(255);
