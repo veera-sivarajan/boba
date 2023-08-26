@@ -684,6 +684,7 @@ impl CodeGen {
                 elements,
                 index,
             } => self.array(ty_pe, elements, *index),
+            LLExpr::Subscript { .. } => todo!(),
         }
     }
 

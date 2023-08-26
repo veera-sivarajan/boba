@@ -559,11 +559,30 @@ impl TypeChecker {
         let index_type = index.to_type();
 
         if !array_type.is_array() {
-            self.error(BobaError::CannotIndex(array_type, Token::from(name).span));
+            self.error(BobaError::CannotIndex(
+                array_type,
+                Token::from(name).span,
+            ));
+            LLExpr::Number(0)
         } else if index_type != Type::Number {
-            self.error(BobaError::UnexpectedIndexType(index_type, Token::from(position).span));
+            self.error(BobaError::UnexpectedIndexType(
+                index_type,
+                Token::from(position).span,
+            ));
+            LLExpr::Number(0)
+        } else {
+            let Type::Array { ty_pe, .. } = array_type else {
+                unreachable!()
+            };
+            let LLExpr::Number(index) = index else {
+                unreachable!()
+            };
+            LLExpr::Subscript {
+                array: Box::new(array),
+                index: index as usize,
+                ty_pe: *ty_pe,
+            }
         }
-        todo!()
     }
 
     fn array(&mut self, meta: &Span, elements: &[Expr]) -> LLExpr {

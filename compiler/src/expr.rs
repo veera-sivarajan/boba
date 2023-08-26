@@ -45,7 +45,7 @@ pub enum Expr {
     Subscript {
         name: Box<Expr>,
         index: Box<Expr>,
-    }
+    },
 }
 
 impl Expr {
@@ -218,6 +218,11 @@ pub enum LLExpr {
         elements: Vec<LLExpr>,
         index: usize,
     },
+    Subscript {
+        array: Box<LLExpr>,
+        ty_pe: Type,
+        index: usize,
+    },
 }
 
 impl LLExpr {
@@ -239,6 +244,7 @@ impl LLExpr {
                 ty_pe: Box::new(ty_pe.clone()),
                 len: elements.len(),
             },
+            LLExpr::Subscript { ty_pe, .. } => ty_pe.clone(),
         }
     }
 }
@@ -275,6 +281,9 @@ impl std::fmt::Debug for LLExpr {
                     write!(f, " {ele:?} ")?;
                 }
                 write!(f, "]")
+            }
+            LLExpr::Subscript { array, index, .. } => {
+                write!(f, "{array:?}[{index}]")
             }
         }
     }
