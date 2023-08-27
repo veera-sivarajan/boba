@@ -7,7 +7,7 @@ To build the CLI:
 #+END_SRC
 NOTE: boba requires ~rustc~ version 1.70.0 or newer.
 ** Usage
-#+BEGIN_SRC bash
+#+BEGIN_SRC shell
   Usage: boba [OPTIONS] <FILENAME>
 
   Arguments:
@@ -20,7 +20,7 @@ NOTE: boba requires ~rustc~ version 1.70.0 or newer.
 #+END_SRC
 
 ~gcc~ or ~clang~ can be used to link the generated assembly with C standard library (for accessing ~printf()~) and to convert it into an ELF executable.
-#+BEGIN_SRC bash
+#+BEGIN_SRC shell
   gcc <FILENAME>.s && ./a.out
 #+END_SRC
 ** Language Documentation
