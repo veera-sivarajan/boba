@@ -626,7 +626,7 @@ impl CodeGen {
         first_operand: impl fmt::Display,
         second_operand: impl fmt::Display,
     ) {
-        write!(&mut self.assembly.code, "{:8}{instruction:6}", " ")
+        write!(&mut self.assembly.code, "{:8}{instruction:7}", " ")
             .expect("Unable to write code.");
         let first_operand = first_operand.to_string();
         let second_operand = second_operand.to_string();
@@ -690,6 +690,29 @@ impl CodeGen {
         }
     }
 
+    fn move_index_to_eax(&mut self, index: &LLExpr) -> RegisterIndex {
+        let index = self.expression(index);
+        let result = self.registers.allocate(&Type::String);
+        self.emit_code("neg", &index, "");
+        self.emit_code("movslq", &index, &result);
+        self.registers.deallocate(index);
+        result
+    }
+
+    fn increment_base(
+        &mut self,
+        base: &RegisterIndex,
+        ty_pe: &Type,
+        index: RegisterIndex,
+    ) {
+        let offset = self.registers.allocate(&Type::String);
+        let element_size = if ty_pe.is_array() { 8 } else { ty_pe.as_size() };
+        self.emit_code("leaq", format!("0(,{index},{element_size})"), &offset);
+        self.emit_code("addq", &offset, base);
+        self.registers.deallocate(offset);
+        self.registers.deallocate(index);
+    }
+
     fn subscript(
         &mut self,
         array: &LLExpr,
@@ -697,17 +720,11 @@ impl CodeGen {
         index: &LLExpr,
     ) -> RegisterIndex {
         let base = self.expression(array);
-        let index = self.expression(index);
-        let element_size = if ty_pe.is_array() { 8 } else { ty_pe.as_size() };
-        self.emit_code("neg", &index, "");
-        self.emit_code("movl", &index, "%eax");
-        self.emit_code("cltq", "", "");
-        let temp = self.registers.allocate(&Type::String);
-        self.emit_code("leaq", format!("0(,%rax,{element_size})"), &temp);
-        self.emit_code("addq", &temp, &base);
-        self.registers.deallocate(temp);
+        let index = self.move_index_to_eax(index);
+        self.increment_base(&base, ty_pe, index);
         let result = self.registers.allocate(ty_pe);
         self.emit_code(move_for(ty_pe), format!("({base})"), &result);
+        self.registers.deallocate(base);
         result
     }
 
