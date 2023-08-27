@@ -282,7 +282,9 @@ impl std::fmt::Debug for LLExpr {
                 }
                 write!(f, "]")
             }
-            LLExpr::Subscript { base: array, index, .. } => {
+            LLExpr::Subscript {
+                base: array, index, ..
+            } => {
                 write!(f, "{array:?}[{index:?}]")
             }
         }
