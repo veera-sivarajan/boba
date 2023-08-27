@@ -574,12 +574,9 @@ impl TypeChecker {
             let Type::Array { ty_pe, .. } = array_type else {
                 unreachable!()
             };
-            let LLExpr::Number(index) = index else {
-                unreachable!()
-            };
             LLExpr::Subscript {
                 base: Box::new(array),
-                index: index as usize,
+                index: Box::new(index),
                 ty_pe: *ty_pe,
             }
         }

@@ -221,7 +221,7 @@ pub enum LLExpr {
     Subscript {
         base: Box<LLExpr>,
         ty_pe: Type,
-        index: usize,
+        index: Box<LLExpr>,
     },
 }
 

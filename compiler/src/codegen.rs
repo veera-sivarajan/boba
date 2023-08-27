@@ -684,20 +684,30 @@ impl CodeGen {
                 elements,
                 index,
             } => self.array(ty_pe, elements, *index),
-            LLExpr::Subscript { base, ty_pe, index} => self.subscript(base, ty_pe, *index),
+            LLExpr::Subscript { base, ty_pe, index } => {
+                self.subscript(base, ty_pe, index)
+            }
         }
     }
 
-    fn subscript(&mut self, base: &LLExpr, ty_pe: &Type, index: usize) -> RegisterIndex {
-        let array = self.expression(base);
-        let element_size = if ty_pe.is_array() {
-            8
-        } else {
-            ty_pe.as_size()
-        };
-        let value = -(element_size as isize * index as isize);
+    fn subscript(
+        &mut self,
+        array: &LLExpr,
+        ty_pe: &Type,
+        index: &LLExpr,
+    ) -> RegisterIndex {
+        let base = self.expression(array);
+        let index = self.expression(index);
+        let element_size = if ty_pe.is_array() { 8 } else { ty_pe.as_size() };
+        self.emit_code("neg", &index, "");
+        self.emit_code("movl", &index, "%eax");
+        self.emit_code("cltq", "", "");
+        let temp = self.registers.allocate(&Type::String);
+        self.emit_code("leaq", format!("0(,%rax,{element_size})"), &temp);
+        self.emit_code("addq", &temp, &base);
+        self.registers.deallocate(temp);
         let result = self.registers.allocate(ty_pe);
-        self.emit_code(move_for(ty_pe), format!("{value}({array})"), &result);
+        self.emit_code(move_for(ty_pe), format!("({base})"), &result);
         result
     }
 
@@ -717,11 +727,7 @@ impl CodeGen {
         index: usize,
     ) -> RegisterIndex {
         let mut start = index;
-        let size = if ty_pe.is_array() {
-            8
-        } else {
-            ty_pe.as_size()
-        };
+        let size = if ty_pe.is_array() { 8 } else { ty_pe.as_size() };
         for ele in elements {
             let value = self.expression(ele);
             self.emit_code(move_for(ty_pe), &value, &format!("-{start}(%rbp)"));
@@ -773,7 +779,7 @@ impl CodeGen {
             self.store_argument(arg_index, &register.to_string(), &kind);
             self.registers.deallocate(register);
         }
-        alignment 
+        alignment
     }
 
     fn function_call(
