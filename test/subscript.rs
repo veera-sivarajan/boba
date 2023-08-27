@@ -10,7 +10,21 @@ fn print(array: [[char; 2]; 3]) {
     );
 }
 
+fn car(array: [str; 2]) -> str {
+    return array[1];
+}
+
+fn car_bools(array: [[bool; 2]; 2]) -> [bool; 2] {
+    return array[0];
+} 
+
 fn main() {
+    let name = car(["cat", "dog"]);
+    println("{}", name);
+
+    let answers = car_bools([[false, false], [true, true]]);
+    println("{}", answers);
+    
     // 1 dimensional arrays
     let array = [1, 2, 3, 4, 5];
     println(
@@ -82,6 +96,7 @@ fn main() {
         lyrics[2][0],
         lyrics[2][1]
     );
+    println("{} {} {}", lyrics[0], lyrics[1], lyrics[2]);
 
     let letters = [['a', 'b'], ['c', 'd'], ['e', 'f']];
     println(
