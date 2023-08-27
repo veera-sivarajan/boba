@@ -517,7 +517,7 @@ impl CodeGen {
         mut arg_index: usize,
     ) {
         if let Type::Array { len, ty_pe } = element_type {
-            let element_size = ty_pe.as_size() * *len;
+            let element_size = 8; // arrays decay into pointers and pointers are 8 bytes
             for index in (0..array_len).rev() {
                 let first_ele = self.registers.allocate(&Type::String);
                 let offset = if index == 0 {
@@ -690,7 +690,11 @@ impl CodeGen {
 
     fn subscript(&mut self, base: &LLExpr, ty_pe: &Type, index: usize) -> RegisterIndex {
         let array = self.expression(base);
-        let element_size = ty_pe.as_size();
+        let element_size = if ty_pe.is_array() {
+            8
+        } else {
+            ty_pe.as_size()
+        };
         let value = -(element_size as isize * index as isize);
         let result = self.registers.allocate(ty_pe);
         self.emit_code(move_for(ty_pe), format!("{value}({array})"), &result);
@@ -713,7 +717,11 @@ impl CodeGen {
         index: usize,
     ) -> RegisterIndex {
         let mut start = index;
-        let size = ty_pe.as_size();
+        let size = if ty_pe.is_array() {
+            8
+        } else {
+            ty_pe.as_size()
+        };
         for ele in elements {
             let value = self.expression(ele);
             self.emit_code(move_for(ty_pe), &value, &format!("-{start}(%rbp)"));

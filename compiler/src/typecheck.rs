@@ -597,9 +597,15 @@ impl TypeChecker {
                 }
             } else {
                 let ty_pe = values.first().unwrap().to_type();
-                let index = self.update_space_for_locals(&ty_pe);
+                let size_ty_pe = if ty_pe.is_array() {
+                    Type::String
+                } else {
+                    ty_pe.clone()
+                };
+                let index = self.update_space_for_locals(&size_ty_pe);
+                println!("Array start: {index}");
                 // Subtract 1 because space is updated for first element
-                let array_size = ty_pe.as_size() * (values.len() - 1);
+                let array_size = size_ty_pe.as_size() * (values.len() - 1);
                 self.allocate_stack_space(array_size);
                 LLExpr::Array {
                     index,
