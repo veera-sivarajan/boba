@@ -600,7 +600,6 @@ impl TypeChecker {
                     ty_pe.clone()
                 };
                 let index = self.update_space_for_locals(&size_ty_pe);
-                println!("Array start: {index}");
                 // Subtract 1 because space is updated for first element
                 let array_size = size_ty_pe.as_size() * (values.len() - 1);
                 self.allocate_stack_space(array_size);
