@@ -1,7 +1,28 @@
 * Boba
-~boba~ is a compiler project to learn about implementing type system, code optimization and code generation. It compiles rust-like source code to x86-64 assembly.
+~boba~ is a compiler project to learn about implementing type system, code optimization and code generation. It compiles Rust-like source code to x86-64 assembly.
+** Build
+To build the CLI:
+#+BEGIN_SRC shell
+  cargo build
+#+END_SRC
+NOTE: boba requires ~rustc~ version 1.70.0 or newer.
+** Usage
+#+BEGIN_SRC bash
+  Usage: boba [OPTIONS] <FILENAME>
 
-The generated assembly is linked with the C standard library (to access ~printf()~) and converted into an ELF executable using ~gcc~.
+  Arguments:
+    <FILENAME>  Name of the file to be compiled
+
+  Options:
+    -p, --print-ast  Print the parsed AST
+    -h, --help       Print help
+    -V, --version    Print version
+#+END_SRC
+
+~gcc~ or ~clang~ can be used to link the generated assembly with C standard library (for accessing ~printf()~) and to convert it into an ELF executable.
+#+BEGIN_SRC bash
+  gcc <FILENAME>.s && ./a.out
+#+END_SRC
 ** Language Documentation
 Check [[./language.org][language documentation]] for details about the syntax and semantics of the language.
 ** Example Programs
