@@ -19,7 +19,7 @@ NOTE: boba requires ~rustc~ version 1.70.0 or newer.
     -V, --version    Print version
 #+END_SRC
 
-~gcc~ or ~clang~ can be used to link the generated assembly with C standard library (for accessing ~printf()~) and to convert it into an ELF executable.
+~gcc~ or ~clang~ can be used to compile the generated assembly to an ELF executable.
 #+BEGIN_SRC shell
   gcc <FILENAME>.s && ./a.out
 #+END_SRC
