@@ -31,6 +31,7 @@ To test the compiler against all the programs in the directory:
 #+BEGIN_SRC shell
   cargo test
 #+END_SRC
+NOTE: This requires ~gcc~ to be available on your ~$PATH~.
 * Devlog
 An attempt to document my development process:
 1. [[https://veera.app/codegen.html][Boba Devlog #0: Compiling Pseudo-Rust to x86 Assembly]]
