@@ -72,11 +72,11 @@ mod tests {
         let output = Command::new(executable)
             .output()
             .expect("Failed to run the executable.");
-        let output = std::str::from_utf8(&output.stdout).unwrap().trim();
-        output.trim().to_string()
+        let output = std::str::from_utf8(&output.stdout).unwrap();
+        output.to_string()
     }
 
-    fn execute(input: &Path, source_name: &str) -> impl std::fmt::Display {
+    fn execute(input: &Path, source_name: &str) -> String {
         let source = std::fs::read_to_string(input);
         if let Ok(source) = source {
             match compiler::compile(source.trim_end(), false) {
@@ -93,11 +93,11 @@ mod tests {
         let output = format!("../test/output/{output_name}");
         let input = Path::new(&source);
         let output_handle = Path::new(&output);
-        let got = execute(input, source_name);
+        let result = execute(input, source_name);
         let expected = std::fs::read_to_string(output_handle)
             .unwrap_or("Cannot read output file.".into());
         (
-            got.to_string().trim().to_string(),
+            result.trim().to_string(),
             expected.trim().to_string(),
         )
     }
@@ -106,239 +106,239 @@ mod tests {
     fn addition() {
         let source = "addition.rs";
         let output = "addition.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn alignment() {
         let source = "alignment.rs";
         let output = "alignment.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn argument() {
         let source = "argument.rs";
         let output = "argument.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn array() {
         let source = "array.rs";
         let output = "array.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn character() {
         let source = "character.rs";
         let output = "character.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn condition_less() {
         let source = "condition-less.rs";
         let output = "condition-less.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn condition() {
         let source = "condition.rs";
         let output = "condition.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn function() {
         let source = "function.rs";
         let output = "function.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn loops() {
         let source = "loops.rs";
         let output = "loops.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn return_type() {
         let source = "return-type.rs";
         let output = "return-type.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result.to_string(), expected)
     }
 
     #[test]
     fn global() {
         let source = "global.rs";
         let output = "global.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn multiply() {
         let source = "multiply.rs";
         let output = "multiply.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn subscript() {
         let source = "subscript.rs";
         let output = "subscript.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn greet_with_name() {
         let source = "greet-with-name.rs";
         let output = "greet-with-name.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn three_args() {
         let source = "three-args.rs";
         let output = "three-args.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn group() {
         let source = "group.rs";
         let output = "group.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn while_loop() {
         let source = "while.rs";
         let output = "while.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn factorial() {
         let source = "factorial.rs";
         let output = "factorial.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn logic() {
         let source = "logic.rs";
         let output = "logic.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn recursive_calls() {
         let source = "recursive-calls.rs";
         let output = "recursive-calls.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn imutable() {
         let source = "imutable.rs";
         let output = "imutable.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn pass_array() {
         let source = "pass-array.rs";
         let output = "pass-array.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn type_mismatch() {
         let source = "type-mismatch.rs";
         let output = "type-mismatch.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn iter_factorial() {
         let source = "iter-factorial.rs";
         let output = "iter-factorial.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn print() {
         let source = "print.rs";
         let output = "print.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn types() {
         let source = "types.rs";
         let output = "types.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn locals() {
         let source = "locals.rs";
         let output = "locals.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn print_with_args() {
         let source = "print-with-args.rs";
         let output = "print-with-args.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn twod_array() {
         let source = "twod-array.rs";
         let output = "twod-array.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 
     #[test]
     fn mutate() {
         let source = "mutate.rs";
         let output = "mutate.txt";
-        let (got, expected) = check(source, output);
-        assert_eq!(got, expected)
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
     }
 }
