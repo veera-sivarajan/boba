@@ -18,8 +18,7 @@ NOTE: boba requires ~rustc~ version 1.70.0 or newer.
     -h, --help       Print help
     -V, --version    Print version
 #+END_SRC
-
-~gcc~ or ~clang~ can be used to compile the generated assembly to an ELF executable.
+The compiler generates a x86-64 assembly (AT&T syntax) file. Use ~gcc~ or ~clang~ to compile the assembly to an ELF executable and then run it on your system.
 #+BEGIN_SRC shell
   gcc <FILENAME>.s && ./a.out
 #+END_SRC
@@ -27,6 +26,11 @@ NOTE: boba requires ~rustc~ version 1.70.0 or newer.
 Check [[./language.org][language documentation]] for details about the syntax and semantics of the language.
 ** Example Programs
 The [[./test/][test/]] directory contains a bunch of example programs that can be compiled with this compiler.
+
+To test the compiler against all the programs in the directory:
+#+BEGIN_SRC shell
+  cargo test
+#+END_SRC
 * Devlog
 An attempt to document my development process:
 1. [[https://veera.app/codegen.html][Boba Devlog #0: Compiling Pseudo-Rust to x86 Assembly]]
