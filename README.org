@@ -1,5 +1,22 @@
 * Boba
 ~boba~ is a compiler project to learn about implementing type system, code optimization and code generation. It compiles Rust-like source code to x86-64 assembly.
+
+Example:
+#+BEGIN_SRC rust
+  fn sum(array: [i32; 5]) -> i32 {
+      let mut total = 0;
+      for (let mut i = 0; i < 5; i = i + 1) {
+          total = total + array[i];
+      }
+      return total;
+  }
+
+  fn main() {
+      let array = [1, 2, 3, 4, 5];
+      let total = sum(array);
+      println("Sum of {} = {}", array, total); // Sum of [1, 2, 3, 4, 5] = 15
+  }
+#+END_SRC
 ** Build
 To build the CLI:
 #+BEGIN_SRC shell
