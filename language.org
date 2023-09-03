@@ -5,6 +5,28 @@
 2. ~i32~: 32-bit signed number data type. Equivalent to ~int~ in C.
 3. ~bool~: 8-bit boolean data type used to denote either ~true~ or ~false~. Internally, ~true~ is stored as ~1~ and ~false~ is ~0~.
 4. ~char~: 8-bit ASCII character.
+5. ~[T; length]~: An array with elements of type ~T~ and compile time known ~length~. 
+** Array
+An array is a collection of values enclosed within square brackets. It compiles to a pointer to the first element.
+
+Like any other expression, arrays can be passed into the print statement to print all the values in the array, assigned to variables, passed into functions but returning an array from a function will result in segmentation fault.
+
+Subscript expressions can be used to access any element of the array. Currently, a subscript expression can only be used as a r-value.
+#+BEGIN_SRC rust
+  fn sum(array: [i32; 5]) -> i32 {
+      let mut total = 0;
+      for (let mut i = 0; i < 5; i = i + 1) {
+          total = total + array[i];
+      }
+      return total;
+  }
+
+  fn main() {
+      let array = [1, 2, 3, 4, 5];
+      let total = sum(array);
+      println("Sum of {} = {}", array, total); // Sum of [1, 2, 3, 4, 5] = 15
+  }
+#+END_SRC
 ** Unary Expressions
 *** Negation
 The symbol ~-~ followed by a value of type ~i32~ is an unary negation expression. It will evaluate to a value of type ~i32~.
