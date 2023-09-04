@@ -53,3 +53,4 @@ NOTE: This requires ~gcc~ to be available on your ~$PATH~.
 An attempt to document my development process:
 1. [[https://veera.app/codegen.html][Boba Devlog #0: Compiling Pseudo-Rust to x86 Assembly]]
 2. [[https://veera.app/type_checking.html][Boba Devlog #1: Sliding in a Type Checker]]
+3. [[https://veera.app/array.html][Boba Devlog #2: Compiling Arrays]]
