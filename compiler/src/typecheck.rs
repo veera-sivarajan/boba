@@ -763,8 +763,14 @@ impl TypeChecker {
     fn binary(&mut self, left: &Expr, oper: &Token, right: &Expr) -> LLExpr {
         let left = self.expression(left);
         let right = self.expression(right);
-        self.error_if_ne(Type::Number, left.to_type(), oper.span);
-        self.error_if_ne(Type::Number, right.to_type(), oper.span);
+        if oper.kind == TokenType::And || oper.kind == TokenType::Or {
+            self.error_if_ne(Type::Bool, left.to_type(), oper.span);
+            self.error_if_ne(Type::Bool, right.to_type(), oper.span);
+        } else {
+            self.error_if_ne(Type::Number, left.to_type(), oper.span);
+            self.error_if_ne(Type::Number, right.to_type(), oper.span);
+        }
+        
         let ty_pe = match oper.kind {
             TokenType::Plus
             | TokenType::Minus
