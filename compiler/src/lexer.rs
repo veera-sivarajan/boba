@@ -1,8 +1,30 @@
 use crate::error::BobaError;
 use crate::typecheck;
+use phf::phf_map;
 use std::hash::{Hash, Hasher};
 use std::iter::Peekable;
 use std::str::CharIndices;
+
+static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
+    "and" => TokenType::And,
+    "else" => TokenType::Else,
+    "false" => TokenType::Boolean(false),
+    "for" => TokenType::For,
+    "fn" => TokenType::Fn,
+    "if" => TokenType::If,
+    "nil" => TokenType::Nil,
+    "or" => TokenType::Or,
+    "println" => TokenType::Print,
+    "return" => TokenType::Return,
+    "true" => TokenType::Boolean(true),
+    "let" => TokenType::Let,
+    "mut" => TokenType::Mutable,
+    "while" => TokenType::While,
+    "str" => TokenType::Type(typecheck::Type::String),
+    "i32" => TokenType::Type(typecheck::Type::Number),
+    "bool" => TokenType::Type(typecheck::Type::Bool),
+    "char" => TokenType::Type(typecheck::Type::Char),
+};
 
 fn to_escaped_char(ch: char) -> char {
     match ch {
@@ -536,27 +558,10 @@ impl<'src> Lexer<'src> {
             lexeme.push(ch);
         }
         let len = lexeme.len();
-        let kind = match lexeme.as_str() {
-            "and" => TokenType::And,
-            "else" => TokenType::Else,
-            "false" => TokenType::Boolean(false),
-            "for" => TokenType::For,
-            "fn" => TokenType::Fn,
-            "if" => TokenType::If,
-            "nil" => TokenType::Nil,
-            "or" => TokenType::Or,
-            "println" => TokenType::Print,
-            "return" => TokenType::Return,
-            "true" => TokenType::Boolean(true),
-            "let" => TokenType::Let,
-            "mut" => TokenType::Mutable,
-            "while" => TokenType::While,
-            "str" => TokenType::Type(typecheck::Type::String),
-            "i32" => TokenType::Type(typecheck::Type::Number),
-            "bool" => TokenType::Type(typecheck::Type::Bool),
-            "char" => TokenType::Type(typecheck::Type::Char),
-            _ => TokenType::Identifier(lexeme),
-        };
+        let kind = KEYWORDS
+            .get(lexeme.as_str())
+            .cloned()
+            .unwrap_or(TokenType::Identifier(lexeme));
         let span = self.make_span(start_pos, len);
         self.tokens.push(Token::new(kind, span));
     }
