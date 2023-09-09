@@ -265,7 +265,7 @@ impl<'src> Lexer<'src> {
             match c {
                 '[' | ']' | '(' | ')' | '.' | ';' | '{' | '}' | ',' | '%'
                 | ':' => self.scan_single_token(),
-                '!' | '=' | '>' | '<' | '-' | '+' | '*' | '/' => {
+                '!' | '=' | '>' | '<' | '-' | '+' | '*' | '/' | '&' | '|' => {
                     self.scan_double_token()
                 }
                 ' ' | '\r' | '\t' => {
@@ -434,6 +434,20 @@ impl<'src> Lexer<'src> {
                 TokenType::LessEqual,
                 TokenType::Less,
             ),
+            '&' => self.check_next_is(
+                start_pos,
+                c.len_utf8(),
+                TokenType::And,
+                TokenType::Unknown,
+                '&',
+            ), 
+            '|' => self.check_next_is(
+                start_pos,
+                c.len_utf8(),
+                TokenType::Or,
+                TokenType::Unknown,
+                '|',
+            ), 
             _ => unreachable!(),
         };
 
