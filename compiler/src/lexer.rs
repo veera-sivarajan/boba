@@ -440,14 +440,14 @@ impl<'src> Lexer<'src> {
                 TokenType::And,
                 TokenType::Unknown,
                 '&',
-            ), 
+            ),
             '|' => self.check_next_is(
                 start_pos,
                 c.len_utf8(),
                 TokenType::Or,
                 TokenType::Unknown,
                 '|',
-            ), 
+            ),
             _ => unreachable!(),
         };
 

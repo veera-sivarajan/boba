@@ -326,7 +326,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn assignment(&mut self) -> Result<Expr, BobaError> {
-        let expr = self.equality()?;
+        let expr = self.logical_or()?;
         if let Some(_equals) = next_eq!(self, TokenType::Equal) {
             let value = self.assignment()?;
             match expr {
@@ -341,6 +341,32 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else {
             Ok(expr)
         }
+    }
+
+    fn logical_or(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.logical_and()?;
+        while let Some(oper) = next_eq!(self, TokenType::Or) {
+            let right = self.logical_and()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                oper,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn logical_and(&mut self) -> Result<Expr, BobaError> {
+        let mut expr = self.equality()?;
+        while let Some(oper) = next_eq!(self, TokenType::And) {
+            let right = self.equality()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                oper,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, BobaError> {
@@ -431,7 +457,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn finish_subscript(&mut self, name: Expr) -> Result<Expr, BobaError> {
-        let index = Box::new(self.equality()?);
+        let index = Box::new(self.logical_or()?);
         self.consume(TokenType::RightBracket, "Expect ']' after array index.")?;
         Ok(Expr::Subscript {
             name: Box::new(name),
@@ -481,7 +507,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn array(&mut self, start: Token) -> Result<Expr, BobaError> {
         let mut elements = Vec::with_capacity(255);
         if !self.peek_check(TokenType::RightBracket) {
-            elements.push(self.expression()?);
+            elements.push(self.logical_or()?);
             while self.next_eq(TokenType::Comma) {
                 elements.push(self.expression()?);
             }

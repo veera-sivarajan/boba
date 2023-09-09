@@ -84,6 +84,13 @@ pub enum BinaryOperand {
     Divide,
     Modulus,
     Compare(Comparison),
+    Logic(Logical),
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub enum Logical {
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -171,6 +178,8 @@ impl From<&Token> for BinaryOperand {
             TokenType::BangEqual => {
                 BinaryOperand::Compare(Comparison::BangEqual)
             }
+            TokenType::And => BinaryOperand::Logic(Logical::And),
+            TokenType::Or => BinaryOperand::Logic(Logical::Or),
             _ => panic!("Cannot turn {token} into binary operand."),
         }
     }

@@ -773,6 +773,8 @@ impl TypeChecker {
             | TokenType::Percent => Type::Number,
             TokenType::Less
             | TokenType::LessEqual
+            | TokenType::Or
+            | TokenType::And
             | TokenType::Greater
             | TokenType::GreaterEqual
             | TokenType::BangEqual
