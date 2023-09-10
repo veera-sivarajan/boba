@@ -142,6 +142,15 @@ impl std::fmt::Display for Comparison {
     }
 }
 
+impl std::fmt::Display for Logical {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Logical::And => write!(f, "&&"),
+            Logical::Or => write!(f, "||"),
+        }
+    }
+}
+
 impl std::fmt::Display for BinaryOperand {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use BinaryOperand::*;
@@ -152,6 +161,7 @@ impl std::fmt::Display for BinaryOperand {
             Divide => write!(f, "/"),
             Modulus => write!(f, "%"),
             Compare(oper) => write!(f, "{oper}"),
+            Logic(oper) => write!(f, "{oper}"),
         }
     }
 }
