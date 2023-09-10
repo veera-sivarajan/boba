@@ -1,4 +1,4 @@
-use crate::expr::{BinaryOperand, Comparison, LLExpr, UnaryOperand};
+use crate::expr::{BinaryOperand, Comparison, LLExpr, Logical, UnaryOperand};
 use crate::stmt::LLStmt;
 use crate::typecheck::{Kind, Type};
 use std::fmt::Write;
@@ -920,7 +920,52 @@ impl CodeGen {
                 self.registers.deallocate(right_register);
                 result
             }
+            BinaryOperand::Logic(operand) => {
+                self.logical_operation(operand, left_register, right_register)
+            }
         }
+    }
+
+    fn logical_operation(
+        &mut self,
+        operand: &Logical,
+        lhs: RegisterIndex,
+        rhs: RegisterIndex,
+    ) -> RegisterIndex {
+        let result = self.registers.allocate(&Type::Bool);
+        match operand {
+            Logical::Or => {
+                let true_branch = self.labels.create();
+                let false_branch = self.labels.create();
+                let end = self.labels.create();
+                self.emit_code("cmpb", "$0", &lhs);
+                self.emit_code("jne", &true_branch, "");
+                self.emit_code("cmpb", "$0", &rhs);
+                self.emit_code("je", &false_branch, "");
+                self.emit_label(true_branch);
+                self.emit_code("movb", "$1", &result);
+                self.emit_code("jmp", &end, "");
+                self.emit_label(false_branch);
+                self.emit_code("movb", "$0", &result);
+                self.emit_label(end);
+            }
+            Logical::And => {
+                let false_branch = self.labels.create();
+                let end = self.labels.create();
+                self.emit_code("cmpb", "$0", &lhs);
+                self.emit_code("je", &false_branch, "");
+                self.emit_code("cmpb", "$0", &rhs);
+                self.emit_code("je", &false_branch, "");
+                self.emit_code("movb", "$1", &result);
+                self.emit_code("jmp", &end, "");
+                self.emit_label(false_branch);
+                self.emit_code("movb", "$0", &result);
+                self.emit_label(end);
+            }
+        }
+        self.registers.deallocate(lhs);
+        self.registers.deallocate(rhs);
+        result
     }
 
     fn number(&mut self, value: i32) -> RegisterIndex {

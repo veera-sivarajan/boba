@@ -770,7 +770,7 @@ impl TypeChecker {
             self.error_if_ne(Type::Number, left.to_type(), oper.span);
             self.error_if_ne(Type::Number, right.to_type(), oper.span);
         }
-        
+
         let ty_pe = match oper.kind {
             TokenType::Plus
             | TokenType::Minus
