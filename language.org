@@ -60,6 +60,10 @@ Here, both ~a~ and ~b~ are values of type ~i32~. All comparison expressions eval
 4. Lesser Equal: ~a <= b~
 5. Equality: ~a == b~
 6. Non Equality: ~a != b~
+*** Logical
+Here, both ~a~ and ~b~ are values of type ~bool~. Both the logical expressions evaluate to a value of type ~bool~.
+1. Or: ~a || b~
+2. And: ~a && b~
 ** Print Statement
 It is a compiler built-in function that takes a format string and the expressions to be printed as arguments. The ~{}~ s inside the format string will be replaced by the value of expressions and displayed on a newline in ~stdout~.
 
