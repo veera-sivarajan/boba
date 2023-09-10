@@ -268,8 +268,10 @@ impl CodeGen {
     fn while_stmt(&mut self, condition: &LLExpr, body: &LLStmt) {
         let loop_begin = self.labels.create();
         let loop_end = self.labels.create();
+        let true_branch = self.labels.create();
         self.emit_label(&loop_begin);
-        self.boolean_expression(condition, &loop_end);
+        self.boolean_expression(condition, &true_branch, &loop_end);
+        self.emit_label(true_branch);
         self.codegen(body);
         self.emit_code("jmp", loop_begin, "");
         self.emit_label(loop_end);
@@ -377,9 +379,11 @@ impl CodeGen {
         then: &LLStmt,
         elze: &Option<Box<LLStmt>>,
     ) {
+        let true_label = self.labels.create();
         let false_label = self.labels.create();
         let done_label = self.labels.create();
-        self.boolean_expression(condition, &false_label);
+        self.boolean_expression(condition, &true_label, &false_label);
+        self.emit_label(true_label);
         self.codegen(then);
         self.emit_code("jmp", &done_label, "");
         self.emit_label(false_label);
@@ -389,25 +393,57 @@ impl CodeGen {
         self.emit_label(done_label);
     }
 
-    fn boolean_expression(&mut self, condition: &LLExpr, false_label: &Label) {
-        if let LLExpr::Binary {
-            left,
-            oper: BinaryOperand::Compare(operator),
-            right,
-            ..
-        } = condition
-        {
-            let lhs = self.expression(left);
-            let rhs = self.expression(right);
-            self.emit_code(cmp_for(&left.to_type()), &rhs, &lhs);
-            self.comparison_operation(operator, false_label);
-            self.registers.deallocate(lhs);
-            self.registers.deallocate(rhs);
-        } else {
-            let result = self.expression(condition);
-            self.emit_code(cmp_for(&condition.to_type()), "$1", &result); // condition code = result - 1
-            self.emit_code("js", false_label, "");
-            self.registers.deallocate(result);
+    fn boolean_expression(
+        &mut self,
+        condition: &LLExpr,
+        true_label: &Label,
+        false_label: &Label,
+    ) {
+        match condition {
+            LLExpr::Binary {
+                left,
+                right,
+                oper: BinaryOperand::Compare(operator),
+                ..
+            } => {
+                let lhs = self.expression(left);
+                let rhs = self.expression(right);
+                self.emit_code(cmp_for(&left.to_type()), &rhs, &lhs);
+                self.comparison_operation(operator, false_label);
+                self.registers.deallocate(lhs);
+                self.registers.deallocate(rhs);
+            }
+            LLExpr::Binary {
+                left,
+                right,
+                oper: BinaryOperand::Logic(operator),
+                ..
+            } => {
+                let lhs = self.expression(left);
+                let rhs = self.expression(right);
+                match operator {
+                    Logical::Or => {
+                        self.emit_code("cmpb", "$0", &lhs);
+                        self.emit_code("jne", true_label, "");
+                        self.emit_code("cmpb", "$0", &rhs);
+                        self.emit_code("je", false_label, "");
+                    }
+                    Logical::And => {
+                        self.emit_code("cmpb", "$0", &lhs);
+                        self.emit_code("je", false_label, "");
+                        self.emit_code("cmpb", "$0", &rhs);
+                        self.emit_code("je", false_label, "");
+                    }
+                }
+                self.registers.deallocate(lhs);
+                self.registers.deallocate(rhs);
+            }
+            _ => {
+                let result = self.expression(condition);
+                self.emit_code(cmp_for(&condition.to_type()), "$1", &result); // condition code = result - 1
+                self.emit_code("js", false_label, "");
+                self.registers.deallocate(result);
+            }
         }
     }
 
