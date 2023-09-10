@@ -341,4 +341,12 @@ mod tests {
         let (result, expected) = check(source, output);
         assert_eq!(result, expected)
     }
+
+    #[test]
+    fn logical() {
+        let source = "logical.rs";
+        let output = "logical.txt";
+        let (result, expected) = check(source, output);
+        assert_eq!(result, expected)
+    }
 }

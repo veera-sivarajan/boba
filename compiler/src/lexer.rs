@@ -6,14 +6,12 @@ use std::iter::Peekable;
 use std::str::CharIndices;
 
 static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
-    "and" => TokenType::And,
     "else" => TokenType::Else,
     "false" => TokenType::Boolean(false),
     "for" => TokenType::For,
     "fn" => TokenType::Fn,
     "if" => TokenType::If,
     "nil" => TokenType::Nil,
-    "or" => TokenType::Or,
     "println" => TokenType::Print,
     "return" => TokenType::Return,
     "true" => TokenType::Boolean(true),
@@ -647,10 +645,19 @@ mod test_lexer {
     #[test]
     fn bools() {
         assert!(test_runner(
-            "false and true",
+            "false && true",
             &[
                 TokenType::Boolean(false),
                 TokenType::And,
+                TokenType::Boolean(true),
+            ]
+        ));
+
+        assert!(test_runner(
+            "false || true",
+            &[
+                TokenType::Boolean(false),
+                TokenType::Or,
                 TokenType::Boolean(true),
             ]
         ));

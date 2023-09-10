@@ -1,0 +1,10 @@
+Or: true, true, false, true
+And: false, false, false, true
+Or check 1 Passed.
+Or check 2 Passed.
+Or check 3 Passed.
+Or check 4 Passed.
+And check 1 Passed.
+And check 2 passed.
+And check 3 Passed.
+And check 4 Passed.
