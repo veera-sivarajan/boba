@@ -9,7 +9,9 @@ mod typecheck;
 use crate::error::BobaError;
 use crate::parser::Parser;
 
-fn compile_helper(source: &str, print_ast: bool) -> Result<String, BobaError> {
+type Assembly = String;
+
+fn compile_helper(source: &str, print_ast: bool) -> Result<Assembly, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
     let tokens = lexer.scan()?;
     if !tokens.is_empty() {

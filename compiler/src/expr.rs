@@ -57,6 +57,7 @@ impl Expr {
     }
 }
 
+// this is disgusting. refactor this asap
 impl From<&Expr> for Token {
     fn from(value: &Expr) -> Token {
         match value {
