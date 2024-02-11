@@ -10,13 +10,16 @@ struct Args {
     /// Print the parsed AST
     #[arg(short, long)]
     print_ast: bool,
+    /// Sets a custom output directory
+    #[arg(short, long, value_name = "FILE")]
+    output: Option<PathBuf>,
 }
 
 fn run(args: Args) -> std::io::Result<()> {
     let source = read_to_string(&args.filename)?;
     let mut file = PathBuf::from(args.filename);
     file.set_extension("s");
-    let mut output = std::env::current_dir()?;
+    let mut output = args.output.unwrap_or(std::env::current_dir()?);
     output.push(file.file_name().unwrap());
     match compiler::compile(source.trim_end(), args.print_ast) {
         Ok(assembly) => write(output, assembly.to_string().as_bytes()),
