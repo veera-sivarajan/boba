@@ -1,4 +1,4 @@
-mod codegen;
+pub mod codegen;
 mod error;
 mod expr;
 mod lexer;
@@ -8,8 +8,7 @@ mod typecheck;
 
 use crate::error::BobaError;
 use crate::parser::Parser;
-
-type Assembly = String;
+use crate::codegen::Assembly;
 
 fn compile_helper(source: &str, print_ast: bool) -> Result<Assembly, BobaError> {
     let mut lexer = lexer::Lexer::new(source);
@@ -29,7 +28,7 @@ fn compile_helper(source: &str, print_ast: bool) -> Result<Assembly, BobaError> 
     }
 }
 
-pub fn compile(source: &str, print_ast: bool) -> Result<String, BobaError> {
+pub fn compile(source: &str, print_ast: bool) -> Result<Assembly, BobaError> {
     if !source.is_empty() {
         compile_helper(source, print_ast)
     } else {

@@ -154,9 +154,9 @@ pub struct Assembly {
     pub global: String, // function names
 }
 
-impl Assembly {
-    fn build(&self) -> String {
-        format!("{}{}{}{}", self.global, self.header, self.code, self.data)
+impl fmt::Display for Assembly {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}{}{}", self.global, self.header, self.code, self.data)
     }
 }
 
@@ -193,16 +193,16 @@ impl CodeGen {
         }
     }
 
-    pub fn compile(&mut self, ast: &[LLStmt]) -> String {
+    pub fn compile(&mut self, ast: &[LLStmt]) -> Assembly {
         for ele in ast {
             self.codegen(ele);
         }
         self.build_assembly()
     }
 
-    fn build_assembly(&mut self) -> String {
+    fn build_assembly(&mut self) -> Assembly {
         self.build_globals();
-        self.assembly.build()
+        self.assembly.clone()
     }
 
     fn build_globals(&mut self) {

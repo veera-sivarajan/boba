@@ -19,10 +19,7 @@ fn run(args: Args) -> std::io::Result<()> {
     let mut output = std::env::current_dir()?;
     output.push(file.file_name().unwrap());
     match compiler::compile(source.trim_end(), args.print_ast) {
-        Ok(assembly) => {
-            write(output, assembly)?;
-            Ok(())
-        }
+        Ok(assembly) => write(output, assembly.to_string().as_bytes()),
         Err(error) => {
             eprint!("{error}");
             std::process::exit(1);
@@ -40,8 +37,9 @@ mod tests {
     use std::io::prelude::*;
     use std::path::{Path, PathBuf};
     use std::process::{Command, Stdio};
+    use compiler::codegen::Assembly;
 
-    fn assemble(assembly: &str, source_name: &str) -> String {
+    fn assemble(assembly: Assembly, source_name: &str) -> String {
         let source_path = format!("../test/output/bin/{source_name}");
         let mut assembly_file = PathBuf::from(&source_path);
         assembly_file.set_extension("s");
@@ -56,7 +54,7 @@ mod tests {
             .open(&assembly_file)
             .unwrap();
 
-        file.write_all(assembly.as_bytes()).unwrap();
+        file.write_all(assembly.to_string().as_bytes()).unwrap();
 
         // compile assembly to executable
         Command::new("gcc")
@@ -80,7 +78,7 @@ mod tests {
         let source = std::fs::read_to_string(input);
         if let Ok(source) = source {
             match compiler::compile(source.trim_end(), false) {
-                Ok(code) => assemble(&code, source_name),
+                Ok(code) => assemble(code, source_name),
                 Err(message) => message.to_string(),
             }
         } else {
